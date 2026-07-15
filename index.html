@@ -43,6 +43,36 @@
   .btn-out{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; }
   .btn-out:hover{ color:var(--danger); border-color:var(--danger); }
+  .tag-mod{ font-size:10px; color:#7fd1c0; border:1px solid rgba(127,209,192,.4);
+    background:rgba(127,209,192,.1); padding:2px 7px; border-radius:999px; }
+  .tag-found{ font-size:10px; color:var(--danger); border:1px solid rgba(229,104,109,.4);
+    background:rgba(229,104,109,.1); padding:2px 7px; border-radius:999px; }
+  /* navigazione fra Scheda e Controllo */
+  .nav{ display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--line); }
+  .nav button{ background:transparent; border:0; border-bottom:2px solid transparent; margin-bottom:-1px;
+    color:var(--muted); font-family:var(--ui); font-size:13px; padding:8px 14px; cursor:pointer; }
+  .nav button:hover{ color:var(--ink); }
+  .nav button.on{ color:var(--gold); border-bottom-color:var(--gold); }
+  /* elenco dei personaggi */
+  .ctrlhead{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .ctrlhead > div{ display:flex; align-items:baseline; gap:10px; }
+  .ctrlhead h2{ font-family:'Cinzel',Georgia,serif; font-size:20px; color:var(--ink); margin:0; font-weight:600; }
+  .ctrlnote{ font-size:12px; color:var(--muted); }
+  .tblwrap{ overflow-x:auto; }
+  .tbl{ width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .tbl th{ text-align:left; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    font-weight:600; padding:10px 12px; background:var(--panel2); border-bottom:1px solid var(--line); white-space:nowrap; }
+  .tbl td{ padding:10px 12px; border-bottom:1px solid var(--line); font-size:13.5px; color:var(--ink); }
+  .tbl tr:last-child td{ border-bottom:0; }
+  .tbl tbody tr:hover td{ background:rgba(255,255,255,.03); }
+  .nick{ display:flex; align-items:center; gap:8px; white-space:nowrap; }
+  .nick img{ width:22px; height:22px; border-radius:50%; border:1px solid var(--line); }
+  .nick small{ color:var(--muted); }
+  .pgname{ font-family:'Cinzel',Georgia,serif; font-size:14.5px; }
+  .lv{ color:var(--gold); font-weight:600; }
+  .xp{ font-variant-numeric:tabular-nums; }
+  .vuoto{ color:var(--muted); font-style:italic; }
+  .ctrlmsg{ padding:16px 12px; color:var(--muted); font-size:13px; }
   [hidden]{ display:none !important; }
 
   /* ============ BARRA DEL NOME ============ */
@@ -280,6 +310,13 @@
 
     <div class="authbar" id="authbar"></div>
 
+    <div class="nav" id="nav" hidden>
+      <button id="tabScheda" class="on">Scheda</button>
+      <button id="tabControllo">Controllo</button>
+    </div>
+
+    <div id="paneScheda">
+
     <div class="header" id="header">
       <div class="eyebrow" id="eyebrow">Nome del personaggio</div>
       <div class="namerow" id="namerow">
@@ -479,6 +516,28 @@
           <button class="btn-no" data-cancel="Class">Annulla</button>
           <button class="btn-yes" data-yes="Class">Azzera</button>
         </div>
+      </div>
+    </div>
+
+    </div><!-- /#paneScheda -->
+
+    <div id="paneControllo" hidden>
+      <div class="ctrlhead">
+        <div>
+          <h2>Personaggi</h2>
+          <span class="ctrlnote" id="ctrlNote"></span>
+        </div>
+        <button class="btn-out" id="btnCtrlReload">Aggiorna</button>
+      </div>
+      <div class="tblwrap">
+        <table class="tbl" id="tblPg">
+          <thead>
+            <tr><th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th></tr>
+          </thead>
+          <tbody id="tblBody">
+            <tr><td colspan="4" class="ctrlmsg">Carico l'elenco&hellip;</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1083,13 +1142,97 @@ function mostra(quale){
   document.getElementById("sheet").hidden = quale!=="sheet";
 }
 
+/* ================= SEZIONE CONTROLLO ================= */
+
+/* I nomi dei personaggi li scrivono i giocatori: prima di metterli
+   dentro la pagina vanno disinnescati, altrimenti uno che chiama il
+   personaggio con del codice lo farebbe girare nel browser dei master. */
+function esc(s){
+  return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function mostraPane(quale){
+  var sched = quale!=="controllo";
+  document.getElementById("paneScheda").hidden = !sched;
+  document.getElementById("paneControllo").hidden = sched;
+  document.getElementById("tabScheda").classList.toggle("on", sched);
+  document.getElementById("tabControllo").classList.toggle("on", !sched);
+  if(sched){ apply(); }        // tornando sulla scheda il nome va rimisurato
+  else { caricaControllo(); }
+}
+
+var ctrlCaricato=false;
+function caricaControllo(){
+  if(ctrlCaricato) return;
+  ctrlCaricato=true;
+  var body=document.getElementById("tblBody");
+  body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
+  Promise.all([
+    sb.from("profili").select("user_id,username,nome,avatar_url"),
+    sb.from("schede").select("user_id,dati")
+  ]).then(function(r){
+    var err = r[0].error || r[1].error;
+    if(err){
+      ctrlCaricato=false;
+      body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non riesco a leggere l\'elenco: '+esc(err.message)+'</td></tr>';
+      console.error(err);
+      return;
+    }
+    var schede={};
+    (r[1].data||[]).forEach(function(s){ schede[s.user_id]=s.dati||{}; });
+
+    var righe=(r[0].data||[]).map(function(p){
+      var d=schede[p.user_id]||{};
+      var haScheda = Object.prototype.hasOwnProperty.call(schede, p.user_id);
+      var xp=(typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
+      return {
+        nick: p.username || "?",
+        disp: p.nome || "",
+        av:   p.avatar_url || "",
+        pg:   (typeof d.name==="string") ? d.name.trim() : "",
+        xp:   haScheda ? xp : null,
+        lv:   haScheda ? levelFromXP(xp) : null
+      };
+    });
+    righe.sort(function(a,b){ return a.nick.localeCompare(b.nick); });
+
+    document.getElementById("ctrlNote").textContent =
+      righe.length + (righe.length===1 ? " persona registrata" : " persone registrate");
+
+    if(!righe.length){
+      body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
+      return;
+    }
+    body.innerHTML = righe.map(function(x){
+      var nick='<span class="nick">'
+        + (x.av ? '<img src="'+esc(x.av)+'" alt="">' : '')
+        + '<span>'+esc(x.nick)
+        + ((x.disp && x.disp!==x.nick) ? ' <small>('+esc(x.disp)+')</small>' : '')
+        + '</span></span>';
+      var pg  = x.pg ? esc(x.pg) : '<span class="vuoto">senza nome</span>';
+      var lv  = (x.lv===null) ? '<span class="vuoto">&mdash;</span>' : x.lv;
+      var xp  = (x.xp===null) ? '<span class="vuoto">nessuna scheda</span>' : numIt(x.xp);
+      return '<tr><td>'+nick+'</td><td class="pgname">'+pg+'</td>'
+           + '<td class="lv">'+lv+'</td><td class="xp">'+xp+'</td></tr>';
+    }).join("");
+  }).catch(function(e){
+    ctrlCaricato=false;
+    body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
+    console.error(e);
+  });
+}
+
 function disegnaAuthbar(){
   var m=utente.user_metadata||{};
   var nome=m.full_name||m.name||m.user_name||m.preferred_username||"Giocatore";
   var av=m.avatar_url||m.picture||"";
   var tag="";
+  if(haRuolo("fondatore")) tag+=' <span class="tag-found">fondatore</span>';
   if(haRuolo("master")) tag+=' <span class="tag-master">master</span>';
   if(haRuolo("supporto")) tag+=' <span class="tag-tech">supporto</span>';
+  if(haRuolo("moderazione")) tag+=' <span class="tag-mod">moderazione</span>';
   document.getElementById("authbar").innerHTML=
     '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'+tag+'</span>'
     +'<button class="btn-out" id="btnOut">Esci</button>';
@@ -1108,6 +1251,12 @@ function login(){
   });
 }
 document.getElementById("btnLogin").addEventListener("click", login);
+
+document.getElementById("tabScheda").addEventListener("click", function(){ mostraPane("scheda"); });
+document.getElementById("tabControllo").addEventListener("click", function(){ mostraPane("controllo"); });
+document.getElementById("btnCtrlReload").addEventListener("click", function(){
+  ctrlCaricato=false; caricaControllo();
+});
 
 function avvia(){
   sb.auth.getSession().then(function(res){
@@ -1130,6 +1279,8 @@ function avvia(){
         return;
       }
       ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
+      // la navigazione (e quindi la sezione Controllo) esiste solo per chi ha una targhetta
+      if(ruoli.length) document.getElementById("nav").hidden = false;
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera

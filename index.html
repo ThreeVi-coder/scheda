@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=EB+Garamond:wght@400;700&family=Marcellus&family=Cardo:wght@400;700&family=Playfair+Display:wght@400;700&family=Spectral:wght@400;700&family=Uncial+Antiqua&family=MedievalSharp&family=Grenze+Gotisch:wght@400;700&family=UnifrakturCook:wght@700&family=Metamorphous&family=Pirata+One&family=IM+Fell+English&family=Great+Vibes&family=Tangerine:wght@400;700&family=Cormorant+SC:wght@400;700&family=Almendra:wght@400;700&family=Griffy&family=Eagle+Lake&family=Fondamento&family=Macondo&family=Inter:wght@400;500;700&family=Oswald:wght@400;700&family=Bebas+Neue&display=swap');
 
@@ -20,6 +21,27 @@
     min-height:100vh;
   }
   .wrap{max-width:900px; margin:0 auto; padding:26px}
+
+  /* ============ ACCESSO ============ */
+  .boot{ display:flex; align-items:center; justify-content:center; min-height:70vh; color:var(--muted); font-size:14px; }
+  .login{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; min-height:72vh; text-align:center; }
+  .login h1{ font-family:'Cinzel',Georgia,serif; font-size:34px; font-weight:700; margin:0; }
+  .login p{ color:var(--muted); font-size:13.5px; max-width:430px; line-height:1.6; margin:0; }
+  .btn-discord{ border:0; background:#5865F2; color:#fff; border-radius:11px; padding:13px 24px;
+    font-size:15px; font-weight:600; cursor:pointer; font-family:var(--ui); margin-top:6px; }
+  .btn-discord:hover{ filter:brightness(1.12); }
+  .loginerr{ color:var(--danger); font-size:12.5px; min-height:16px; }
+
+  .authbar{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px; }
+  .who{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--muted); }
+  .who img{ width:26px; height:26px; border-radius:50%; border:1px solid var(--line); }
+  .who b{ color:var(--ink); font-weight:600; }
+  .tag-master{ font-size:10px; color:var(--gold); border:1px solid rgba(224,177,94,.4);
+    background:rgba(224,177,94,.1); padding:2px 7px; border-radius:999px; }
+  .btn-out{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .btn-out:hover{ color:var(--danger); border-color:var(--danger); }
+  [hidden]{ display:none !important; }
 
   /* ============ BARRA DEL NOME ============ */
   .header{
@@ -243,6 +265,19 @@
 <body>
   <div class="wrap">
 
+    <div class="boot" id="boot">Carico la scheda&hellip;</div>
+
+    <div class="login" id="loginScreen" hidden>
+      <h1>Scheda del personaggio</h1>
+      <p>Entra con il tuo account Discord: la scheda resta legata a te e ti segue su qualsiasi dispositivo. Non serve registrarsi n&eacute; ricordare password.</p>
+      <button class="btn-discord" id="btnLogin">Entra con Discord</button>
+      <div class="loginerr" id="loginErr"></div>
+    </div>
+
+    <div id="sheet" hidden>
+
+    <div class="authbar" id="authbar"></div>
+
     <div class="header" id="header">
       <div class="eyebrow" id="eyebrow">Nome del personaggio</div>
       <div class="namerow" id="namerow">
@@ -445,10 +480,18 @@
       </div>
     </div>
 
+    </div><!-- /#sheet -->
+
   </div>
 
 <script>
 "use strict";
+
+/* ================= COLLEGAMENTO AL DATABASE ================= */
+var SB_URL="https://azlfyuxxoxcqwqvjenua.supabase.co";
+var SB_KEY="sb_publishable_S0bnh2LHjCR2cgeQCAfyMg_Z5rFJUi9";
+var sb=window.supabase.createClient(SB_URL, SB_KEY);
+var utente=null, sonoMaster=false;
 
 var ICONS={
   artificere:'<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3 v2 M12 19 v2 M3 12 h2 M19 12 h2 M5.6 5.6 l1.4 1.4 M17 17 l1.4 1.4 M18.4 5.6 l-1.4 1.4 M5.6 18.4 l1.4 -1.4"/>',
@@ -586,25 +629,34 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_KEY="scheda_v2";
 var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2"];
-function loadState(){
-  try{
-    var raw=localStorage.getItem(SAVE_KEY); if(!raw) return;
-    var o=JSON.parse(raw);
-    SAVE_FIELDS.forEach(function(k){ if(o[k]!==undefined) state[k]=o[k]; });
-    if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; });
-    if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
-    if(typeof o.name==="string" && o.name.length) elName.textContent=o.name;
-  }catch(e){}
+
+/* Legge un oggetto scheda e lo riversa nello stato */
+function applicaDati(o){
+  if(!o || typeof o!=="object") return;
+  SAVE_FIELDS.forEach(function(k){ if(o[k]!==undefined) state[k]=o[k]; });
+  if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; });
+  if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
+  elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
+/* Impacchetta lo stato per il database */
+function datiDaSalvare(){
+  var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
+  o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
+  return o;
+}
+
 function saveState(){
-  try{
-    var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
-    o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(o));
-    flashSaved("Salvato \u2713");
-  }catch(e){ flashSaved("Salvataggio non disponibile qui"); }
+  if(!utente){ flashSaved("Non risulti entrato: ricarica la pagina"); return; }
+  flashSaved("Salvo\u2026");
+  sb.from("schede").upsert({
+    user_id: utente.id,
+    discord_id: (utente.user_metadata && utente.user_metadata.provider_id) || null,
+    dati: datiDaSalvare()
+  }).then(function(res){
+    if(res.error){ flashSaved("Errore nel salvataggio: riprova"); console.error(res.error); }
+    else flashSaved("Salvato \u2713");
+  });
 }
 var SAVEMSGS=["savemsgName","savemsgClass","savemsgXp"];
 function flashSaved(msg){
@@ -998,18 +1050,84 @@ document.getElementById("chosen").addEventListener("click", function(e){
   else if(act==="lvldec") changeLevel(key,-1);
 });
 
-loadState();
-elFont.value=state.font;
-elEmblem.value=state.emblemMode;
-document.getElementById("size").value=state.size;
-document.getElementById("xpInput").value=state.xp;
+/* ================= AVVIO ================= */
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });
 buildWheel();
-renderCapSuggestions();
-renderAll();
+
+/* Riallinea tutti i comandi allo stato appena caricato */
+function sincronizzaComandi(){
+  elFont.value=state.font;
+  elEmblem.value=state.emblemMode;
+  document.getElementById("size").value=state.size;
+  document.getElementById("xpInput").value=state.xp;
+  namePicker.setHex(state.nameColor);
+  capPicker.setHex(state.capColor);
+  xpPicker1.setHex(state.xpColor1);
+  xpPicker2.setHex(state.xpColor2);
+  renderCapSuggestions();
+  renderAll();
+}
+
+function mostra(quale){
+  document.getElementById("boot").hidden = quale!=="boot";
+  document.getElementById("loginScreen").hidden = quale!=="login";
+  document.getElementById("sheet").hidden = quale!=="sheet";
+}
+
+function disegnaAuthbar(){
+  var m=utente.user_metadata||{};
+  var nome=m.full_name||m.name||m.user_name||m.preferred_username||"Giocatore";
+  var av=m.avatar_url||m.picture||"";
+  document.getElementById("authbar").innerHTML=
+    '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'
+    +(sonoMaster?' <span class="tag-master">master</span>':'')+'</span>'
+    +'<button class="btn-out" id="btnOut">Esci</button>';
+  document.getElementById("btnOut").addEventListener("click", function(){
+    sb.auth.signOut().then(function(){ location.reload(); });
+  });
+}
+
+function login(){
+  document.getElementById("loginErr").textContent="";
+  sb.auth.signInWithOAuth({
+    provider:"discord",
+    options:{ redirectTo: window.location.origin + window.location.pathname }
+  }).then(function(res){
+    if(res.error){ document.getElementById("loginErr").textContent="Non riesco ad aprire Discord: "+res.error.message; }
+  });
+}
+document.getElementById("btnLogin").addEventListener("click", login);
+
+function avvia(){
+  sb.auth.getSession().then(function(res){
+    var sess=res.data && res.data.session;
+    if(!sess){ mostra("login"); return; }
+    utente=sess.user;
+    // due domande insieme: la mia scheda, e se sono master
+    return Promise.all([
+      sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
+      sb.from("master").select("user_id").eq("user_id", utente.id).maybeSingle()
+    ]).then(function(r){
+      var scheda=r[0], master=r[1];
+      if(scheda.error){
+        document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
+        return;
+      }
+      sonoMaster = !!(master.data && !master.error);
+      if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
+      sincronizzaComandi();
+      disegnaAuthbar();
+      mostra("sheet");
+    });
+  }).catch(function(e){
+    document.getElementById("boot").textContent="Qualcosa non ha risposto: ricarica la pagina.";
+    console.error(e);
+  });
+}
+avvia();
 </script>
 </body>
 </html>

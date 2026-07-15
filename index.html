@@ -38,6 +38,8 @@
   .who b{ color:var(--ink); font-weight:600; }
   .tag-master{ font-size:10px; color:var(--gold); border:1px solid rgba(224,177,94,.4);
     background:rgba(224,177,94,.1); padding:2px 7px; border-radius:999px; }
+  .tag-tech{ font-size:10px; color:var(--violet); border:1px solid rgba(167,139,250,.45);
+    background:rgba(124,92,255,.12); padding:2px 7px; border-radius:999px; }
   .btn-out{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; }
   .btn-out:hover{ color:var(--danger); border-color:var(--danger); }
@@ -491,7 +493,8 @@
 var SB_URL="https://azlfyuxxoxcqwqvjenua.supabase.co";
 var SB_KEY="sb_publishable_S0bnh2LHjCR2cgeQCAfyMg_Z5rFJUi9";
 var sb=window.supabase.createClient(SB_URL, SB_KEY);
-var utente=null, sonoMaster=false;
+var utente=null, ruoli=[];
+function haRuolo(r){ return ruoli.indexOf(r)>=0; }
 
 var ICONS={
   artificere:'<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3 v2 M12 19 v2 M3 12 h2 M19 12 h2 M5.6 5.6 l1.4 1.4 M17 17 l1.4 1.4 M18.4 5.6 l-1.4 1.4 M5.6 18.4 l1.4 -1.4"/>',
@@ -719,7 +722,10 @@ function setNameSize(px){
 }
 function fitName(){
   var row=document.getElementById("namerow");
-  var avail=row.clientWidth, size=state.size, guard=0;
+  var avail=row.clientWidth;
+  // Se la scheda è ancora nascosta la larghezza è zero: misurare ora darebbe un nome minuscolo
+  if(!avail){ setNameSize(state.size); return; }
+  var size=state.size, guard=0;
   setNameSize(size);
   while(guard<90 && size>14){
     var need=elName.scrollWidth;
@@ -1081,9 +1087,11 @@ function disegnaAuthbar(){
   var m=utente.user_metadata||{};
   var nome=m.full_name||m.name||m.user_name||m.preferred_username||"Giocatore";
   var av=m.avatar_url||m.picture||"";
+  var tag="";
+  if(haRuolo("master")) tag+=' <span class="tag-master">master</span>';
+  if(haRuolo("supporto")) tag+=' <span class="tag-tech">supporto</span>';
   document.getElementById("authbar").innerHTML=
-    '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'
-    +(sonoMaster?' <span class="tag-master">master</span>':'')+'</span>'
+    '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'+tag+'</span>'
     +'<button class="btn-out" id="btnOut">Esci</button>';
   document.getElementById("btnOut").addEventListener("click", function(){
     sb.auth.signOut().then(function(){ location.reload(); });
@@ -1109,18 +1117,20 @@ function avvia(){
     // due domande insieme: la mia scheda, e se sono master
     return Promise.all([
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
-      sb.from("master").select("user_id").eq("user_id", utente.id).maybeSingle()
+      sb.from("ruoli").select("ruolo").eq("user_id", utente.id)
     ]).then(function(r){
-      var scheda=r[0], master=r[1];
+      var scheda=r[0], rr=r[1];
       if(scheda.error){
         document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
         return;
       }
-      sonoMaster = !!(master.data && !master.error);
+      ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
-      sincronizzaComandi();
       disegnaAuthbar();
-      mostra("sheet");
+      mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
+      sincronizzaComandi();     // e solo dopo si misura il nome
+      // i font decorativi arrivano da internet: quando sono pronti rimisuro
+      if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }
     });
   }).catch(function(e){
     document.getElementById("boot").textContent="Qualcosa non ha risposto: ricarica la pagina.";

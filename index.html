@@ -1114,12 +1114,17 @@ function avvia(){
     var sess=res.data && res.data.session;
     if(!sess){ mostra("login"); return; }
     utente=sess.user;
-    // due domande insieme: la mia scheda, e se sono master
+    // tre domande insieme: la mia scheda, le mie targhette,
+    // e il profilo che si tiene aggiornato da solo (nome, avatar, storico dei nick)
     return Promise.all([
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
-      sb.from("ruoli").select("ruolo").eq("user_id", utente.id)
+      sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
+      sb.rpc("sync_profilo")
     ]).then(function(r){
-      var scheda=r[0], rr=r[1];
+      var scheda=r[0], rr=r[1], prof=r[2];
+      // se il profilo non si aggiorna la scheda deve funzionare lo stesso:
+      // lo segnalo solo nella console, senza fermare niente
+      if(prof && prof.error) console.warn("sync_profilo non ha risposto:", prof.error.message);
       if(scheda.error){
         document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
         return;

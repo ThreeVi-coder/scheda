@@ -59,8 +59,13 @@
   .chip.on.c-supporto{ color:var(--violet); border-color:rgba(167,139,250,.5); background:rgba(124,92,255,.14); }
   .chip.on.c-moderazione{ color:#7fd1c0; border-color:rgba(127,209,192,.5); background:rgba(127,209,192,.12); }
   .chip.on.c-fondatore{ color:var(--danger); border-color:rgba(229,104,109,.5); background:rgba(229,104,109,.12); }
-  .chip[disabled]{ cursor:progress; opacity:.5; }
+  .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
+  .attesabtn{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+  .chip.c-accesso{ border-color:rgba(127,209,192,.35); }
+  .chip.on.c-accesso{ color:#7fd1c0; border-color:rgba(127,209,192,.6); background:rgba(127,209,192,.16); }
+  .attesa{ font-size:10px; color:var(--danger); border:1px solid rgba(229,104,109,.4);
+    background:rgba(229,104,109,.1); padding:1px 6px; border-radius:999px; margin-left:6px; white-space:nowrap; }
   .sep{ height:1px; background:var(--line); margin:26px 0 22px; border:0; }
   /* navigazione fra Scheda e Controllo */
   .nav{ display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--line); }
@@ -319,6 +324,17 @@
       <p>Entra con il tuo account Discord: la scheda resta legata a te e ti segue su qualsiasi dispositivo. Non serve registrarsi n&eacute; ricordare password.</p>
       <button class="btn-discord" id="btnLogin">Entra con Discord</button>
       <div class="loginerr" id="loginErr"></div>
+    </div>
+
+    <div class="login" id="attesaScreen" hidden>
+      <h1>Sala d&rsquo;attesa</h1>
+      <p id="attesaChi"></p>
+      <p>Il tuo accesso &egrave; arrivato, ma la scheda si apre solo dopo che qualcuno del gruppo ti ha dato il via libera. Chiedilo nel server: &egrave; un clic, non una pratica.</p>
+      <div class="attesabtn">
+        <button class="btn-discord" id="btnRicontrolla">Ho avuto il via libera, ricontrolla</button>
+        <button class="btn-out" id="btnEsciAttesa">Esci</button>
+      </div>
+      <div class="loginerr" id="attesaErr"></div>
     </div>
 
     <div id="sheet" hidden>
@@ -1173,6 +1189,7 @@ function sincronizzaComandi(){
 function mostra(quale){
   document.getElementById("boot").hidden = quale!=="boot";
   document.getElementById("loginScreen").hidden = quale!=="login";
+  document.getElementById("attesaScreen").hidden = quale!=="attesa";
   document.getElementById("sheet").hidden = quale!=="sheet";
 }
 
@@ -1213,10 +1230,10 @@ function caricaControllo(){
   body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
 
   var richieste=[
-    sb.from("profili").select("user_id,username,nome,avatar_url"),
-    sb.from("schede").select("user_id,dati")
+    sb.from("profili").select("user_id,username,nome,avatar_url,approvato"),
+    sb.from("schede").select("user_id,dati"),
+    sb.from("ruoli").select("user_id,ruolo")
   ];
-  if(puoAssegnare()) richieste.push(sb.from("ruoli").select("user_id,ruolo"));
 
   Promise.all(richieste).then(function(r){
     var err = r[0].error || r[1].error || (r[2] && r[2].error);
@@ -1229,9 +1246,9 @@ function caricaControllo(){
     profiliCache = (r[0].data||[]).slice().sort(function(a,b){
       return String(a.username||"").localeCompare(String(b.username||""));
     });
+    mappaRuoli(r[2] ? (r[2].data||[]) : []);
     disegnaPersonaggi(r[1].data||[]);
     if(puoAssegnare()){
-      mappaRuoli(r[2] ? (r[2].data||[]) : []);
       disegnaRuoli();
       document.getElementById("ruoliBlock").hidden=false;
     }
@@ -1242,13 +1259,20 @@ function caricaControllo(){
   });
 }
 
+function inAttesa(p){
+  // chi ha una targhetta entra comunque: la targhetta vale come approvazione
+  return !p.approvato && !(ruoliDi[p.user_id]||[]).length;
+}
+
 function disegnaPersonaggi(righeSchede){
   var body=document.getElementById("tblBody");
   var schede={};
   righeSchede.forEach(function(s){ schede[s.user_id]=s.dati||{}; });
 
+  var attesa = profiliCache.filter(inAttesa).length;
   document.getElementById("ctrlNote").textContent =
-    profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate");
+    profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate")
+    + (attesa ? " · " + attesa + (attesa===1 ? " in attesa di via libera" : " in attesa di via libera") : "");
 
   if(!profiliCache.length){
     body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
@@ -1261,7 +1285,8 @@ function disegnaPersonaggi(righeSchede){
     var pg = (typeof d.name==="string" && d.name.trim()) ? esc(d.name.trim()) : '<span class="vuoto">senza nome</span>';
     var lv = haScheda ? levelFromXP(xp) : '<span class="vuoto">&mdash;</span>';
     var xt = haScheda ? numIt(xp) : '<span class="vuoto">nessuna scheda</span>';
-    return '<tr><td>'+nickCell(p)+'</td><td class="pgname">'+pg+'</td>'
+    var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
+    return '<tr><td>'+nickCell(p)+marchio+'</td><td class="pgname">'+pg+'</td>'
          + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td></tr>';
   }).join("");
 }
@@ -1296,6 +1321,15 @@ function disegnaRuoli(){
   body.innerHTML = profiliCache.map(function(p){
     var suoi = ruoliDi[p.user_id]||[];
     var pezzi = [];
+
+    // interruttore dell'accesso: primo, perché è quello che decide se la persona esiste
+    var acceso = p.approvato || suoi.length>0;
+    var bloccato = (p.user_id===utente.id) || suoi.length>0;
+    var perche = (p.user_id===utente.id) ? "non puoi cambiare la tua approvazione"
+               : (suoi.length>0 ? "ha una targhetta, quindi entra comunque" : "");
+    pezzi.push('<button class="chip c-accesso'+(acceso?' on':'')+'" data-user="'+esc(p.user_id)
+             + '" data-azione="accesso"'+(bloccato?' disabled title="'+perche+'"':'')+'>accesso</button>');
+
     // targhette che questa persona ha ma che io non posso toccare: le mostro e basta
     if(suoi.indexOf("sviluppatore")>=0) pezzi.push('<span class="tag-dev">sviluppatore</span>');
     if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-found">fondatore</span>');
@@ -1320,6 +1354,21 @@ function rileggiRuoli(){
     ruoli = (ruoliDi[utente.id]||[]).slice();   // se ho cambiato qualcosa a me stesso
     disegnaAuthbar();
     document.getElementById("nav").hidden = !ruoli.length;
+  });
+}
+
+function toggleAccesso(userId, btn){
+  msgRuoli("");
+  btn.disabled=true;
+  var p = profiliCache.filter(function(x){ return x.user_id===userId; })[0];
+  var nuovo = !(p && p.approvato);
+  sb.rpc("approva", { p_user:userId, p_valore:nuovo }).then(function(res){
+    if(res && res.error){ msgRuoli("Il database ha rifiutato: "+res.error.message); }
+    ctrlCaricato=false; caricaControllo();   // si rilegge tutto: la verità sta lì
+  }).catch(function(e){
+    btn.disabled=false;
+    msgRuoli("Qualcosa non ha risposto: riprova.");
+    console.error(e);
   });
 }
 
@@ -1378,7 +1427,13 @@ document.getElementById("btnCtrlReload").addEventListener("click", function(){
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
   if(!b || b.disabled) return;
-  toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
+  if(b.getAttribute("data-azione")==="accesso") toggleAccesso(b.getAttribute("data-user"), b);
+  else toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
+});
+
+document.getElementById("btnRicontrolla").addEventListener("click", function(){ location.reload(); });
+document.getElementById("btnEsciAttesa").addEventListener("click", function(){
+  sb.auth.signOut().then(function(){ location.reload(); });
 });
 
 function avvia(){
@@ -1386,22 +1441,35 @@ function avvia(){
     var sess=res.data && res.data.session;
     if(!sess){ mostra("login"); return; }
     utente=sess.user;
-    // tre domande insieme: la mia scheda, le mie targhette,
-    // e il profilo che si tiene aggiornato da solo (nome, avatar, storico dei nick)
+    // quattro domande insieme: la mia scheda, le mie targhette, il mio profilo
+    // (mi serve sapere se sono approvato) e la sincronizzazione del profilo stesso
     return Promise.all([
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
       sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
-      sb.rpc("sync_profilo")
+      sb.rpc("sync_profilo"),
+      sb.from("profili").select("username,nome,approvato").eq("user_id", utente.id).maybeSingle()
     ]).then(function(r){
-      var scheda=r[0], rr=r[1], prof=r[2];
+      var scheda=r[0], rr=r[1], prof=r[2], mio=r[3];
       // se il profilo non si aggiorna la scheda deve funzionare lo stesso:
       // lo segnalo solo nella console, senza fermare niente
       if(prof && prof.error) console.warn("sync_profilo non ha risposto:", prof.error.message);
+
+      ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
+
+      // Sala d'attesa: senza via libera il database non fa salvare niente,
+      // quindi è inutile aprire la scheda e far perdere tempo alla persona.
+      var approvato = !!(mio && mio.data && mio.data.approvato);
+      if(!approvato && !ruoli.length){
+        var chi = (mio && mio.data && (mio.data.nome || mio.data.username)) || "";
+        document.getElementById("attesaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
+        mostra("attesa");
+        return;
+      }
+
       if(scheda.error){
         document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
         return;
       }
-      ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
       // la navigazione (e quindi la sezione Controllo) esiste solo per chi ha una targhetta
       if(ruoli.length) document.getElementById("nav").hidden = false;
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);

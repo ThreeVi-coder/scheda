@@ -228,7 +228,10 @@
   .btn-reset{ border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:9px; padding:9px 14px; font-size:13px; cursor:pointer; margin-right:auto; }
   .btn-reset:hover{ color:var(--danger); border-color:var(--danger); }
   .dlgbar[hidden]{ display:none; }
-  /* la finestra dell'uscita non si aggancia alla barra del nome: sta in mezzo */
+  /* Solo la finestra del Nome si aggancia sotto la barra del nome, perche' li'
+     serve vedere le modifiche mentre si fanno. Le altre stanno in mezzo alla
+     pagina: tenere il posto vuoto a una barra sfocata non serviva a niente. */
+  .dialog.centrata{ top:50%; transform:translate(-50%,-50%); max-height:calc(100dvh - 80px); }
   .dialog.mezzo{ top:50%; transform:translate(-50%,-50%); width:min(460px,92vw); }
   .btn-via{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; }
@@ -252,6 +255,12 @@
   .opt.on{ border-color:var(--violet); background:rgba(124,92,255,.14); color:#fff; }
   select{ background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:14px; min-width:230px; cursor:pointer; }
   select optgroup{ color:var(--muted); }
+  /* Aspetto delle scritte */
+  .asplab{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    margin:18px 0 8px; padding-top:14px; border-top:1px solid var(--line); }
+  .opt.lega.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
+  .picker.legato{ pointer-events:none; opacity:.4; }
+  select:disabled{ opacity:.4; }
   select option{ background:#201f2e; color:var(--ink); }
   input[type=range]{ flex:1; min-width:140px; accent-color:var(--violet); }
   .val{ font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--gold); width:52px; text-align:right; }
@@ -351,7 +360,7 @@
     <div class="login" id="attesaScreen" hidden>
       <h1>Sala d&rsquo;attesa</h1>
       <p id="attesaChi"></p>
-      <p>Il tuo accesso &egrave; arrivato, ma la scheda si apre solo dopo che qualcuno del gruppo ti ha dato il via libera. Chiedilo nel server: &egrave; un clic, non una pratica.</p>
+      <p id="attesaTesto"></p>
       <div class="attesabtn">
         <button class="btn-discord" id="btnRicontrolla">Ho avuto il via libera, ricontrolla</button>
         <button class="btn-out" id="btnEsciAttesa">Esci</button>
@@ -362,7 +371,7 @@
     <div class="login" id="pausaScreen" hidden>
       <h1>Scheda in pausa</h1>
       <p id="pausaChi"></p>
-      <p>La tua scheda &egrave; stata messa in pausa dalla moderazione: resta tutto dov&rsquo;&egrave;, ma per ora non si tocca. Per sapere perch&eacute; e per quanto, parlane nel server.</p>
+      <p id="pausaTesto"></p>
       <div class="attesabtn">
         <button class="btn-discord" id="btnRicontrollaPausa">Ricontrolla</button>
         <button class="btn-out" id="btnEsciPausa">Esci</button>
@@ -468,6 +477,33 @@
             <div id="namePicker" class="picker"></div>
           </div>
 
+
+          <div class="asplab">Aspetto delle altre scritte</div>
+          <div class="row">
+            <span class="rowlab">Scritta</span>
+            <span class="aspchips" id="aspChips_name"></span>
+          </div>
+          <div class="row">
+            <span class="rowlab">Font</span>
+            <select id="aspFont_name"></select>
+            <button class="opt lega" data-lega="font" data-dove="name">Segue il nome</button>
+          </div>
+          <div class="row top">
+            <span class="rowlab">Colore</span>
+            <div id="aspPicker_name" class="picker"></div>
+            <button class="opt lega" data-lega="colore" data-dove="name">Segue il nome</button>
+          </div>
+          <p class="subhint" id="aspNote_name"></p>
+
+          <div class="asplab">Uniforma tutta la scheda</div>
+          <div class="row">
+            <span class="rowlab">Aggancia</span>
+            <button class="opt" id="unifFont">Tutti i font al nome</button>
+            <button class="opt" id="unifColore">Tutti i colori al nome</button>
+            <button class="opt" id="unifVia">Slega tutto</button>
+          </div>
+          <p class="subhint">Aggancia le scritte di tutta la scheda a questo nome: da l&igrave; in poi si muovono con lui. Slegandole tornano come le avevi lasciate.</p>
+
           <div id="capSection" style="display:none">
             <div class="row top">
               <span class="rowlab">Colore capolettera</span>
@@ -496,7 +532,7 @@
 
     <div class="modal" id="modalXp" hidden>
       <div class="backdrop" data-close="xp"></div>
-      <div class="dialog" id="dialogXp">
+      <div class="dialog centrata" id="dialogXp">
         <div class="dlghead">
           <h2>Esperienza e livello</h2>
           <button class="dlgx" data-close="xp" aria-label="Chiudi">&times;</button>
@@ -531,6 +567,24 @@
             <div id="xpPicker2" class="picker"></div>
           </div>
 
+
+          <div class="asplab">Aspetto delle scritte</div>
+          <div class="row">
+            <span class="rowlab">Scritta</span>
+            <span class="aspchips" id="aspChips_xp"></span>
+          </div>
+          <div class="row">
+            <span class="rowlab">Font</span>
+            <select id="aspFont_xp"></select>
+            <button class="opt lega" data-lega="font" data-dove="xp">Segue il nome</button>
+          </div>
+          <div class="row top">
+            <span class="rowlab">Colore</span>
+            <div id="aspPicker_xp" class="picker"></div>
+            <button class="opt lega" data-lega="colore" data-dove="xp">Segue il nome</button>
+          </div>
+          <p class="subhint" id="aspNote_xp"></p>
+
           <table class="xptable" id="xpTable">
             <thead><tr><th>Punti esperienza</th><th>Livello</th><th>Competenza</th></tr></thead>
             <tbody></tbody>
@@ -550,7 +604,7 @@
 
     <div class="modal" id="modalClass" hidden>
       <div class="backdrop" data-close="class"></div>
-      <div class="dialog" id="dialogClass">
+      <div class="dialog centrata" id="dialogClass">
         <div class="dlghead">
           <h2>Scelta della classe</h2>
           <button class="dlgx" data-close="class" aria-label="Chiudi">&times;</button>
@@ -562,6 +616,23 @@
           </div>
           <div class="cwarn" id="cwarn"></div>
           <div class="chosen" id="chosen"></div>
+
+          <div class="asplab">Aspetto delle scritte</div>
+          <div class="row">
+            <span class="rowlab">Scritta</span>
+            <span class="aspchips" id="aspChips_class"></span>
+          </div>
+          <div class="row">
+            <span class="rowlab">Font</span>
+            <select id="aspFont_class"></select>
+            <button class="opt lega" data-lega="font" data-dove="class">Segue il nome</button>
+          </div>
+          <div class="row top">
+            <span class="rowlab">Colore</span>
+            <div id="aspPicker_class" class="picker"></div>
+            <button class="opt lega" data-lega="colore" data-dove="class">Segue il nome</button>
+          </div>
+          <p class="subhint" id="aspNote_class"></p>
         </div>
         <div class="dlgbar" id="barClass">
           <button class="btn-reset" data-reset="Class">Azzera</button>
@@ -770,8 +841,33 @@ var state={
   emblemMode:"auto",
   classes:[],
   xp:0,
-  xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E"
+  xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
+  testi:null   // riempito subito sotto, quando TESTI e' stato dichiarato
 };
+
+/* ================= ASPETTO DELLE SCRITTE =================
+   Ogni scritta della scheda e' registrata qui una volta sola: font e colore
+   suoi, piu' due agganci al nome (uno per il font, uno per il colore).
+   I valori di partenza sono quelli che la scheda ha gia' nel foglio di stile,
+   quindi finche' non si tocca niente non cambia niente.
+   Quando arriveranno i riquadri nuovi (caratteristiche, tiri salvezza...)
+   basta aggiungere una riga qui e i comandi compaiono da soli. */
+var TESTI=[
+  { id:"etNome",    dove:"name",  nome:"Etichetta",            sel:"#eyebrow",             font:"",       colore:"#9A97AD" },
+  { id:"etLivello", dove:"xp",    nome:"Etichetta",            sel:"#levelPanel .eyebrow", font:"",       colore:"#9A97AD" },
+  { id:"numLv",     dove:"xp",    nome:"Numero del livello",   sel:"#lvNum",               font:"cinzel", colore:"#E0B15E" },
+  { id:"txtPE",     dove:"xp",    nome:"Riga dei PE",          sel:"#xpTxt, #lvMax",       font:"",       colore:"#9A97AD" },
+  { id:"numPE",     dove:"xp",    nome:"Numeri dei PE",        sel:"#xpTxt b",             font:"",       colore:"#E8E6F0" },
+  { id:"etClasse",  dove:"class", nome:"Etichetta",            sel:"#classPanel .eyebrow", font:"",       colore:"#9A97AD" },
+  { id:"nomeCl",    dove:"class", nome:"Nome della classe",    sel:".cn",                  font:"cinzel", colore:"#E8E6F0" },
+  { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" }
+];
+var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
+function testiDiPartenza(){
+  var o={};
+  TESTI.forEach(function(t){ o[t.id]={ font:t.font, colore:t.colore, legaFont:false, legaColore:false }; });
+  return o;
+}
 
 /* Valori di partenza, usati dai tasti Azzera */
 var DEF_NAME={ font:"cinzel", size:40, align:"left", bold:true, italic:false, underline:false,
@@ -779,17 +875,33 @@ var DEF_NAME={ font:"cinzel", size:40, align:"left", bold:true, italic:false, un
   nameColor:"#E8E6F0", capColor:"#E0B15E", emblemMode:"auto" };
 var DEF_XP={ xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E" };
 
+state.testi = testiDiPartenza();
+
 var elName=document.getElementById("name"), elHeader=document.getElementById("header"),
     elEyebrow=document.getElementById("eyebrow"), elReadout=document.getElementById("readout"),
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
 var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2"];
+/* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
+   ma si rilegge una scritta alla volta, in applicaDati. */
 
 /* Legge un oggetto scheda e lo riversa nello stato */
 function applicaDati(o){
   if(!o || typeof o!=="object") return;
   SAVE_FIELDS.forEach(function(k){ if(o[k]!==undefined) state[k]=o[k]; });
+  // le scritte si travasano una per una invece di copiare l'oggetto intero:
+  // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
+  state.testi = testiDiPartenza();
+  if(o.testi && typeof o.testi==="object"){
+    TESTI.forEach(function(t){
+      var v=o.testi[t.id], d=state.testi[t.id];
+      if(!v || typeof v!=="object") return;
+      if(v.font==="" || FONTS[v.font]) d.font=v.font;
+      if(typeof v.colore==="string" && /^#[0-9a-fA-F]{6}$/.test(v.colore)) d.colore=v.colore;
+      d.legaFont=!!v.legaFont; d.legaColore=!!v.legaColore;
+    });
+  }
   if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
   elName.textContent = (typeof o.name==="string") ? o.name : "";
@@ -798,6 +910,7 @@ function applicaDati(o){
 function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
   o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
+  o.testi=state.testi;
   return o;
 }
 
@@ -850,7 +963,7 @@ function chiediUscita(){
 }
 window.addEventListener("beforeunload", function(e){
   // il browser non lascia scrivere il nostro testo qui dentro: mostra il suo
-  if(!utente || !sporco()) return;
+  if(!utente || uscitaForzata || !sporco()) return;
   e.preventDefault(); e.returnValue="";
 });
 
@@ -962,6 +1075,8 @@ function apply(){
   if(state.smallcaps)fmt.push("maiuscoletto"); if(state.neon)fmt.push("neon"); if(state.dropcap)fmt.push("capolettera");
   var alignIt=state.align==="center"?"al centro":(state.align==="right"?"a destra":"a sinistra");
   var embIt = state.emblemMode==="auto" ? "automatico" : (state.emblemMode==="none" ? "nessuno" : BY_KEY[state.emblemMode].name+" (manuale)");
+  applicaTesti();
+  ["name","xp","class"].forEach(sincronizzaAspetto);
   aggiornaSalva();
   elReadout.innerHTML="Scelta attuale: <b>"+FONT_NAME[state.font]+"</b>, <b>"+state.size+"px</b>, "+alignIt
     +", formato: <b>"+(fmt.length?fmt.join(", "):"nessuno")+"</b>, colore nome <b>"+state.nameColor.toUpperCase()+"</b>"
@@ -1058,9 +1173,14 @@ function cancelReset(which){
   document.getElementById("cfm"+which).hidden=true;
   document.getElementById("bar"+which).hidden=false;
 }
+function azzeraTesti(dove){
+  var d=testiDiPartenza();
+  TESTI.forEach(function(t){ if(t.dove===dove) state.testi[t.id]=d[t.id]; });
+}
 function doReset(which){
   if(which==="Name"){
     for(var k in DEF_NAME){ state[k]=DEF_NAME[k]; }
+    azzeraTesti("name");
     elName.textContent="";
     elFont.value=state.font;
     elEmblem.value=state.emblemMode;
@@ -1070,8 +1190,10 @@ function doReset(which){
     renderCapSuggestions();
   } else if(which==="Class"){
     state.classes=[];
+    azzeraTesti("class");
   } else if(which==="Xp"){
     state.xp=0;
+    azzeraTesti("xp");
     for(var j in DEF_XP){ state[j]=DEF_XP[j]; }
     document.getElementById("xpInput").value=0;
     xpPicker1.setHex(state.xpColor1);
@@ -1127,6 +1249,7 @@ function renderLevel(){
   else if(free<0){ fl.className="freelv over"; fl.textContent=(-free)+(free===-1?" livello in eccesso":" livelli in eccesso"); }
   else fl.className="freelv hidden";
 
+  applicaTesti();   // la riga dei PE si riscrive ogni volta: idem
   setActive("data-xpstyle", state.xpStyle);
   document.getElementById("xpc1row").style.display = state.xpStyle==="name" ? "none" : "flex";
   document.getElementById("xpc2row").style.display = state.xpStyle==="grad" ? "flex" : "none";
@@ -1160,7 +1283,26 @@ function renderPanel(){
     return '<span class="cls"><span class="ce">'+emblemSVG(c.key)+'</span>'
       +'<span class="cn">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
   }).join('<span class="cdiv"></span>');
+  applicaTesti();   // i nomi delle classi sono appena nati: vanno dipinti
 }
+/* Prende il font e il colore buoni per una scritta: i suoi, oppure quelli
+   del nome se l'aggancio e' acceso. */
+function fontDi(id){ var s=state.testi[id]; var k = s.legaFont ? state.font : s.font; return k ? FONTS[k] : ""; }
+function coloreDi(id){ var s=state.testi[id]; return s.legaColore ? state.nameColor : s.colore; }
+
+/* Dipinge tutte le scritte. Va richiamata ogni volta che una parte della
+   scheda viene ridisegnata, perche' i pezzi nuovi nascono senza stile. */
+function applicaTesti(){
+  TESTI.forEach(function(t){
+    var f=fontDi(t.id), c=coloreDi(t.id);
+    var lista=document.querySelectorAll(t.sel);
+    for(var i=0;i<lista.length;i++){
+      lista[i].style.fontFamily=f;   // vuoto = torna quello del foglio di stile
+      lista[i].style.color=c;
+    }
+  });
+}
+
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog(); apply(); setHub(null); }
 
 FONT_GROUPS.forEach(function(g){
@@ -1176,6 +1318,90 @@ FONT_GROUPS.forEach(function(g){
   elEmblem.appendChild(og);
 })();
 
+/* I comandi dell'Aspetto: una fila di pastiglie per scegliere la scritta,
+   poi il font, il colore e i due agganci di quella scelta. Un solo picker per
+   finestra invece di uno per scritta: le finestre restano leggibili. */
+var aspSel={ name:"etNome", xp:"etLivello", class:"etClasse" }, aspPicker={}, aspFermo=false;
+
+function costruisciAspetto(dove){
+  var quali=TESTI.filter(function(t){ return t.dove===dove; });
+  document.getElementById("aspChips_"+dove).innerHTML = quali.map(function(t){
+    return '<button class="opt" data-asp="'+t.id+'" data-dove="'+dove+'">'+t.nome+'</button>';
+  }).join(" ");
+
+  var sel=document.getElementById("aspFont_"+dove);
+  var o=document.createElement("option"); o.value=""; o.textContent="Come adesso"; sel.appendChild(o);
+  FONT_GROUPS.forEach(function(g){
+    var og=document.createElement("optgroup"); og.label=g[0];
+    g[1].forEach(function(f){
+      var x=document.createElement("option"); x.value=f[0]; x.textContent=f[1]; x.style.fontFamily=f[2]; og.appendChild(x);
+    });
+    sel.appendChild(og);
+  });
+  sel.addEventListener("change", function(){
+    var s=state.testi[aspSel[dove]];
+    if(s.legaFont) return;
+    s.font=sel.value; applicaTesti(); sincronizzaAspetto(dove); aggiornaSalva();
+  });
+
+  aspPicker[dove]=makePicker(document.getElementById("aspPicker_"+dove), "#9A97AD", function(hex){
+    // setHex fa scattare questa funzione anche quando siamo noi a mettere il
+    // picker in pari: li' non si scrive niente, se no la scritta si prende il
+    // colore del nome (o una versione arrotondata del suo) senza chiederlo.
+    if(aspFermo) return;
+    var s=state.testi[aspSel[dove]];
+    if(s.legaColore) return;
+    s.colore=hex; applicaTesti(); aggiornaSalva();
+  });
+}
+
+function sincronizzaAspetto(dove){
+  var id=aspSel[dove], s=state.testi[id];
+  var chips=document.querySelectorAll('#aspChips_'+dove+' [data-asp]');
+  for(var i=0;i<chips.length;i++) chips[i].classList.toggle("on", chips[i].getAttribute("data-asp")===id);
+
+  var sel=document.getElementById("aspFont_"+dove);
+  sel.value = s.legaFont ? state.font : s.font;
+  sel.disabled = s.legaFont;
+
+  var host=document.getElementById("aspPicker_"+dove);
+  host.classList.toggle("legato", s.legaColore);
+  aspFermo=true;
+  try{ aspPicker[dove].setHex(s.legaColore ? state.nameColor : s.colore); }
+  finally{ aspFermo=false; }
+
+  document.querySelectorAll('[data-lega][data-dove="'+dove+'"]').forEach(function(b){
+    b.classList.toggle("on", b.getAttribute("data-lega")==="font" ? s.legaFont : s.legaColore);
+  });
+
+  var v=[];
+  if(s.legaFont) v.push("il font segue il nome");
+  if(s.legaColore) v.push("il colore segue il nome");
+  document.getElementById("aspNote_"+dove).textContent =
+    v.length ? TESTO[id].nome+": "+v.join(" e ")+". Cambia il nome e cambia anche questa."
+             : TESTO[id].nome+": font e colore suoi, non seguono il nome.";
+}
+
+function aspettoDaEventi(e){
+  var c=e.target.closest ? e.target.closest("[data-asp]") : null;
+  if(c){ var dv=c.getAttribute("data-dove"); aspSel[dv]=c.getAttribute("data-asp"); sincronizzaAspetto(dv); return true; }
+  var l=e.target.closest ? e.target.closest("[data-lega]") : null;
+  if(l){
+    var dove=l.getAttribute("data-dove"), s=state.testi[aspSel[dove]];
+    if(l.getAttribute("data-lega")==="font") s.legaFont=!s.legaFont; else s.legaColore=!s.legaColore;
+    applicaTesti(); sincronizzaAspetto(dove); aggiornaSalva(); return true;
+  }
+  return false;
+}
+
+function uniforma(cosa, acceso){
+  TESTI.forEach(function(t){
+    if(cosa!=="colore") state.testi[t.id].legaFont=acceso;
+    if(cosa!=="font") state.testi[t.id].legaColore=acceso;
+  });
+  applicaTesti(); ["name","xp","class"].forEach(sincronizzaAspetto); aggiornaSalva();
+}
+
 var modalName=document.getElementById("modalName"), modalClass=document.getElementById("modalClass"),
     modalXp=document.getElementById("modalXp");
 function positionDialog(dlg){
@@ -1186,8 +1412,8 @@ function positionDialog(dlg){
 function openName(){ modalName.hidden=false; elHeader.classList.add("raised"); positionDialog(document.getElementById("dialogName")); }
 /* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
    lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
-function openClass(){ modalClass.hidden=false; setHub(null); positionDialog(document.getElementById("dialogClass")); }
-function openXp(){ modalXp.hidden=false; renderXpDialog(); positionDialog(document.getElementById("dialogXp")); }
+function openClass(){ modalClass.hidden=false; setHub(null); }
+function openXp(){ modalXp.hidden=false; renderXpDialog(); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
@@ -1197,8 +1423,6 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(
 window.addEventListener("resize", function(){
   apply();
   if(!modalName.hidden) positionDialog(document.getElementById("dialogName"));
-  if(!modalClass.hidden) positionDialog(document.getElementById("dialogClass"));
-  if(!modalXp.hidden) positionDialog(document.getElementById("dialogXp"));
 });
 
 document.getElementById("xpInput").addEventListener("input", function(e){ setXP(e.target.value); });
@@ -1215,6 +1439,7 @@ elEmblem.addEventListener("change", function(e){ state.emblemMode=e.target.value
 document.getElementById("size").addEventListener("input", function(e){ state.size=parseInt(e.target.value,10); apply(); });
 
 document.addEventListener("click", function(e){
+  if(aspettoDaEventi(e)) return;
   var r=e.target.closest("[data-reset]"); if(r){ askReset(r.getAttribute("data-reset")); return; }
   var no=e.target.closest("[data-cancel]"); if(no){ cancelReset(no.getAttribute("data-cancel")); return; }
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }
@@ -1243,6 +1468,11 @@ document.getElementById("chosen").addEventListener("click", function(e){
 });
 
 /* ================= AVVIO ================= */
+["name","xp","class"].forEach(costruisciAspetto);
+document.getElementById("unifFont").addEventListener("click", function(){ uniforma("font", true); });
+document.getElementById("unifColore").addEventListener("click", function(){ uniforma("colore", true); });
+document.getElementById("unifVia").addEventListener("click", function(){ uniforma("tutto", false); });
+
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
@@ -1259,9 +1489,75 @@ function sincronizzaComandi(){
   capPicker.setHex(state.capColor);
   xpPicker1.setHex(state.xpColor1);
   xpPicker2.setHex(state.xpColor2);
+  ["name","xp","class"].forEach(sincronizzaAspetto);
   renderCapSuggestions();
   renderAll();
 }
+
+var TESTO_PAUSA  = "La tua scheda \u00E8 stata messa momentaneamente in pausa, per sapere perch\u00E9 apri ticket e chiedi informazioni allo staff.";
+var TESTO_ATTESA = "Il tuo accesso \u00E8 stato inviato, rimani in attesa di un'approvazione.";
+var TESTO_TOLTO  = "Il tuo accesso \u00E8 stato momentaneamente rimosso. I tempi di attesa saranno lunghi\u2026 speriamo di no.";
+
+var statoOra="", uscitaForzata=false;
+
+/* Una sola regola per decidere cosa vede la persona, usata sia all'avvio sia
+   quando arriva un cambiamento in diretta. La pausa viene prima dell'accesso:
+   se uno e' in pausa non importa che sia approvato. */
+function decidiSchermata(dati){
+  var dev = ruoli.indexOf("sviluppatore")>=0;
+  if(dati.in_pausa && !dev) return "pausa";
+  if(!dati.approvato && !dev) return "attesa";
+  return "sheet";
+}
+
+function mostraBlocco(quale, dati){
+  statoOra = quale;
+  closeAll();
+  var chi = (dati.nome || dati.username) || "";
+  if(quale==="pausa"){
+    document.getElementById("pausaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
+    document.getElementById("pausaTesto").textContent = TESTO_PAUSA;
+  } else {
+    document.getElementById("attesaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
+    document.getElementById("attesaTesto").textContent = dati.accesso_tolto_il ? TESTO_TOLTO : TESTO_ATTESA;
+  }
+  mostra(quale);
+}
+
+/* Arriva un cambiamento mentre la persona sta usando il sito: si chiude
+   subito, senza aspettare che ricarichi. Quello che non aveva salvato lo
+   perde: e' esattamente il senso della pausa. */
+function cambioStato(dati){
+  if(!dati) return;
+  var vuole = decidiSchermata(dati);
+  if(vuole===statoOra) return;
+  if(vuole==="sheet"){ uscitaForzata=true; location.reload(); return; }  // riammesso: riparto pulito
+  mostraBlocco(vuole, dati);
+}
+
+var CAMPI_MIEI = "username,nome,approvato,in_pausa,accesso_tolto_il";
+
+function ascoltaProfilo(){
+  try{
+    sb.channel("mio-profilo-"+utente.id)
+      .on("postgres_changes",
+          { event:"UPDATE", schema:"public", table:"profili", filter:"user_id=eq."+utente.id },
+          function(msg){ cambioStato(msg && msg.new); })
+      .subscribe();
+  }catch(e){
+    // se la diretta non parte il sito funziona lo stesso: il database
+    // rifiuta comunque di salvare, e al rientro nella scheda si ricontrolla
+    console.warn("la diretta non e' partita:", e);
+  }
+}
+
+// rete di sicurezza: tornando sulla scheda del browser si ricontrolla comunque
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState!=="visible" || !utente) return;
+  sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
+    .then(function(r){ if(r && !r.error) cambioStato(r.data); })
+    .catch(function(){});
+});
 
 function mostra(quale){
   document.getElementById("boot").hidden = quale!=="boot";
@@ -1591,7 +1887,7 @@ function avvia(){
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
       sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
       sb.rpc("sync_profilo"),
-      sb.from("profili").select("username,nome,approvato,in_pausa").eq("user_id", utente.id).maybeSingle()
+      sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
     ]).then(function(r){
       var scheda=r[0], rr=r[1], prof=r[2], mio=r[3];
       // se il profilo non si aggiorna la scheda deve funzionare lo stesso:
@@ -1601,25 +1897,13 @@ function avvia(){
       ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
 
       var dati = (mio && mio.data) || {};
-      var chi = dati.nome || dati.username || "";
-      var dev = ruoli.indexOf("sviluppatore")>=0;
 
-      // In pausa la scheda non si apre proprio: resta tutto dov'e' e non si
-      // tocca. Lo sviluppatore non ci finisce mai, il database non lo permette.
-      if(dati.in_pausa && !dev){
-        document.getElementById("pausaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
-        mostra("pausa");
-        return;
-      }
-
-      // Sala d'attesa: senza via libera il database non fa salvare niente,
-      // quindi è inutile aprire la scheda e far perdere tempo alla persona.
-      // Una posizione non basta piu': il via libera serve a tutti.
-      if(!dati.approvato && !dev){
-        document.getElementById("attesaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
-        mostra("attesa");
-        return;
-      }
+      // In pausa la scheda non si apre proprio; senza via libera nemmeno,
+      // tanto il database non farebbe salvare niente. Lo sviluppatore entra
+      // sempre: il database non lo lascia chiudere fuori.
+      var quale = decidiSchermata(dati);
+      if(quale!=="sheet"){ mostraBlocco(quale, dati); ascoltaProfilo(); return; }
+      statoOra="sheet";
 
       if(scheda.error){
         document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
@@ -1628,10 +1912,12 @@ function avvia(){
       // la navigazione (e quindi la sezione Controllo) esiste solo per chi e' nello staff
       if(ruoli.length) document.getElementById("nav").hidden = false;
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
-      salvato=foto();           // da qui in poi ogni differenza accende il tasto
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
       sincronizzaComandi();     // e solo dopo si misura il nome
+      salvato=foto();           // fotografia a comandi fermi: da qui ogni differenza accende il tasto
+      aggiornaSalva();
+      ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }
     });

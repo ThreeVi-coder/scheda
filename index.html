@@ -12,6 +12,7 @@
     --bg:#111019; --panel:#1a1926; --panel2:#201f2e; --line:#2e2d3e;
     --ink:#e8e6f0; --muted:#9a97ad; --violet:#a78bfa; --violet-2:#7c5cff; --gold:#e0b15e; --danger:#e5686d;
     --r-master:#e5686d; --r-supporto:#5c8dfa; --r-moderazione:#7fd1c0; --r-fondatore:#a78bfa; --r-sviluppatore:#e0b15e;
+    --r-stella:#cfd3e0;
     --ui:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   }
   *{box-sizing:border-box}
@@ -60,6 +61,10 @@
     background:rgba(167,139,250,.14); padding:2px 7px; border-radius:999px; }
   .tag-sviluppatore{ font-size:10px; color:var(--r-sviluppatore); border:1px solid rgba(224,177,94,.45);
     background:rgba(224,177,94,.12); padding:2px 7px; border-radius:999px; }
+  .tag-stella{ font-size:10px; color:var(--r-stella); border:1px solid rgba(207,211,224,.45);
+    background:rgba(207,211,224,.12); padding:2px 7px; border-radius:999px; }
+  .tag-pausa{ font-size:10px; color:var(--danger); border:1px solid rgba(229,104,109,.55);
+    background:rgba(229,104,109,.18); padding:2px 7px; border-radius:999px; font-weight:600; }
   /* pannello dello staff */
   .chiprow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
   .chip{ font-size:10px; padding:3px 9px; border-radius:999px; cursor:pointer; font-family:var(--ui);
@@ -70,6 +75,10 @@
   .chip.on.c-supporto{ color:var(--r-supporto); border-color:rgba(92,141,250,.55); background:rgba(92,141,250,.14); }
   .chip.on.c-moderazione{ color:var(--r-moderazione); border-color:rgba(127,209,192,.5); background:rgba(127,209,192,.12); }
   .chip.on.c-fondatore{ color:var(--r-fondatore); border-color:rgba(167,139,250,.55); background:rgba(167,139,250,.14); }
+  .chip.on.c-stella{ color:var(--r-stella); border-color:rgba(207,211,224,.55); background:rgba(207,211,224,.14); }
+  .chip.c-pausa{ border-color:rgba(229,104,109,.3); }
+  .chip.on.c-pausa{ color:#fff; border-color:transparent; background:var(--danger); font-weight:600; }
+  .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
   .attesabtn{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
@@ -348,6 +357,16 @@
         <button class="btn-out" id="btnEsciAttesa">Esci</button>
       </div>
       <div class="loginerr" id="attesaErr"></div>
+    </div>
+
+    <div class="login" id="pausaScreen" hidden>
+      <h1>Scheda in pausa</h1>
+      <p id="pausaChi"></p>
+      <p>La tua scheda &egrave; stata messa in pausa dalla moderazione: resta tutto dov&rsquo;&egrave;, ma per ora non si tocca. Per sapere perch&eacute; e per quanto, parlane nel server.</p>
+      <div class="attesabtn">
+        <button class="btn-discord" id="btnRicontrollaPausa">Ricontrolla</button>
+        <button class="btn-out" id="btnEsciPausa">Esci</button>
+      </div>
     </div>
 
     <div id="sheet" hidden>
@@ -1248,6 +1267,7 @@ function mostra(quale){
   document.getElementById("boot").hidden = quale!=="boot";
   document.getElementById("loginScreen").hidden = quale!=="login";
   document.getElementById("attesaScreen").hidden = quale!=="attesa";
+  document.getElementById("pausaScreen").hidden = quale!=="pausa";
   document.getElementById("sheet").hidden = quale!=="sheet";
 }
 
@@ -1273,7 +1293,15 @@ function mostraPane(quale){
 }
 
 var ctrlCaricato=false, profiliCache=[], ruoliDi={};
+
+/* Chi puo' cosa. Le stesse regole stanno anche nel database, che e' quello
+   che decide davvero: qui servono solo a non mostrare tasti che verrebbero
+   rifiutati. Il fondatore non compare negli accessi: assegna le posizioni. */
 function puoAssegnare(){ return haRuolo("fondatore") || haRuolo("sviluppatore"); }
+function puoDareAccesso(){ return haRuolo("sviluppatore") || haRuolo("stella") || haRuolo("supporto"); }
+function puoTogliereAccesso(){ return haRuolo("sviluppatore") || haRuolo("stella") || haRuolo("moderazione"); }
+function puoPausare(){ return haRuolo("sviluppatore") || haRuolo("stella") || haRuolo("moderazione"); }
+function puoStaff(){ return puoAssegnare() || puoDareAccesso() || puoTogliereAccesso() || puoPausare(); }
 
 function nickCell(p){
   var disp = p.nome && p.nome!==p.username ? ' <small>('+esc(p.nome)+')</small>' : '';
@@ -1288,7 +1316,7 @@ function caricaControllo(){
   body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
 
   var richieste=[
-    sb.from("profili").select("user_id,username,nome,avatar_url,approvato"),
+    sb.from("profili").select("user_id,username,nome,avatar_url,approvato,in_pausa"),
     sb.from("schede").select("user_id,dati"),
     sb.from("ruoli").select("user_id,ruolo")
   ];
@@ -1306,7 +1334,7 @@ function caricaControllo(){
     });
     mappaRuoli(r[2] ? (r[2].data||[]) : []);
     disegnaPersonaggi(r[1].data||[]);
-    if(puoAssegnare()){
+    if(puoStaff()){
       disegnaRuoli();
       document.getElementById("ruoliBlock").hidden=false;
     }
@@ -1318,8 +1346,9 @@ function caricaControllo(){
 }
 
 function inAttesa(p){
-  // chi e' nello staff entra comunque: la posizione vale come approvazione
-  return !p.approvato && !(ruoliDi[p.user_id]||[]).length;
+  // una posizione non vale piu' come accesso: il via libera lo deve avere
+  // chiunque. L'unico che entra sempre e' lo sviluppatore.
+  return !p.approvato && (ruoliDi[p.user_id]||[]).indexOf("sviluppatore")<0;
 }
 
 function disegnaPersonaggi(righeSchede){
@@ -1344,6 +1373,7 @@ function disegnaPersonaggi(righeSchede){
     var lv = haScheda ? levelFromXP(xp) : '<span class="vuoto">&mdash;</span>';
     var xt = haScheda ? numIt(xp) : '<span class="vuoto">nessuna scheda</span>';
     var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
+    if(p.in_pausa) marchio += ' <span class="tag-pausa">in pausa</span>';
     return '<tr><td>'+nickCell(p)+marchio+'</td><td class="pgname">'+pg+'</td>'
          + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td></tr>';
   }).join("");
@@ -1352,6 +1382,7 @@ function disegnaPersonaggi(righeSchede){
 /* ---- pannello dello staff ---- */
 var ASSEGNABILI=[
   { k:"fondatore",   soloDev:true  },
+  { k:"stella",      soloDev:true  },
   { k:"master",      soloDev:false },
   { k:"supporto",    soloDev:false },
   { k:"moderazione", soloDev:false }
@@ -1365,12 +1396,21 @@ function mappaRuoli(righe){
 }
 function msgRuoli(t){ document.getElementById("ruoliErr").textContent=t||""; }
 
+function noteStaff(){
+  var v=[];
+  if(puoDareAccesso() && puoTogliereAccesso()) v.push("dai e togli l'accesso");
+  else if(puoDareAccesso()) v.push("dai l'accesso");
+  else if(puoTogliereAccesso()) v.push("togli l'accesso");
+  if(puoPausare()) v.push("metti in pausa");
+  if(haRuolo("sviluppatore")) v.push("assegni tutte le posizioni tranne sviluppatore");
+  else if(haRuolo("fondatore")) v.push("assegni master, supporto e moderazione");
+  return v.join(" \u00B7 ");
+}
+
 function disegnaRuoli(){
   var dev = haRuolo("sviluppatore");
   var body = document.getElementById("ruoliBody");
-  document.getElementById("ruoliNote").textContent = dev
-    ? "assegni tutto tranne la posizione di sviluppatore"
-    : "assegni master, supporto e moderazione";
+  document.getElementById("ruoliNote").textContent = noteStaff();
 
   if(!profiliCache.length){
     body.innerHTML='<tr><td colspan="2" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
@@ -1378,26 +1418,45 @@ function disegnaRuoli(){
   }
   body.innerHTML = profiliCache.map(function(p){
     var suoi = ruoliDi[p.user_id]||[];
+    var sonoIo = (p.user_id===utente.id);
+    var loroDev = suoi.indexOf("sviluppatore")>=0;
     var pezzi = [];
 
-    // interruttore dell'accesso: primo, perché è quello che decide se la persona esiste
-    var acceso = p.approvato || suoi.length>0;
-    var bloccato = (p.user_id===utente.id) || suoi.length>0;
-    var perche = (p.user_id===utente.id) ? "non puoi cambiare la tua approvazione"
-               : (suoi.length>0 ? "\u00E8 nello staff, quindi entra comunque" : "");
+    // 1. l'accesso: e' quello che decide se la persona entra o resta fuori
+    var acceso = p.approvato || loroDev;
+    var possoAccesso = !sonoIo && !loroDev && (acceso ? puoTogliereAccesso() : puoDareAccesso());
+    var perche = sonoIo ? "non puoi cambiare il tuo accesso"
+               : loroDev ? "lo sviluppatore non si chiude fuori"
+               : acceso ? "non hai il permesso di togliere l'accesso"
+               : "non hai il permesso di dare l'accesso";
     pezzi.push('<button class="chip c-accesso'+(acceso?' on':'')+'" data-user="'+esc(p.user_id)
-             + '" data-azione="accesso"'+(bloccato?' disabled title="'+perche+'"':'')+'>accesso</button>');
+             + '" data-azione="accesso"'+(possoAccesso?'':' disabled title="'+perche+'"')+'>accesso</button>');
 
-    // posizioni che questa persona ha ma che io non posso toccare: le mostro e basta
-    if(suoi.indexOf("sviluppatore")>=0) pezzi.push('<span class="tag-sviluppatore">sviluppatore</span>');
-    if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-fondatore">fondatore</span>');
+    // 2. la pausa: congela la scheda mentre la moderazione decide
+    var possoPausa = !sonoIo && !loroDev && puoPausare();
+    var perchePausa = sonoIo ? "non puoi mettere in pausa te stesso"
+                    : loroDev ? "lo sviluppatore non si mette in pausa"
+                    : "non hai il permesso di mettere in pausa";
+    pezzi.push('<button class="chip c-pausa'+(p.in_pausa?' on':'')+'" data-user="'+esc(p.user_id)
+             + '" data-azione="pausa"'+(possoPausa?'':' disabled title="'+perchePausa+'"')+'>pausa</button>');
 
-    ASSEGNABILI.forEach(function(a){
-      if(a.soloDev && !dev) return;
-      var on = suoi.indexOf(a.k)>=0;
-      pezzi.push('<button class="chip c-'+a.k+(on?' on':'')+'" data-user="'+esc(p.user_id)
-               + '" data-ruolo="'+a.k+'">'+a.k+'</button>');
-    });
+    // 3. le posizioni, solo per chi le assegna
+    if(puoAssegnare()){
+      pezzi.push('<span class="sep"></span>');
+      // quelle che questa persona ha ma che io non posso toccare: le mostro e basta
+      if(loroDev) pezzi.push('<span class="tag-sviluppatore">sviluppatore</span>');
+      if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-fondatore">fondatore</span>');
+      if(!dev && suoi.indexOf("stella")>=0) pezzi.push('<span class="tag-stella">stella</span>');
+      ASSEGNABILI.forEach(function(a){
+        if(a.soloDev && !dev) return;
+        var on = suoi.indexOf(a.k)>=0;
+        pezzi.push('<button class="chip c-'+a.k+(on?' on':'')+'" data-user="'+esc(p.user_id)
+                 + '" data-ruolo="'+a.k+'">'+a.k+'</button>');
+      });
+    } else {
+      // non le assegno, ma vedere chi e' chi serve per decidere
+      suoi.forEach(function(k){ pezzi.push('<span class="tag-'+k+'">'+k+'</span>'); });
+    }
     return '<tr><td>'+nickCell(p)+'</td><td><div class="chiprow">'+pezzi.join(" ")+'</div></td></tr>';
   }).join("");
 }
@@ -1430,6 +1489,21 @@ function toggleAccesso(userId, btn){
   });
 }
 
+function togglePausa(userId, btn){
+  msgRuoli("");
+  btn.disabled=true;
+  var p = profiliCache.filter(function(x){ return x.user_id===userId; })[0];
+  var nuovo = !(p && p.in_pausa);
+  sb.rpc("pausa", { p_user:userId, p_valore:nuovo }).then(function(res){
+    if(res && res.error){ msgRuoli("Il database ha rifiutato: "+res.error.message); }
+    ctrlCaricato=false; caricaControllo();   // si rilegge tutto: la verita' sta li'
+  }).catch(function(e){
+    btn.disabled=false;
+    msgRuoli("Qualcosa non ha risposto: riprova.");
+    console.error(e);
+  });
+}
+
 function toggleRuolo(userId, ruolo, btn){
   msgRuoli("");
   btn.disabled=true;
@@ -1455,6 +1529,7 @@ function disegnaAuthbar(){
   var tag="";
   if(haRuolo("sviluppatore")) tag+=' <span class="tag-sviluppatore">sviluppatore</span>';
   if(haRuolo("fondatore")) tag+=' <span class="tag-fondatore">fondatore</span>';
+  if(haRuolo("stella")) tag+=' <span class="tag-stella">stella</span>';
   if(haRuolo("master")) tag+=' <span class="tag-master">master</span>';
   if(haRuolo("supporto")) tag+=' <span class="tag-supporto">supporto</span>';
   if(haRuolo("moderazione")) tag+=' <span class="tag-moderazione">moderazione</span>';
@@ -1487,7 +1562,9 @@ document.getElementById("btnCtrlReload").addEventListener("click", function(){
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
   if(!b || b.disabled) return;
-  if(b.getAttribute("data-azione")==="accesso") toggleAccesso(b.getAttribute("data-user"), b);
+  var azione = b.getAttribute("data-azione");
+  if(azione==="accesso") toggleAccesso(b.getAttribute("data-user"), b);
+  else if(azione==="pausa") togglePausa(b.getAttribute("data-user"), b);
   else toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
 });
 
@@ -1495,6 +1572,10 @@ document.getElementById("btnEsciSenza").addEventListener("click", esciDavvero);
 document.getElementById("btnSalvaEsci").addEventListener("click", function(){ saveState(esciDavvero); });
 
 document.getElementById("btnRicontrolla").addEventListener("click", function(){ location.reload(); });
+document.getElementById("btnRicontrollaPausa").addEventListener("click", function(){ location.reload(); });
+document.getElementById("btnEsciPausa").addEventListener("click", function(){
+  sb.auth.signOut().then(function(){ location.reload(); });
+});
 document.getElementById("btnEsciAttesa").addEventListener("click", function(){
   sb.auth.signOut().then(function(){ location.reload(); });
 });
@@ -1510,7 +1591,7 @@ function avvia(){
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
       sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
       sb.rpc("sync_profilo"),
-      sb.from("profili").select("username,nome,approvato").eq("user_id", utente.id).maybeSingle()
+      sb.from("profili").select("username,nome,approvato,in_pausa").eq("user_id", utente.id).maybeSingle()
     ]).then(function(r){
       var scheda=r[0], rr=r[1], prof=r[2], mio=r[3];
       // se il profilo non si aggiorna la scheda deve funzionare lo stesso:
@@ -1519,11 +1600,22 @@ function avvia(){
 
       ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
 
+      var dati = (mio && mio.data) || {};
+      var chi = dati.nome || dati.username || "";
+      var dev = ruoli.indexOf("sviluppatore")>=0;
+
+      // In pausa la scheda non si apre proprio: resta tutto dov'e' e non si
+      // tocca. Lo sviluppatore non ci finisce mai, il database non lo permette.
+      if(dati.in_pausa && !dev){
+        document.getElementById("pausaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
+        mostra("pausa");
+        return;
+      }
+
       // Sala d'attesa: senza via libera il database non fa salvare niente,
       // quindi è inutile aprire la scheda e far perdere tempo alla persona.
-      var approvato = !!(mio && mio.data && mio.data.approvato);
-      if(!approvato && !ruoli.length){
-        var chi = (mio && mio.data && (mio.data.nome || mio.data.username)) || "";
+      // Una posizione non basta piu': il via libera serve a tutti.
+      if(!dati.approvato && !dev){
         document.getElementById("attesaChi").textContent = chi ? "Sei entrato come " + chi + "." : "";
         mostra("attesa");
         return;

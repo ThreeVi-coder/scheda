@@ -11,6 +11,7 @@
   :root{
     --bg:#111019; --panel:#1a1926; --panel2:#201f2e; --line:#2e2d3e;
     --ink:#e8e6f0; --muted:#9a97ad; --violet:#a78bfa; --violet-2:#7c5cff; --gold:#e0b15e; --danger:#e5686d;
+    --r-master:#e5686d; --r-supporto:#5c8dfa; --r-moderazione:#7fd1c0; --r-fondatore:#a78bfa; --r-sviluppatore:#e0b15e;
     --ui:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   }
   *{box-sizing:border-box}
@@ -32,33 +33,43 @@
   .btn-discord:hover{ filter:brightness(1.12); }
   .loginerr{ color:var(--danger); font-size:12.5px; min-height:16px; }
 
-  .authbar{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px; }
+  .authbar{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  /* Un solo Salva per tutta la scheda: spento finche' non c'e' niente da salvare */
+  .btn-salva{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:8px; padding:6px 14px; font-size:12px; font-family:var(--ui); cursor:default; }
+  .btn-salva.on{ border:1px solid transparent; background:linear-gradient(150deg,var(--violet-2),#5b45c9);
+    color:#fff; font-weight:600; cursor:pointer; }
+  .btn-salva.on:hover{ filter:brightness(1.08); }
+  .salvamsg{ font-size:11.5px; color:var(--gold); }
+  .salvamsg.ko{ color:var(--danger); }
   .who{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--muted); }
   .who img{ width:26px; height:26px; border-radius:50%; border:1px solid var(--line); }
   .who b{ color:var(--ink); font-weight:600; }
-  .tag-master{ font-size:10px; color:var(--gold); border:1px solid rgba(224,177,94,.4);
-    background:rgba(224,177,94,.1); padding:2px 7px; border-radius:999px; }
-  .tag-tech{ font-size:10px; color:var(--violet); border:1px solid rgba(167,139,250,.45);
-    background:rgba(124,92,255,.12); padding:2px 7px; border-radius:999px; }
+  /* colori delle posizioni: master rosso, supporto blu, moderazione verde acqua,
+     fondatore viola, sviluppatore oro (l'oro si e' liberato quando master e' passato al rosso) */
+  .tag-master{ font-size:10px; color:var(--r-master); border:1px solid rgba(229,104,109,.45);
+    background:rgba(229,104,109,.12); padding:2px 7px; border-radius:999px; }
+  .tag-supporto{ font-size:10px; color:var(--r-supporto); border:1px solid rgba(92,141,250,.5);
+    background:rgba(92,141,250,.14); padding:2px 7px; border-radius:999px; }
   .btn-out{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; }
   .btn-out:hover{ color:var(--danger); border-color:var(--danger); }
-  .tag-mod{ font-size:10px; color:#7fd1c0; border:1px solid rgba(127,209,192,.4);
-    background:rgba(127,209,192,.1); padding:2px 7px; border-radius:999px; }
-  .tag-found{ font-size:10px; color:var(--danger); border:1px solid rgba(229,104,109,.4);
-    background:rgba(229,104,109,.1); padding:2px 7px; border-radius:999px; }
-  .tag-dev{ font-size:10px; color:#8ab4f8; border:1px solid rgba(138,180,248,.45);
-    background:rgba(138,180,248,.12); padding:2px 7px; border-radius:999px; }
-  /* pannello delle targhette */
+  .tag-moderazione{ font-size:10px; color:var(--r-moderazione); border:1px solid rgba(127,209,192,.45);
+    background:rgba(127,209,192,.12); padding:2px 7px; border-radius:999px; }
+  .tag-fondatore{ font-size:10px; color:var(--r-fondatore); border:1px solid rgba(167,139,250,.5);
+    background:rgba(167,139,250,.14); padding:2px 7px; border-radius:999px; }
+  .tag-sviluppatore{ font-size:10px; color:var(--r-sviluppatore); border:1px solid rgba(224,177,94,.45);
+    background:rgba(224,177,94,.12); padding:2px 7px; border-radius:999px; }
+  /* pannello dello staff */
   .chiprow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
   .chip{ font-size:10px; padding:3px 9px; border-radius:999px; cursor:pointer; font-family:var(--ui);
     border:1px dashed var(--line); background:transparent; color:var(--muted); transition:.12s; }
   .chip:hover:not([disabled]){ border-style:solid; color:var(--ink); }
   .chip.on{ border-style:solid; }
-  .chip.on.c-master{ color:var(--gold); border-color:rgba(224,177,94,.5); background:rgba(224,177,94,.12); }
-  .chip.on.c-supporto{ color:var(--violet); border-color:rgba(167,139,250,.5); background:rgba(124,92,255,.14); }
-  .chip.on.c-moderazione{ color:#7fd1c0; border-color:rgba(127,209,192,.5); background:rgba(127,209,192,.12); }
-  .chip.on.c-fondatore{ color:var(--danger); border-color:rgba(229,104,109,.5); background:rgba(229,104,109,.12); }
+  .chip.on.c-master{ color:var(--r-master); border-color:rgba(229,104,109,.5); background:rgba(229,104,109,.12); }
+  .chip.on.c-supporto{ color:var(--r-supporto); border-color:rgba(92,141,250,.55); background:rgba(92,141,250,.14); }
+  .chip.on.c-moderazione{ color:var(--r-moderazione); border-color:rgba(127,209,192,.5); background:rgba(127,209,192,.12); }
+  .chip.on.c-fondatore{ color:var(--r-fondatore); border-color:rgba(167,139,250,.55); background:rgba(167,139,250,.14); }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
   .attesabtn{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
@@ -140,9 +151,6 @@
   .cl{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:700; color:var(--gold); align-self:flex-start; margin-top:3px; }
   .cdiv{ width:1.5px; height:30px; background:var(--line); transform:rotate(18deg); border-radius:2px; margin:0 3px; flex:0 0 auto; }
   .cempty{ font-size:15px; color:var(--muted); font-style:italic; padding:6px 0; }
-  .ctot{ font-size:11.5px; color:var(--muted); margin-top:9px; }
-  .ctot b{ font-family:ui-monospace,Consolas,monospace; color:var(--ink); font-size:13px; }
-  .ctot.hidden{ display:none; }
 
   /* ============ PANNELLO LIVELLO ============ */
   .lpanel{
@@ -211,6 +219,11 @@
   .btn-reset{ border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:9px; padding:9px 14px; font-size:13px; cursor:pointer; margin-right:auto; }
   .btn-reset:hover{ color:var(--danger); border-color:var(--danger); }
   .dlgbar[hidden]{ display:none; }
+  /* la finestra dell'uscita non si aggancia alla barra del nome: sta in mezzo */
+  .dialog.mezzo{ top:50%; transform:translate(-50%,-50%); width:min(460px,92vw); }
+  .btn-via{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; }
+  .btn-via:hover{ color:var(--danger); border-color:var(--danger); }
   .cfmbar{ flex:0 0 auto; display:flex; align-items:center; justify-content:flex-end; gap:10px;
     padding:14px 20px; border-top:1px solid rgba(229,104,109,.45); background:rgba(229,104,109,.09); }
   .cfmbar[hidden]{ display:none; }
@@ -371,7 +384,6 @@
       <div class="cpanel" id="classPanel">
         <div class="eyebrow">Classe</div>
         <div class="cline" id="classLine"></div>
-        <div class="ctot hidden" id="classTot"></div>
         <button class="gear" id="gearClass" title="Scegli la classe" aria-label="Scegli la classe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
     </div>
@@ -453,9 +465,7 @@
         </div>
         <div class="dlgbar" id="barName">
           <button class="btn-reset" data-reset="Name">Azzera</button>
-          <span class="savemsg" id="savemsgName"></span>
           <button class="btn-close" data-close="name">Chiudi</button>
-          <button class="btn-save" data-save="1">Salva</button>
         </div>
         <div class="cfmbar" id="cfmName" hidden>
           <span class="cfmtxt">Azzerare il nome e tutto il suo aspetto? L'azione non si pu&ograve; annullare.</span>
@@ -509,9 +519,7 @@
         </div>
         <div class="dlgbar" id="barXp">
           <button class="btn-reset" data-reset="Xp">Azzera</button>
-          <span class="savemsg" id="savemsgXp"></span>
           <button class="btn-close" data-close="xp">Chiudi</button>
-          <button class="btn-save" data-save="1">Salva</button>
         </div>
         <div class="cfmbar" id="cfmXp" hidden>
           <span class="cfmtxt">Riportare l'esperienza a zero e la barra ai colori di partenza? L'azione non si pu&ograve; annullare.</span>
@@ -538,14 +546,30 @@
         </div>
         <div class="dlgbar" id="barClass">
           <button class="btn-reset" data-reset="Class">Azzera</button>
-          <span class="savemsg" id="savemsgClass"></span>
           <button class="btn-close" data-close="class">Chiudi</button>
-          <button class="btn-save" data-save="1">Salva</button>
         </div>
         <div class="cfmbar" id="cfmClass" hidden>
           <span class="cfmtxt">Togliere tutte le classi scelte? I livelli tornano da assegnare. L'azione non si pu&ograve; annullare.</span>
           <button class="btn-no" data-cancel="Class">Annulla</button>
           <button class="btn-yes" data-yes="Class">Azzera</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalEsci" hidden>
+      <div class="backdrop" data-close="esci"></div>
+      <div class="dialog mezzo">
+        <div class="dlghead">
+          <h2>Modifiche non salvate</h2>
+          <button class="dlgx" data-close="esci" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <p class="hint" style="margin:6px 0 10px">Sono state effettuate delle modifiche alla scheda. Vuoi salvarle prima di uscire?</p>
+        </div>
+        <div class="dlgbar">
+          <button class="btn-close" data-close="esci">Annulla</button>
+          <button class="btn-via" id="btnEsciSenza">Esci senza salvare</button>
+          <button class="btn-save" id="btnSalvaEsci">Salva ed esci</button>
         </div>
       </div>
     </div>
@@ -575,14 +599,14 @@
         <hr class="sep">
         <div class="ctrlhead">
           <div>
-            <h2>Targhette</h2>
+            <h2>Staff</h2>
             <span class="ctrlnote" id="ruoliNote"></span>
           </div>
         </div>
         <div class="tblwrap">
           <table class="tbl" id="tblRuoli">
             <thead>
-              <tr><th>Nick Discord</th><th>Targhette</th></tr>
+              <tr><th>Nick Discord</th><th>Posizioni</th></tr>
             </thead>
             <tbody id="ruoliBody"></tbody>
           </table>
@@ -638,7 +662,7 @@ var CLASSES=[
   {key:"warlock",    name:"Warlock",    die:8,  sug:"Carisma"}
 ];
 var BY_KEY={}; CLASSES.forEach(function(c){ BY_KEY[c.key]=c; });
-var MAX_TOT=20;
+var MAX_CLASSI=3;   /* fino al triclasse, non oltre */
 
 /* Soglie di esperienza per livello (manuale base) */
 var XP_TABLE=[0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
@@ -747,7 +771,7 @@ var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","
 function applicaDati(o){
   if(!o || typeof o!=="object") return;
   SAVE_FIELDS.forEach(function(k){ if(o[k]!==undefined) state[k]=o[k]; });
-  if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; });
+  if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
   elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
@@ -758,26 +782,58 @@ function datiDaSalvare(){
   return o;
 }
 
-function saveState(){
-  if(!utente){ flashSaved("Non risulti entrato: ricarica la pagina"); return; }
-  flashSaved("Salvo\u2026");
+/* Il salvataggio e' uno solo, in alto. La scheda si tiene la fotografia
+   dell'ultima versione salvata e la confronta con quella di adesso: se sono
+   diverse c'e' qualcosa da salvare, e il tasto si accende da solo. Cosi'
+   funziona anche se uno rimette le cose com'erano: il tasto si rispegne. */
+var salvato="", statoSalva="";
+function foto(){ return JSON.stringify(datiDaSalvare()); }
+function sporco(){ return foto()!==salvato; }
+
+function msgSalva(t,ko){
+  var el=document.getElementById("salvaMsg"); if(!el) return;
+  el.textContent=t||""; el.className="salvamsg"+(ko?" ko":"");
+  clearTimeout(msgSalva._t);
+  if(t && !ko) msgSalva._t=setTimeout(function(){ var e=document.getElementById("salvaMsg"); if(e) e.textContent=""; },2200);
+}
+function aggiornaSalva(){
+  var b=document.getElementById("btnSalva"); if(!b) return;
+  if(statoSalva==="salvo"){ b.className="btn-salva"; b.disabled=true; b.textContent="Salvo\u2026"; return; }
+  var s=sporco();
+  b.className="btn-salva"+(s?" on":"");
+  b.disabled=!s;
+  b.textContent=s?"Salva":"Salvato";
+}
+
+function saveState(poi){
+  if(!utente){ msgSalva("Non risulti entrato: ricarica la pagina",true); return; }
+  var scatto=foto();               // la fotografia si prende adesso: se cambi qualcosa
+  statoSalva="salvo"; aggiornaSalva();   // mentre salva, resta da salvare
+  msgSalva("");
   sb.from("schede").upsert({
     user_id: utente.id,
     discord_id: (utente.user_metadata && utente.user_metadata.provider_id) || null,
     dati: datiDaSalvare()
   }).then(function(res){
-    if(res.error){ flashSaved("Errore nel salvataggio: riprova"); console.error(res.error); }
-    else flashSaved("Salvato \u2713");
+    statoSalva="";
+    if(res.error){ msgSalva("Non ha salvato: "+res.error.message,true); console.error(res.error); aggiornaSalva(); }
+    else { salvato=scatto; msgSalva("Salvato \u2713"); aggiornaSalva(); if(poi) poi(); }
+  }).catch(function(e){
+    statoSalva=""; msgSalva("Non ha risposto: riprova",true); aggiornaSalva(); console.error(e);
   });
 }
-var SAVEMSGS=["savemsgName","savemsgClass","savemsgXp"];
-function flashSaved(msg){
-  SAVEMSGS.forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=msg; });
-  clearTimeout(flashSaved._t);
-  flashSaved._t=setTimeout(function(){
-    SAVEMSGS.forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=""; });
-  },2200);
+
+/* Uscire con roba non salvata */
+function esciDavvero(){ sb.auth.signOut().then(function(){ location.reload(); }); }
+function chiediUscita(){
+  if(!sporco()){ esciDavvero(); return; }
+  document.getElementById("modalEsci").hidden=false;
 }
+window.addEventListener("beforeunload", function(e){
+  // il browser non lascia scrivere il nostro testo qui dentro: mostra il suo
+  if(!utente || !sporco()) return;
+  e.preventDefault(); e.returnValue="";
+});
 
 /* Il livello totale nasce dagli XP; i livelli di classe sono la sua distribuzione */
 function totalLevel(){ return levelFromXP(state.xp); }
@@ -887,6 +943,7 @@ function apply(){
   if(state.smallcaps)fmt.push("maiuscoletto"); if(state.neon)fmt.push("neon"); if(state.dropcap)fmt.push("capolettera");
   var alignIt=state.align==="center"?"al centro":(state.align==="right"?"a destra":"a sinistra");
   var embIt = state.emblemMode==="auto" ? "automatico" : (state.emblemMode==="none" ? "nessuno" : BY_KEY[state.emblemMode].name+" (manuale)");
+  aggiornaSalva();
   elReadout.innerHTML="Scelta attuale: <b>"+FONT_NAME[state.font]+"</b>, <b>"+state.size+"px</b>, "+alignIt
     +", formato: <b>"+(fmt.length?fmt.join(", "):"nessuno")+"</b>, colore nome <b>"+state.nameColor.toUpperCase()+"</b>"
     +(state.dropcap?", capolettera <b>"+state.capColor.toUpperCase()+"</b>":"")
@@ -956,6 +1013,7 @@ function warn(msg){
 
 function addClass(key){
   if(has(key)){ warn(BY_KEY[key].name+" \u00E8 gi\u00E0 nella scheda: cambia il suo livello nell'elenco qui sotto."); return; }
+  if(state.classes.length>=MAX_CLASSI){ warn("Un personaggio arriva al massimo a "+MAX_CLASSI+" classi: togline una dall'elenco qui sotto per cambiarla."); return; }
   if(freeLevels()<=0){ warn("Non hai livelli da assegnare: servono altri punti esperienza, oppure togli un livello a un'altra classe."); return; }
   state.classes.push({key:key, level:1});
   renderAll();
@@ -1054,6 +1112,7 @@ function renderLevel(){
   document.getElementById("xpc1row").style.display = state.xpStyle==="name" ? "none" : "flex";
   document.getElementById("xpc2row").style.display = state.xpStyle==="grad" ? "flex" : "none";
   document.getElementById("xpc1lab").textContent = state.xpStyle==="grad" ? "Colore iniziale" : "Colore";
+  aggiornaSalva();
 }
 
 function renderXpDialog(){
@@ -1072,19 +1131,16 @@ function renderXpDialog(){
   if(document.activeElement!==inp) inp.value=state.xp;
 }
 function renderPanel(){
-  var line=document.getElementById("classLine"), tot=document.getElementById("classTot");
+  var line=document.getElementById("classLine");
   if(!state.classes.length){
     line.innerHTML='<span class="cempty">Nessuna classe scelta \u2014 apri la rotellina</span>';
-    tot.classList.add("hidden"); return;
+    return;
   }
+  // il livello totale non si ripete qui: lo mostra gia' il riquadro Livello
   line.innerHTML=state.classes.map(function(c){
     return '<span class="cls"><span class="ce">'+emblemSVG(c.key)+'</span>'
       +'<span class="cn">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
   }).join('<span class="cdiv"></span>');
-  if(state.classes.length>1){
-    tot.innerHTML='Livello totale <b>'+assignedLevels()+'</b>';
-    tot.classList.remove("hidden");
-  } else tot.classList.add("hidden");
 }
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog(); apply(); setHub(null); }
 
@@ -1109,9 +1165,12 @@ function positionDialog(dlg){
   dlg.style.maxHeight="calc(100dvh - "+Math.round(b+36)+"px)";
 }
 function openName(){ modalName.hidden=false; elHeader.classList.add("raised"); positionDialog(document.getElementById("dialogName")); }
-function openClass(){ modalClass.hidden=false; elHeader.classList.add("raised"); setHub(null); positionDialog(document.getElementById("dialogClass")); }
-function openXp(){ modalXp.hidden=false; elHeader.classList.add("raised"); renderXpDialog(); positionDialog(document.getElementById("dialogXp")); }
-function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; elHeader.classList.remove("raised"); }
+/* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
+   lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
+function openClass(){ modalClass.hidden=false; setHub(null); positionDialog(document.getElementById("dialogClass")); }
+function openXp(){ modalXp.hidden=false; renderXpDialog(); positionDialog(document.getElementById("dialogXp")); }
+function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true;
+  document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
@@ -1142,7 +1201,6 @@ document.addEventListener("click", function(e){
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }
   var xs=e.target.closest("[data-xpstyle]"); if(xs){ state.xpStyle=xs.getAttribute("data-xpstyle"); renderAll(); return; }
   var cl=e.target.closest("[data-close]"); if(cl){ closeAll(); return; }
-  var sv=e.target.closest("[data-save]"); if(sv){ saveState(); return; }
   var sg=e.target.closest(".sugsw"); if(sg){ capPicker.setHex(sg.getAttribute("data-hex")); return; }
   var el=e.target.closest("[data-align],[data-fmt],[data-upper],[data-label]"); if(!el) return;
   if(el.hasAttribute("data-align")) state.align=el.getAttribute("data-align");
@@ -1260,7 +1318,7 @@ function caricaControllo(){
 }
 
 function inAttesa(p){
-  // chi ha una targhetta entra comunque: la targhetta vale come approvazione
+  // chi e' nello staff entra comunque: la posizione vale come approvazione
   return !p.approvato && !(ruoliDi[p.user_id]||[]).length;
 }
 
@@ -1291,7 +1349,7 @@ function disegnaPersonaggi(righeSchede){
   }).join("");
 }
 
-/* ---- pannello delle targhette ---- */
+/* ---- pannello dello staff ---- */
 var ASSEGNABILI=[
   { k:"fondatore",   soloDev:true  },
   { k:"master",      soloDev:false },
@@ -1311,7 +1369,7 @@ function disegnaRuoli(){
   var dev = haRuolo("sviluppatore");
   var body = document.getElementById("ruoliBody");
   document.getElementById("ruoliNote").textContent = dev
-    ? "assegni tutto tranne la targhetta di sviluppatore"
+    ? "assegni tutto tranne la posizione di sviluppatore"
     : "assegni master, supporto e moderazione";
 
   if(!profiliCache.length){
@@ -1326,13 +1384,13 @@ function disegnaRuoli(){
     var acceso = p.approvato || suoi.length>0;
     var bloccato = (p.user_id===utente.id) || suoi.length>0;
     var perche = (p.user_id===utente.id) ? "non puoi cambiare la tua approvazione"
-               : (suoi.length>0 ? "ha una targhetta, quindi entra comunque" : "");
+               : (suoi.length>0 ? "\u00E8 nello staff, quindi entra comunque" : "");
     pezzi.push('<button class="chip c-accesso'+(acceso?' on':'')+'" data-user="'+esc(p.user_id)
              + '" data-azione="accesso"'+(bloccato?' disabled title="'+perche+'"':'')+'>accesso</button>');
 
-    // targhette che questa persona ha ma che io non posso toccare: le mostro e basta
-    if(suoi.indexOf("sviluppatore")>=0) pezzi.push('<span class="tag-dev">sviluppatore</span>');
-    if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-found">fondatore</span>');
+    // posizioni che questa persona ha ma che io non posso toccare: le mostro e basta
+    if(suoi.indexOf("sviluppatore")>=0) pezzi.push('<span class="tag-sviluppatore">sviluppatore</span>');
+    if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-fondatore">fondatore</span>');
 
     ASSEGNABILI.forEach(function(a){
       if(a.soloDev && !dev) return;
@@ -1348,7 +1406,7 @@ function disegnaRuoli(){
    se una regola rifiuta in silenzio, il pannello lo mostra lo stesso. */
 function rileggiRuoli(){
   return sb.from("ruoli").select("user_id,ruolo").then(function(res){
-    if(res.error){ msgRuoli("Non riesco a rileggere le targhette: "+res.error.message); return; }
+    if(res.error){ msgRuoli("Non riesco a rileggere le posizioni: "+res.error.message); return; }
     mappaRuoli(res.data||[]);
     disegnaRuoli();
     ruoli = (ruoliDi[utente.id]||[]).slice();   // se ho cambiato qualcosa a me stesso
@@ -1395,17 +1453,19 @@ function disegnaAuthbar(){
   var nome=m.full_name||m.name||m.user_name||m.preferred_username||"Giocatore";
   var av=m.avatar_url||m.picture||"";
   var tag="";
-  if(haRuolo("sviluppatore")) tag+=' <span class="tag-dev">sviluppatore</span>';
-  if(haRuolo("fondatore")) tag+=' <span class="tag-found">fondatore</span>';
+  if(haRuolo("sviluppatore")) tag+=' <span class="tag-sviluppatore">sviluppatore</span>';
+  if(haRuolo("fondatore")) tag+=' <span class="tag-fondatore">fondatore</span>';
   if(haRuolo("master")) tag+=' <span class="tag-master">master</span>';
-  if(haRuolo("supporto")) tag+=' <span class="tag-tech">supporto</span>';
-  if(haRuolo("moderazione")) tag+=' <span class="tag-mod">moderazione</span>';
+  if(haRuolo("supporto")) tag+=' <span class="tag-supporto">supporto</span>';
+  if(haRuolo("moderazione")) tag+=' <span class="tag-moderazione">moderazione</span>';
   document.getElementById("authbar").innerHTML=
     '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'+tag+'</span>'
+    +'<span class="salvamsg" id="salvaMsg"></span>'
+    +'<button class="btn-salva" id="btnSalva" disabled>Salvato</button>'
     +'<button class="btn-out" id="btnOut">Esci</button>';
-  document.getElementById("btnOut").addEventListener("click", function(){
-    sb.auth.signOut().then(function(){ location.reload(); });
-  });
+  document.getElementById("btnSalva").addEventListener("click", function(){ if(sporco()) saveState(); });
+  document.getElementById("btnOut").addEventListener("click", chiediUscita);
+  aggiornaSalva();   // la barra si ridisegna: il tasto va rimesso com'era
 }
 
 function login(){
@@ -1431,6 +1491,9 @@ document.getElementById("ruoliBody").addEventListener("click", function(e){
   else toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
 });
 
+document.getElementById("btnEsciSenza").addEventListener("click", esciDavvero);
+document.getElementById("btnSalvaEsci").addEventListener("click", function(){ saveState(esciDavvero); });
+
 document.getElementById("btnRicontrolla").addEventListener("click", function(){ location.reload(); });
 document.getElementById("btnEsciAttesa").addEventListener("click", function(){
   sb.auth.signOut().then(function(){ location.reload(); });
@@ -1441,7 +1504,7 @@ function avvia(){
     var sess=res.data && res.data.session;
     if(!sess){ mostra("login"); return; }
     utente=sess.user;
-    // quattro domande insieme: la mia scheda, le mie targhette, il mio profilo
+    // quattro domande insieme: la mia scheda, le mie posizioni, il mio profilo
     // (mi serve sapere se sono approvato) e la sincronizzazione del profilo stesso
     return Promise.all([
       sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
@@ -1470,9 +1533,10 @@ function avvia(){
         document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
         return;
       }
-      // la navigazione (e quindi la sezione Controllo) esiste solo per chi ha una targhetta
+      // la navigazione (e quindi la sezione Controllo) esiste solo per chi e' nello staff
       if(ruoli.length) document.getElementById("nav").hidden = false;
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
+      salvato=foto();           // da qui in poi ogni differenza accende il tasto
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
       sincronizzaComandi();     // e solo dopo si misura il nome

@@ -47,6 +47,21 @@
     background:rgba(127,209,192,.1); padding:2px 7px; border-radius:999px; }
   .tag-found{ font-size:10px; color:var(--danger); border:1px solid rgba(229,104,109,.4);
     background:rgba(229,104,109,.1); padding:2px 7px; border-radius:999px; }
+  .tag-dev{ font-size:10px; color:#8ab4f8; border:1px solid rgba(138,180,248,.45);
+    background:rgba(138,180,248,.12); padding:2px 7px; border-radius:999px; }
+  /* pannello delle targhette */
+  .chiprow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .chip{ font-size:10px; padding:3px 9px; border-radius:999px; cursor:pointer; font-family:var(--ui);
+    border:1px dashed var(--line); background:transparent; color:var(--muted); transition:.12s; }
+  .chip:hover:not([disabled]){ border-style:solid; color:var(--ink); }
+  .chip.on{ border-style:solid; }
+  .chip.on.c-master{ color:var(--gold); border-color:rgba(224,177,94,.5); background:rgba(224,177,94,.12); }
+  .chip.on.c-supporto{ color:var(--violet); border-color:rgba(167,139,250,.5); background:rgba(124,92,255,.14); }
+  .chip.on.c-moderazione{ color:#7fd1c0; border-color:rgba(127,209,192,.5); background:rgba(127,209,192,.12); }
+  .chip.on.c-fondatore{ color:var(--danger); border-color:rgba(229,104,109,.5); background:rgba(229,104,109,.12); }
+  .chip[disabled]{ cursor:progress; opacity:.5; }
+  .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }
+  .sep{ height:1px; background:var(--line); margin:26px 0 22px; border:0; }
   /* navigazione fra Scheda e Controllo */
   .nav{ display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--line); }
   .nav button{ background:transparent; border:0; border-bottom:2px solid transparent; margin-bottom:-1px;
@@ -538,6 +553,25 @@
             <tr><td colspan="4" class="ctrlmsg">Carico l'elenco&hellip;</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div id="ruoliBlock" hidden>
+        <hr class="sep">
+        <div class="ctrlhead">
+          <div>
+            <h2>Targhette</h2>
+            <span class="ctrlnote" id="ruoliNote"></span>
+          </div>
+        </div>
+        <div class="tblwrap">
+          <table class="tbl" id="tblRuoli">
+            <thead>
+              <tr><th>Nick Discord</th><th>Targhette</th></tr>
+            </thead>
+            <tbody id="ruoliBody"></tbody>
+          </table>
+        </div>
+        <div class="ctrlerr" id="ruoliErr"></div>
       </div>
     </div>
 
@@ -1163,63 +1197,146 @@ function mostraPane(quale){
   else { caricaControllo(); }
 }
 
-var ctrlCaricato=false;
+var ctrlCaricato=false, profiliCache=[], ruoliDi={};
+function puoAssegnare(){ return haRuolo("fondatore") || haRuolo("sviluppatore"); }
+
+function nickCell(p){
+  var disp = p.nome && p.nome!==p.username ? ' <small>('+esc(p.nome)+')</small>' : '';
+  return '<span class="nick">' + (p.avatar_url ? '<img src="'+esc(p.avatar_url)+'" alt="">' : '')
+       + '<span>'+esc(p.username||"?")+disp+'</span></span>';
+}
+
 function caricaControllo(){
   if(ctrlCaricato) return;
   ctrlCaricato=true;
   var body=document.getElementById("tblBody");
   body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
-  Promise.all([
+
+  var richieste=[
     sb.from("profili").select("user_id,username,nome,avatar_url"),
     sb.from("schede").select("user_id,dati")
-  ]).then(function(r){
-    var err = r[0].error || r[1].error;
+  ];
+  if(puoAssegnare()) richieste.push(sb.from("ruoli").select("user_id,ruolo"));
+
+  Promise.all(richieste).then(function(r){
+    var err = r[0].error || r[1].error || (r[2] && r[2].error);
     if(err){
       ctrlCaricato=false;
       body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non riesco a leggere l\'elenco: '+esc(err.message)+'</td></tr>';
       console.error(err);
       return;
     }
-    var schede={};
-    (r[1].data||[]).forEach(function(s){ schede[s.user_id]=s.dati||{}; });
-
-    var righe=(r[0].data||[]).map(function(p){
-      var d=schede[p.user_id]||{};
-      var haScheda = Object.prototype.hasOwnProperty.call(schede, p.user_id);
-      var xp=(typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
-      return {
-        nick: p.username || "?",
-        disp: p.nome || "",
-        av:   p.avatar_url || "",
-        pg:   (typeof d.name==="string") ? d.name.trim() : "",
-        xp:   haScheda ? xp : null,
-        lv:   haScheda ? levelFromXP(xp) : null
-      };
+    profiliCache = (r[0].data||[]).slice().sort(function(a,b){
+      return String(a.username||"").localeCompare(String(b.username||""));
     });
-    righe.sort(function(a,b){ return a.nick.localeCompare(b.nick); });
-
-    document.getElementById("ctrlNote").textContent =
-      righe.length + (righe.length===1 ? " persona registrata" : " persone registrate");
-
-    if(!righe.length){
-      body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
-      return;
+    disegnaPersonaggi(r[1].data||[]);
+    if(puoAssegnare()){
+      mappaRuoli(r[2] ? (r[2].data||[]) : []);
+      disegnaRuoli();
+      document.getElementById("ruoliBlock").hidden=false;
     }
-    body.innerHTML = righe.map(function(x){
-      var nick='<span class="nick">'
-        + (x.av ? '<img src="'+esc(x.av)+'" alt="">' : '')
-        + '<span>'+esc(x.nick)
-        + ((x.disp && x.disp!==x.nick) ? ' <small>('+esc(x.disp)+')</small>' : '')
-        + '</span></span>';
-      var pg  = x.pg ? esc(x.pg) : '<span class="vuoto">senza nome</span>';
-      var lv  = (x.lv===null) ? '<span class="vuoto">&mdash;</span>' : x.lv;
-      var xp  = (x.xp===null) ? '<span class="vuoto">nessuna scheda</span>' : numIt(x.xp);
-      return '<tr><td>'+nick+'</td><td class="pgname">'+pg+'</td>'
-           + '<td class="lv">'+lv+'</td><td class="xp">'+xp+'</td></tr>';
-    }).join("");
   }).catch(function(e){
     ctrlCaricato=false;
     body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
+    console.error(e);
+  });
+}
+
+function disegnaPersonaggi(righeSchede){
+  var body=document.getElementById("tblBody");
+  var schede={};
+  righeSchede.forEach(function(s){ schede[s.user_id]=s.dati||{}; });
+
+  document.getElementById("ctrlNote").textContent =
+    profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate");
+
+  if(!profiliCache.length){
+    body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
+    return;
+  }
+  body.innerHTML = profiliCache.map(function(p){
+    var haScheda = Object.prototype.hasOwnProperty.call(schede, p.user_id);
+    var d = schede[p.user_id]||{};
+    var xp = (typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
+    var pg = (typeof d.name==="string" && d.name.trim()) ? esc(d.name.trim()) : '<span class="vuoto">senza nome</span>';
+    var lv = haScheda ? levelFromXP(xp) : '<span class="vuoto">&mdash;</span>';
+    var xt = haScheda ? numIt(xp) : '<span class="vuoto">nessuna scheda</span>';
+    return '<tr><td>'+nickCell(p)+'</td><td class="pgname">'+pg+'</td>'
+         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td></tr>';
+  }).join("");
+}
+
+/* ---- pannello delle targhette ---- */
+var ASSEGNABILI=[
+  { k:"fondatore",   soloDev:true  },
+  { k:"master",      soloDev:false },
+  { k:"supporto",    soloDev:false },
+  { k:"moderazione", soloDev:false }
+];
+
+function mappaRuoli(righe){
+  ruoliDi={};
+  righe.forEach(function(x){
+    (ruoliDi[x.user_id]=ruoliDi[x.user_id]||[]).push(x.ruolo);
+  });
+}
+function msgRuoli(t){ document.getElementById("ruoliErr").textContent=t||""; }
+
+function disegnaRuoli(){
+  var dev = haRuolo("sviluppatore");
+  var body = document.getElementById("ruoliBody");
+  document.getElementById("ruoliNote").textContent = dev
+    ? "assegni tutto tranne la targhetta di sviluppatore"
+    : "assegni master, supporto e moderazione";
+
+  if(!profiliCache.length){
+    body.innerHTML='<tr><td colspan="2" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
+    return;
+  }
+  body.innerHTML = profiliCache.map(function(p){
+    var suoi = ruoliDi[p.user_id]||[];
+    var pezzi = [];
+    // targhette che questa persona ha ma che io non posso toccare: le mostro e basta
+    if(suoi.indexOf("sviluppatore")>=0) pezzi.push('<span class="tag-dev">sviluppatore</span>');
+    if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-found">fondatore</span>');
+
+    ASSEGNABILI.forEach(function(a){
+      if(a.soloDev && !dev) return;
+      var on = suoi.indexOf(a.k)>=0;
+      pezzi.push('<button class="chip c-'+a.k+(on?' on':'')+'" data-user="'+esc(p.user_id)
+               + '" data-ruolo="'+a.k+'">'+a.k+'</button>');
+    });
+    return '<tr><td>'+nickCell(p)+'</td><td><div class="chiprow">'+pezzi.join(" ")+'</div></td></tr>';
+  }).join("");
+}
+
+/* Dopo ogni modifica si rilegge la verità dal database invece di fidarsi:
+   se una regola rifiuta in silenzio, il pannello lo mostra lo stesso. */
+function rileggiRuoli(){
+  return sb.from("ruoli").select("user_id,ruolo").then(function(res){
+    if(res.error){ msgRuoli("Non riesco a rileggere le targhette: "+res.error.message); return; }
+    mappaRuoli(res.data||[]);
+    disegnaRuoli();
+    ruoli = (ruoliDi[utente.id]||[]).slice();   // se ho cambiato qualcosa a me stesso
+    disegnaAuthbar();
+    document.getElementById("nav").hidden = !ruoli.length;
+  });
+}
+
+function toggleRuolo(userId, ruolo, btn){
+  msgRuoli("");
+  btn.disabled=true;
+  var ha = (ruoliDi[userId]||[]).indexOf(ruolo)>=0;
+  var p = profiliCache.filter(function(x){ return x.user_id===userId; })[0];
+  var op = ha
+    ? sb.from("ruoli").delete().eq("user_id",userId).eq("ruolo",ruolo)
+    : sb.from("ruoli").insert({ user_id:userId, ruolo:ruolo, nota:(p && p.username) || null });
+  op.then(function(res){
+    if(res && res.error) msgRuoli("Il database ha rifiutato: "+res.error.message);
+    return rileggiRuoli();
+  }).catch(function(e){
+    btn.disabled=false;
+    msgRuoli("Qualcosa non ha risposto: riprova.");
     console.error(e);
   });
 }
@@ -1229,6 +1346,7 @@ function disegnaAuthbar(){
   var nome=m.full_name||m.name||m.user_name||m.preferred_username||"Giocatore";
   var av=m.avatar_url||m.picture||"";
   var tag="";
+  if(haRuolo("sviluppatore")) tag+=' <span class="tag-dev">sviluppatore</span>';
   if(haRuolo("fondatore")) tag+=' <span class="tag-found">fondatore</span>';
   if(haRuolo("master")) tag+=' <span class="tag-master">master</span>';
   if(haRuolo("supporto")) tag+=' <span class="tag-tech">supporto</span>';
@@ -1256,6 +1374,11 @@ document.getElementById("tabScheda").addEventListener("click", function(){ mostr
 document.getElementById("tabControllo").addEventListener("click", function(){ mostraPane("controllo"); });
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
+});
+document.getElementById("ruoliBody").addEventListener("click", function(e){
+  var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
+  if(!b || b.disabled) return;
+  toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
 });
 
 function avvia(){

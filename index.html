@@ -1645,26 +1645,75 @@ function cambioStato(dati){
 
 var CAMPI_MIEI = "username,nome,approvato,in_pausa,accesso_tolto_il";
 
+/* Le posizioni cambiano mentre uno sta usando il sito: il potere gliel'ha
+   gia' tolto il database, ma il sito continuerebbe a disegnargli i pulsanti
+   di prima finche' non ricarica. Qui si riconfigura da solo. */
+function applicaRuoli(){
+  document.getElementById("nav").hidden = !ruoli.length;
+
+  // l'elenco del Controllo va riletto: con le posizioni nuove il database
+  // risponde in modo diverso, e alcune colonne potrebbero non spettargli piu'
+  ctrlCaricato=false;
+  document.getElementById("ruoliBlock").hidden = !puoStaff();
+
+  var suControllo = !document.getElementById("paneControllo").hidden;
+  if(suControllo && !ruoli.length){ mostraPane("scheda"); }
+  else if(suControllo){ caricaControllo(); }
+
+  if(bersaglio){
+    if(!puoVedereSchede()){
+      // non gli spetta piu' vederla: si torna alla sua senza chiedere niente,
+      // perche' non ha piu' il diritto di salvare quello che ha cambiato
+      salvato=foto();
+      caricaLaMia();
+    } else {
+      modoScheda();   // magari da qui in poi la puo' solo guardare
+    }
+  }
+}
+
+/* Una sola funzione che rilegge chi sei e cosa puoi: la chiamano sia la
+   diretta sia la rete di sicurezza. */
+function ricontrolla(){
+  if(!utente) return;
+  Promise.all([
+    sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
+    sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
+  ]).then(function(r){
+    // rete ballerina: si riprova al giro dopo, senza combinare guai
+    if(r[0].error || r[1].error) return;
+    var nuovi = (r[0].data||[]).map(function(x){ return x.ruolo; });
+    var cambiati = nuovi.slice().sort().join(",") !== ruoli.slice().sort().join(",");
+    ruoli = nuovi;
+    if(cambiati){
+      disegnaAuthbar();   // le etichette accanto al nome
+      applicaRuoli();
+    }
+    cambioStato(r[1].data);   // pausa e accesso: possono chiudere tutto
+  }).catch(function(){});
+}
+
 function ascoltaProfilo(){
   try{
-    sb.channel("mio-profilo-"+utente.id)
+    sb.channel("mio-stato-"+utente.id)
       .on("postgres_changes",
           { event:"UPDATE", schema:"public", table:"profili", filter:"user_id=eq."+utente.id },
           function(msg){ cambioStato(msg && msg.new); })
+      .on("postgres_changes",
+          { event:"*", schema:"public", table:"ruoli", filter:"user_id=eq."+utente.id },
+          function(){ ricontrolla(); })   // arriva la notizia, ma la verita' si richiede al database
       .subscribe();
   }catch(e){
-    // se la diretta non parte il sito funziona lo stesso: il database
-    // rifiuta comunque di salvare, e al rientro nella scheda si ricontrolla
+    // se la diretta non parte il sito funziona lo stesso: il database rifiuta
+    // comunque, e al rientro sulla scheda del browser si ricontrolla
     console.warn("la diretta non e' partita:", e);
   }
 }
 
 // rete di sicurezza: tornando sulla scheda del browser si ricontrolla comunque
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState!=="visible" || !utente) return;
-  sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
-    .then(function(r){ if(r && !r.error) cambioStato(r.data); })
-    .catch(function(){});
+  if(document.visibilityState!=="visible") return;
+  ricontrolla();
 });
 
 function mostra(quale){
@@ -2013,27 +2062,50 @@ document.getElementById("btnEsciAttesa").addEventListener("click", function(){
   sb.auth.signOut().then(function(){ location.reload(); });
 });
 
+function bloccoAvvio(txt){
+  document.getElementById("boot").textContent = txt;
+  mostra("boot");
+}
+
 function avvia(){
   sb.auth.getSession().then(function(res){
     var sess=res.data && res.data.session;
     if(!sess){ mostra("login"); return; }
     utente=sess.user;
-    // quattro domande insieme: la mia scheda, le mie posizioni, il mio profilo
-    // (mi serve sapere se sono approvato) e la sincronizzazione del profilo stesso
-    return Promise.all([
-      sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
-      sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
-      sb.rpc("sync_profilo"),
-      sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
-    ]).then(function(r){
-      var scheda=r[0], rr=r[1], prof=r[2], mio=r[3];
+
+    // Prima si sincronizza il profilo, poi lo si legge. Partivano insieme, e
+    // al primo accesso di una persona nuova la lettura poteva arrivare un
+    // istante prima che il profilo esistesse: risultato, sala d'attesa dal nulla.
+    return sb.rpc("sync_profilo").then(function(prof){
       // se il profilo non si aggiorna la scheda deve funzionare lo stesso:
       // lo segnalo solo nella console, senza fermare niente
       if(prof && prof.error) console.warn("sync_profilo non ha risposto:", prof.error.message);
+      return Promise.all([
+        sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
+        sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
+        sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
+      ]);
+    }).then(function(r){
+      var scheda=r[0], rr=r[1], mio=r[2];
 
+      // Se le posizioni non si leggono, uno sviluppatore risulterebbe uno
+      // qualunque e si chiuderebbe fuori da solo: meglio fermarsi e dirlo.
+      if(rr.error){ bloccoAvvio("Non riesco a leggere le tue posizioni: "+rr.error.message); return; }
       ruoli = (rr.data||[]).map(function(x){ return x.ruolo; });
 
-      var dati = (mio && mio.data) || {};
+      // Un errore qui non vuol dire "non sei approvato". Prima finivano nello
+      // stesso posto: la persona vedeva la sala d'attesa e nessuno capiva
+      // perche', perche' lo sviluppatore salta il controllo e non se ne accorge.
+      if(mio.error){
+        bloccoAvvio("Non riesco a leggere il tuo profilo: "+mio.error.message
+          +" \u2014 non e' un problema di permessi, e' il sito che non riesce a chiedere. Fallo sapere allo staff.");
+        return;
+      }
+      if(!mio.data){
+        bloccoAvvio("Il tuo profilo non risulta ancora registrato. Ricarica la pagina tra qualche secondo: se continua, fallo sapere allo staff.");
+        return;
+      }
+      var dati = mio.data;
 
       // In pausa la scheda non si apre proprio; senza via libera nemmeno,
       // tanto il database non farebbe salvare niente. Lo sviluppatore entra
@@ -2043,7 +2115,7 @@ function avvia(){
       statoOra="sheet";
 
       if(scheda.error){
-        document.getElementById("boot").textContent="Non riesco a leggere la scheda: "+scheda.error.message;
+        bloccoAvvio("Non riesco a leggere la scheda: "+scheda.error.message);
         return;
       }
       // la navigazione (e quindi la sezione Controllo) esiste solo per chi e' nello staff
@@ -2059,7 +2131,7 @@ function avvia(){
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }
     });
   }).catch(function(e){
-    document.getElementById("boot").textContent="Qualcosa non ha risposto: ricarica la pagina.";
+    bloccoAvvio("Qualcosa non ha risposto: ricarica la pagina.");
     console.error(e);
   });
 }

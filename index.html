@@ -34,6 +34,16 @@
   .btn-discord:hover{ filter:brightness(1.12); }
   .loginerr{ color:var(--danger); font-size:12.5px; min-height:16px; }
 
+  /* fascia di quando si sta guardando la scheda di un altro */
+  .fascia{ display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    border:1px solid rgba(92,141,250,.5); background:rgba(92,141,250,.12);
+    border-radius:12px; padding:9px 14px; margin-bottom:14px; }
+  .fascia .ftxt{ font-size:13px; color:var(--ink); flex:1 1 auto; }
+  .fascia .ftxt b{ color:var(--r-supporto); }
+  .fascia .fmodo{ font-size:11px; color:var(--muted); }
+  .btn-apri{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:7px; padding:4px 10px; font-size:11.5px; cursor:pointer; font-family:var(--ui); }
+  .btn-apri:hover{ color:var(--violet); border-color:var(--violet); }
   .authbar{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
   /* Un solo Salva per tutta la scheda: spento finche' non c'e' niente da salvare */
   .btn-salva{ border:1px solid var(--line); background:transparent; color:var(--muted);
@@ -381,6 +391,11 @@
     <div id="sheet" hidden>
 
     <div class="authbar" id="authbar"></div>
+    <div class="fascia" id="fascia" hidden>
+      <span class="ftxt" id="fasciaTxt"></span>
+      <span class="fmodo" id="fasciaModo"></span>
+      <button class="btn-out" id="btnTornaMia">Torna alla mia</button>
+    </div>
 
     <div class="nav" id="nav" hidden>
       <button id="tabScheda" class="on">Scheda</button>
@@ -654,12 +669,12 @@
           <button class="dlgx" data-close="esci" aria-label="Chiudi">&times;</button>
         </div>
         <div class="dlgbody">
-          <p class="hint" style="margin:6px 0 10px">Sono state effettuate delle modifiche alla scheda. Vuoi salvarle prima di uscire?</p>
+          <p class="hint" style="margin:6px 0 10px" id="esciTxt"></p>
         </div>
         <div class="dlgbar">
           <button class="btn-close" data-close="esci">Annulla</button>
-          <button class="btn-via" id="btnEsciSenza">Esci senza salvare</button>
-          <button class="btn-save" id="btnSalvaEsci">Salva ed esci</button>
+          <button class="btn-via" id="btnEsciSenza">Scarta</button>
+          <button class="btn-save" id="btnSalvaEsci">Salva</button>
         </div>
       </div>
     </div>
@@ -671,13 +686,14 @@
         <div>
           <h2>Personaggi</h2>
           <span class="ctrlnote" id="ctrlNote"></span>
+          <span class="ctrlnote" id="ctrlMsg"></span>
         </div>
         <button class="btn-out" id="btnCtrlReload">Aggiorna</button>
       </div>
       <div class="tblwrap">
         <table class="tbl" id="tblPg">
           <thead>
-            <tr><th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th></tr>
+            <tr id="tblHead"></tr>
           </thead>
           <tbody id="tblBody">
             <tr><td colspan="4" class="ctrlmsg">Carico l'elenco&hellip;</td></tr>
@@ -939,27 +955,119 @@ function aggiornaSalva(){
 
 function saveState(poi){
   if(!utente){ msgSalva("Non risulti entrato: ricarica la pagina",true); return; }
+  if(soloLettura){ msgSalva("Questa scheda la puoi solo guardare",true); return; }
   var scatto=foto();               // la fotografia si prende adesso: se cambi qualcosa
   statoSalva="salvo"; aggiornaSalva();   // mentre salva, resta da salvare
   msgSalva("");
-  sb.from("schede").upsert({
-    user_id: utente.id,
-    discord_id: (utente.user_metadata && utente.user_metadata.provider_id) || null,
-    dati: datiDaSalvare()
-  }).then(function(res){
+  var chi = bersaglio || utente.id;
+  var riga = { user_id: chi, dati: datiDaSalvare() };
+  var did = bersaglio ? discordDi(chi) : ((utente.user_metadata && utente.user_metadata.provider_id) || null);
+  if(did) riga.discord_id=did;   // se non lo sappiamo non lo tocchiamo: mandarlo vuoto lo cancellerebbe
+  sb.from("schede").upsert(riga).then(function(res){
     statoSalva="";
     if(res.error){ msgSalva("Non ha salvato: "+res.error.message,true); console.error(res.error); aggiornaSalva(); }
-    else { salvato=scatto; msgSalva("Salvato \u2713"); aggiornaSalva(); if(poi) poi(); }
+    else {
+      salvato=scatto; msgSalva("Salvato \u2713"); aggiornaSalva();
+      if(bersaglio) ctrlCaricato=false;   // l'elenco mostra dati vecchi: si rilegge alla prossima apertura
+      if(poi) poi();
+    }
   }).catch(function(e){
     statoSalva=""; msgSalva("Non ha risposto: riprova",true); aggiornaSalva(); console.error(e);
   });
 }
 
-/* Uscire con roba non salvata */
+/* ============ la scheda di un altro ============
+   bersaglio = di chi e' la scheda che ho davanti. null vuol dire la mia.
+   Il master guarda e basta, il supporto e lo sviluppatore mettono le mani.
+   Il salvataggio finisce sulla riga di quella persona, non sulla propria. */
+var bersaglio=null, soloLettura=false;
+
+function discordDi(id){
+  var p=profiliCache.filter(function(x){ return x.user_id===id; })[0];
+  return (p && p.discord_id) || null;
+}
+function nomeDi(id){
+  var p=profiliCache.filter(function(x){ return x.user_id===id; })[0];
+  return (p && (p.nome || p.username)) || "questa persona";
+}
+
+/* Rimette la scheda com'e' appena nata: senza, aprendo quella di un altro
+   resterebbero addosso i font, i colori e le classi della propria. */
+function schedaVuota(){
+  for(var k in DEF_NAME) state[k]=DEF_NAME[k];
+  for(var j in DEF_XP) state[j]=DEF_XP[j];
+  state.classes=[]; state.xp=0; state.testi=testiDiPartenza();
+  elName.textContent="";
+}
+
+function modoScheda(){
+  var altrui = !!bersaglio;
+  soloLettura = altrui && !puoToccareSchede();
+  document.getElementById("fascia").hidden = !altrui;
+  if(altrui){
+    document.getElementById("fasciaTxt").innerHTML = "Stai guardando la scheda di <b>"+esc(nomeDi(bersaglio))+"</b>";
+    document.getElementById("fasciaModo").textContent = soloLettura ? "sola lettura" : "puoi modificarla e salvarla";
+  }
+  elName.contentEditable = soloLettura ? "false" : "true";
+  ["gearName","gearXp","gearClass"].forEach(function(id){
+    var g=document.getElementById(id); if(g) g.hidden=soloLettura;
+  });
+  var b=document.getElementById("btnSalva"); if(b) b.hidden=soloLettura;
+  if(soloLettura) closeAll();
+}
+
+function apriScheda(id){
+  conModifiche(function(){ caricaScheda(id); },
+    "Sono state effettuate delle modifiche non salvate. Vuoi salvarle prima di aprire un'altra scheda?");
+}
+
+function caricaScheda(id){
+  var msg=document.getElementById("ctrlMsg");
+  if(msg) msg.textContent="Apro la scheda\u2026";
+  sb.from("schede").select("dati").eq("user_id", id).maybeSingle().then(function(r){
+    if(r && r.error){ if(msg) msg.textContent="Non riesco ad aprirla: "+r.error.message; return; }
+    if(msg) msg.textContent="";
+    bersaglio=id;
+    schedaVuota();
+    if(r && r.data && r.data.dati) applicaDati(r.data.dati);
+    modoScheda();
+    sincronizzaComandi();
+    salvato=foto(); aggiornaSalva();
+    mostraPane("scheda");
+  }).catch(function(e){
+    if(msg) msg.textContent="Non ha risposto: riprova.";
+    console.error(e);
+  });
+}
+
+function tornaAllaMia(){
+  conModifiche(function(){ caricaLaMia(); },
+    "Sono state effettuate delle modifiche non salvate. Vuoi salvarle prima di tornare alla tua?");
+}
+
+function caricaLaMia(){
+  sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle().then(function(r){
+    bersaglio=null;
+    schedaVuota();
+    if(r && r.data && r.data.dati) applicaDati(r.data.dati);
+    modoScheda();
+    sincronizzaComandi();
+    salvato=foto(); aggiornaSalva();
+    mostraPane("scheda");
+  });
+}
+
+/* Uscire, o cambiare scheda, con roba non salvata */
+var inSospeso=null;
+function conModifiche(azione, testo){
+  if(!sporco()){ azione(); return; }
+  inSospeso=azione;
+  document.getElementById("esciTxt").textContent=testo;
+  document.getElementById("modalEsci").hidden=false;
+}
 function esciDavvero(){ sb.auth.signOut().then(function(){ location.reload(); }); }
 function chiediUscita(){
-  if(!sporco()){ esciDavvero(); return; }
-  document.getElementById("modalEsci").hidden=false;
+  conModifiche(esciDavvero, "Sono state effettuate delle modifiche alla scheda. Vuoi salvarle prima di uscire?");
 }
 window.addEventListener("beforeunload", function(e){
   // il browser non lascia scrivere il nostro testo qui dentro: mostra il suo
@@ -1598,6 +1706,11 @@ function puoDareAccesso(){ return haRuolo("sviluppatore") || haRuolo("stella") |
 function puoTogliereAccesso(){ return haRuolo("sviluppatore") || haRuolo("stella") || haRuolo("moderazione"); }
 function puoPausare(){ return haRuolo("sviluppatore") || haRuolo("stella") || haRuolo("moderazione"); }
 function puoStaff(){ return puoAssegnare() || puoDareAccesso() || puoTogliereAccesso() || puoPausare(); }
+/* Le schede: il master guarda, il supporto mette le mani, lo sviluppatore fa
+   tutto. Moderazione, fondatore e stella non le vedono proprio: il database
+   non gliele darebbe comunque, qui si evita solo di chiedergliele. */
+function puoVedereSchede(){ return haRuolo("master") || haRuolo("supporto") || haRuolo("sviluppatore"); }
+function puoToccareSchede(){ return haRuolo("supporto") || haRuolo("sviluppatore"); }
 
 function nickCell(p){
   var disp = p.nome && p.nome!==p.username ? ' <small>('+esc(p.nome)+')</small>' : '';
@@ -1609,11 +1722,11 @@ function caricaControllo(){
   if(ctrlCaricato) return;
   ctrlCaricato=true;
   var body=document.getElementById("tblBody");
-  body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
+  body.innerHTML='<tr><td colspan="5" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
 
   var richieste=[
-    sb.from("profili").select("user_id,username,nome,avatar_url,approvato,in_pausa"),
-    sb.from("schede").select("user_id,dati"),
+    sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa"),
+    puoVedereSchede() ? sb.from("schede").select("user_id,dati") : Promise.resolve({ data:[], error:null }),
     sb.from("ruoli").select("user_id,ruolo")
   ];
 
@@ -1649,31 +1762,46 @@ function inAttesa(p){
 
 function disegnaPersonaggi(righeSchede){
   var body=document.getElementById("tblBody");
+  var vede=puoVedereSchede();
   var schede={};
   righeSchede.forEach(function(s){ schede[s.user_id]=s.dati||{}; });
+
+  // Chi le schede non le vede si ferma al nick e allo stato: le colonne del
+  // personaggio resterebbero vuote e farebbero solo credere che manchi qualcosa.
+  document.getElementById("tblHead").innerHTML = vede
+    ? '<th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th><th></th>'
+    : '<th>Nick Discord</th>';
+  var quante = vede ? 5 : 1;
 
   var attesa = profiliCache.filter(inAttesa).length;
   document.getElementById("ctrlNote").textContent =
     profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate")
-    + (attesa ? " · " + attesa + (attesa===1 ? " in attesa di via libera" : " in attesa di via libera") : "");
+    + (attesa ? " \u00B7 " + attesa + " in attesa di via libera" : "");
 
   if(!profiliCache.length){
-    body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
+    body.innerHTML='<tr><td colspan="'+quante+'" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
     return;
   }
   body.innerHTML = profiliCache.map(function(p){
+    var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
+    if(p.in_pausa) marchio += ' <span class="tag-pausa">in pausa</span>';
+    var prima = '<td>'+nickCell(p)+marchio+'</td>';
+    if(!vede) return '<tr>'+prima+'</tr>';
+
     var haScheda = Object.prototype.hasOwnProperty.call(schede, p.user_id);
     var d = schede[p.user_id]||{};
     var xp = (typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
     var pg = (typeof d.name==="string" && d.name.trim()) ? esc(d.name.trim()) : '<span class="vuoto">senza nome</span>';
     var lv = haScheda ? levelFromXP(xp) : '<span class="vuoto">&mdash;</span>';
     var xt = haScheda ? numIt(xp) : '<span class="vuoto">nessuna scheda</span>';
-    var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
-    if(p.in_pausa) marchio += ' <span class="tag-pausa">in pausa</span>';
-    return '<tr><td>'+nickCell(p)+marchio+'</td><td class="pgname">'+pg+'</td>'
-         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td></tr>';
+    var apri = (p.user_id===utente.id)
+      ? '<span class="vuoto">la tua</span>'
+      : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
+    return '<tr>'+prima+'<td class="pgname">'+pg+'</td>'
+         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td><td>'+apri+'</td></tr>';
   }).join("");
 }
+
 
 /* ---- pannello dello staff ---- */
 var ASSEGNABILI=[
@@ -1855,6 +1983,10 @@ document.getElementById("tabControllo").addEventListener("click", function(){ mo
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
+document.getElementById("tblBody").addEventListener("click", function(e){
+  var b = e.target && e.target.closest ? e.target.closest("[data-apri]") : null;
+  if(b) apriScheda(b.getAttribute("data-apri"));
+});
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
   if(!b || b.disabled) return;
@@ -1864,8 +1996,13 @@ document.getElementById("ruoliBody").addEventListener("click", function(e){
   else toggleRuolo(b.getAttribute("data-user"), b.getAttribute("data-ruolo"), b);
 });
 
-document.getElementById("btnEsciSenza").addEventListener("click", esciDavvero);
-document.getElementById("btnSalvaEsci").addEventListener("click", function(){ saveState(esciDavvero); });
+document.getElementById("btnEsciSenza").addEventListener("click", function(){
+  closeAll(); var a=inSospeso; inSospeso=null; if(a) a();
+});
+document.getElementById("btnSalvaEsci").addEventListener("click", function(){
+  saveState(function(){ closeAll(); var a=inSospeso; inSospeso=null; if(a) a(); });
+});
+document.getElementById("btnTornaMia").addEventListener("click", tornaAllaMia);
 
 document.getElementById("btnRicontrolla").addEventListener("click", function(){ location.reload(); });
 document.getElementById("btnRicontrollaPausa").addEventListener("click", function(){ location.reload(); });

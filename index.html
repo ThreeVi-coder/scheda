@@ -178,6 +178,41 @@
   .cdiv{ width:1.5px; height:30px; background:var(--line); transform:rotate(18deg); border-radius:2px; margin:0 3px; flex:0 0 auto; }
   .cempty{ font-size:15px; color:var(--muted); font-style:italic; padding:6px 0; }
 
+  /* ============ PANNELLO CARATTERISTICHE ============ */
+  .spanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 68px 18px 22px; width:fit-content; max-width:100%; min-width:300px;
+  }
+  .stats{ display:flex; gap:10px; flex-wrap:wrap; }
+  .stat{ border:1px solid var(--line); background:var(--panel2); border-radius:12px;
+    padding:8px 6px 7px; width:86px; text-align:center; }
+  .sigla{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .valore{ font-family:'Cinzel',Georgia,serif; font-size:28px; font-weight:700; line-height:1.2; }
+  .mod{ font-family:ui-monospace,Consolas,monospace; font-size:14px; font-weight:700; color:var(--gold); }
+  .conbonus{ border-color:rgba(167,139,250,.45); }
+  .bmk{ display:block; font-size:9.5px; color:var(--violet); margin-top:1px; }
+  /* la tabella dentro la finestra */
+  .stable{ width:100%; border-collapse:collapse; margin-top:4px; }
+  .stable td{ padding:7px 4px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .stable tr:last-child td{ border-bottom:0; }
+  .stnome{ font-size:12.5px; color:var(--muted); white-space:nowrap; }
+  .stnome b{ color:var(--ink); font-size:13px; letter-spacing:.1em; display:block; }
+  .stcalc{ text-align:right; font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--muted); white-space:nowrap; }
+  .stcalc b{ color:var(--ink); font-size:15px; }
+  .stcalc i{ color:var(--gold); font-style:normal; font-weight:700; }
+  .pb{ display:inline-flex; align-items:center; gap:8px; }
+  .pbtn{ width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:transparent;
+    color:var(--ink); font-size:16px; line-height:1; cursor:pointer; font-family:var(--ui); }
+  .pbtn:hover:not(:disabled){ border-color:var(--violet); color:var(--violet); }
+  .pbtn:disabled{ opacity:.28; cursor:default; }
+  .pbv{ font-family:ui-monospace,Consolas,monospace; font-size:16px; font-weight:700; min-width:22px; text-align:center; }
+  .stnum{ width:66px; background:var(--panel2); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:6px 8px; font-size:14px; font-family:ui-monospace,Consolas,monospace; text-align:center; }
+  .stnum:focus{ outline:none; border-color:var(--violet); }
+  .punti{ font-size:12.5px; color:var(--muted); }
+  .punti b{ font-family:ui-monospace,Consolas,monospace; font-size:15px; color:var(--ink); }
+  .punti.finiti b{ color:var(--gold); }
+
   /* ============ PANNELLO LIVELLO ============ */
   .lpanel{
     background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
@@ -351,6 +386,8 @@
     select{ min-width:100%; }
     .subhint{ margin-left:0; }
     .size-row{ display:none; }
+    .spanel{ min-width:0; width:100%; padding-right:56px; }
+    .stat{ flex:1 1 78px; width:auto; }
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .prow{ gap:12px; }
@@ -435,6 +472,12 @@
         <div class="eyebrow">Classe</div>
         <div class="cline" id="classLine"></div>
         <button class="gear" id="gearClass" title="Scegli la classe" aria-label="Scegli la classe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
+
+      <div class="spanel" id="statsPanel">
+        <div class="eyebrow">Caratteristiche</div>
+        <div class="stats" id="statsLine"></div>
+        <button class="gear" id="gearStats" title="Caratteristiche" aria-label="Caratteristiche"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
     </div>
 
@@ -668,6 +711,57 @@
       </div>
     </div>
 
+    <div class="modal" id="modalStats" hidden>
+      <div class="backdrop" data-close="stats"></div>
+      <div class="dialog centrata" id="dialogStats">
+        <div class="dlghead">
+          <h2>Caratteristiche</h2>
+          <button class="dlgx" data-close="stats" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <p class="hint">Scegli come riempirle. Il modificatore lo calcola la scheda dal totale, e i bonus della razza si aggiungeranno qui quando le razze esisteranno.</p>
+
+          <div class="row">
+            <span class="rowlab">Modo</span>
+            <button class="opt" data-modo="mano">A mano</button>
+            <button class="opt" data-modo="pointbuy">Point buy</button>
+            <button class="opt" data-modo="array">Array standard</button>
+            <span class="punti" id="statsPunti"></span>
+          </div>
+          <p class="subhint" id="statsNota"></p>
+          <div class="cwarn" id="statsWarn"></div>
+
+          <table class="stable"><tbody id="stBody"></tbody></table>
+
+          <div class="asplab">Aspetto delle scritte</div>
+          <div class="row">
+            <span class="rowlab">Scritta</span>
+            <span class="aspchips" id="aspChips_stats"></span>
+          </div>
+          <div class="row">
+            <span class="rowlab">Font</span>
+            <select id="aspFont_stats"></select>
+            <button class="opt lega" data-lega="font" data-dove="stats">Segue il nome</button>
+          </div>
+          <div class="row top">
+            <span class="rowlab">Colore</span>
+            <div id="aspPicker_stats" class="picker"></div>
+            <button class="opt lega" data-lega="colore" data-dove="stats">Segue il nome</button>
+          </div>
+          <p class="subhint" id="aspNote_stats"></p>
+        </div>
+        <div class="dlgbar" id="barStats">
+          <button class="btn-reset" data-reset="Stats">Azzera</button>
+          <button class="btn-close" data-close="stats">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmStats" hidden>
+          <span class="cfmtxt">Riportare le sei caratteristiche a 10 e le loro scritte com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Stats">Annulla</button>
+          <button class="btn-yes" data-yes="Stats">Azzera</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalEsci" hidden>
       <div class="backdrop" data-close="esci"></div>
       <div class="dialog mezzo">
@@ -870,8 +964,163 @@ var state={
   classes:[],
   xp:0,
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
-  testi:null   // riempito subito sotto, quando TESTI e' stato dichiarato
+  testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
+  stats:null
 };
+
+/* ================= CARATTERISTICHE =================
+   Le sei di D&D. Ogni valore e' tenuto diviso in due: il "base", che scegli
+   tu, e il "bonus", che arrivera' dalla razza e per ora vale zero. Il totale
+   e la modifica non si salvano: si ricalcolano, cosi' non possono mai
+   raccontare una cosa diversa da quella che c'e' scritta sopra. */
+var CARATT=[
+  { k:"for", sigla:"FOR", nome:"Forza" },
+  { k:"des", sigla:"DES", nome:"Destrezza" },
+  { k:"cos", sigla:"COS", nome:"Costituzione" },
+  { k:"int", sigla:"INT", nome:"Intelligenza" },
+  { k:"sag", sigla:"SAG", nome:"Saggezza" },
+  { k:"car", sigla:"CAR", nome:"Carisma" }
+];
+var CAR_MIN=1, CAR_MAX=30;
+
+/* Point buy: la tabella dei costi delle regole base. Salire costa poco fino
+   a 13 e caro dopo, ed e' quello che scoraggia i personaggi con un 15 e
+   cinque miserie. */
+var PB_COSTO={ 8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9 };
+var PB_MIN=8, PB_MAX=15, PB_TOTALE=27;
+var ARRAY_STD=[15,14,13,12,10,8];
+
+function statsDiPartenza(){
+  var o={ modo:"mano", base:{}, bonus:{} };
+  CARATT.forEach(function(c){ o.base[c.k]=10; o.bonus[c.k]=0; });
+  return o;
+}
+function totaleCar(k){
+  var v=state.stats.base[k]+state.stats.bonus[k];
+  return Math.max(CAR_MIN, Math.min(CAR_MAX, v));
+}
+function modCar(k){ return Math.floor((totaleCar(k)-10)/2); }
+function segno(n){ return (n>=0?"+":"\u2212")+Math.abs(n); }
+function conBonus(){ return CARATT.some(function(c){ return state.stats.bonus[c.k]!==0; }); }
+
+function pbCosto(v){ return PB_COSTO[v]; }
+function pbUsati(){
+  var t=0;
+  CARATT.forEach(function(c){ var v=state.stats.base[c.k]; t += (PB_COSTO[v]===undefined ? 0 : PB_COSTO[v]); });
+  return t;
+}
+function pbLiberi(){ return PB_TOTALE - pbUsati(); }
+function pbValido(){
+  return CARATT.every(function(c){ var v=state.stats.base[c.k]; return v>=PB_MIN && v<=PB_MAX; })
+      && pbUsati()<=PB_TOTALE;
+}
+function arrayValido(){
+  var v=CARATT.map(function(c){ return state.stats.base[c.k]; }).sort(function(a,b){ return b-a; });
+  return v.join(",")===ARRAY_STD.slice().sort(function(a,b){ return b-a; }).join(",");
+}
+
+/* Cambiare modo non butta via il lavoro se quello che c'e' gia' ci sta
+   dentro: si azzera solo quando i numeri di adesso sono impossibili col modo
+   nuovo, e in quel caso lo si dice invece di farlo di nascosto. */
+function cambiaModo(m){
+  var prima=state.stats.modo;
+  state.stats.modo=m;
+  statsWarn("");
+  if(m==="pointbuy" && !pbValido()){
+    CARATT.forEach(function(c){ state.stats.base[c.k]=PB_MIN; });
+    if(prima!==m) statsWarn("I valori di prima non stanno nel point buy: sono ripartiti da "+PB_MIN+", con "+PB_TOTALE+" punti da spendere.");
+  }
+  if(m==="array" && !arrayValido()){
+    CARATT.forEach(function(c,i){ state.stats.base[c.k]=ARRAY_STD[i]; });
+    if(prima!==m) statsWarn("I valori di prima non erano l'array standard: te l'ho messo in ordine, ora spostali dove vuoi.");
+  }
+  renderAll();
+}
+
+function statsWarn(t){
+  var el=document.getElementById("statsWarn"); if(!el) return;
+  el.textContent=t||""; el.classList.toggle("on", !!t);
+}
+
+/* Array standard: scegliendo un valore gia' preso, le due caratteristiche se
+   lo scambiano. Cosi' l'array resta sempre quello giusto e non si finisce mai
+   con due 15 o con un buco. */
+function assegnaArray(k, v){
+  var altro=CARATT.filter(function(c){ return c.k!==k && state.stats.base[c.k]===v; })[0];
+  if(altro) state.stats.base[altro.k]=state.stats.base[k];
+  state.stats.base[k]=v;
+  renderAll();
+}
+
+function cambiaPb(k, verso){
+  var v=state.stats.base[k], n=v+verso;
+  if(n<PB_MIN || n>PB_MAX) return;
+  if(verso>0 && (pbCosto(n)-pbCosto(v))>pbLiberi()) return;
+  state.stats.base[k]=n;
+  renderAll();
+}
+
+function scriviCar(k, testo){
+  var n=parseInt(String(testo).replace(/[^0-9]/g,""),10);
+  if(!isFinite(n)) return;
+  state.stats.base[k]=Math.max(CAR_MIN, Math.min(CAR_MAX, n));
+  renderAll();
+}
+
+function renderStats(){
+  var linea=document.getElementById("statsLine");
+  linea.innerHTML = CARATT.map(function(c){
+    var b=state.stats.bonus[c.k];
+    return '<div class="stat'+(b?' conbonus':'')+'">'
+      + '<div class="sigla">'+c.sigla+'</div>'
+      + '<div class="valore">'+totaleCar(c.k)+'</div>'
+      + '<div class="mod">'+segno(modCar(c.k))+'</div>'
+      + (b ? '<span class="bmk">'+state.stats.base[c.k]+' '+segno(b)+'</span>' : '')
+      + '</div>';
+  }).join("");
+  applicaTesti();   // le sei caselle sono appena nate: vanno dipinte
+}
+
+function renderStatsDialog(){
+  var modo=state.stats.modo;
+  setActive("data-modo", modo);
+
+  var punti=document.getElementById("statsPunti");
+  if(modo==="pointbuy"){
+    punti.innerHTML='Punti rimasti: <b>'+pbLiberi()+'</b> su '+PB_TOTALE;
+    punti.className="punti"+(pbLiberi()===0?" finiti":"");
+  } else punti.textContent="";
+
+  document.getElementById("statsNota").textContent =
+      modo==="mano"      ? "Numero libero da "+CAR_MIN+" a "+CAR_MAX+": nessun controllo, decidete voi."
+    : modo==="pointbuy"  ? "Si parte da "+PB_MIN+" e si sale spendendo punti. Da 14 in su costa di piu\u0300."
+    : "I sei numeri sono sempre questi: scegline uno gi\u00E0 preso e le due caratteristiche se lo scambiano.";
+
+  var bonus=conBonus();
+  document.getElementById("stBody").innerHTML = CARATT.map(function(c){
+    var v=state.stats.base[c.k], comando;
+    if(modo==="pointbuy"){
+      var giu = v<=PB_MIN;
+      var su  = v>=PB_MAX || (pbCosto(v+1)-pbCosto(v))>pbLiberi();
+      comando = '<span class="pb">'
+        + '<button class="pbtn" data-car="'+c.k+'" data-verso="-1"'+(giu?' disabled':'')+'>&minus;</button>'
+        + '<span class="pbv">'+v+'</span>'
+        + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
+        + '</span>';
+    } else if(modo==="array"){
+      comando = '<select data-cararr="'+c.k+'">'+ARRAY_STD.map(function(x){
+        return '<option value="'+x+'"'+(x===v?' selected':'')+'>'+x+'</option>';
+      }).join("")+'</select>';
+    } else {
+      comando = '<input class="stnum" type="text" inputmode="numeric" data-carnum="'+c.k+'" value="'+v+'">';
+    }
+    var calc = bonus
+      ? v+' '+segno(state.stats.bonus[c.k])+' = <b>'+totaleCar(c.k)+'</b> <i>'+segno(modCar(c.k))+'</i>'
+      : '<b>'+totaleCar(c.k)+'</b> <i>'+segno(modCar(c.k))+'</i>';
+    return '<tr><td class="stnome"><b>'+c.sigla+'</b>'+c.nome+'</td>'
+         + '<td>'+comando+'</td><td class="stcalc">'+calc+'</td></tr>';
+  }).join("");
+}
 
 /* ================= ASPETTO DELLE SCRITTE =================
    Ogni scritta della scheda e' registrata qui una volta sola: font e colore
@@ -888,7 +1137,11 @@ var TESTI=[
   { id:"numPE",     dove:"xp",    nome:"Numeri dei PE",        sel:"#xpTxt b",             font:"",       colore:"#E8E6F0" },
   { id:"etClasse",  dove:"class", nome:"Etichetta",            sel:"#classPanel .eyebrow", font:"",       colore:"#9A97AD" },
   { id:"nomeCl",    dove:"class", nome:"Nome della classe",    sel:".cn",                  font:"cinzel", colore:"#E8E6F0" },
-  { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" }
+  { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" },
+  { id:"etCar",     dove:"stats", nome:"Etichetta",            sel:"#statsPanel .eyebrow", font:"",       colore:"#9A97AD" },
+  { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".sigla",               font:"",       colore:"#9A97AD" },
+  { id:"valCar",    dove:"stats", nome:"Valore",               sel:".valore",              font:"cinzel", colore:"#E8E6F0" },
+  { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".mod",                 font:"",       colore:"#E0B15E" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -904,6 +1157,7 @@ var DEF_NAME={ font:"cinzel", size:40, align:"left", bold:true, italic:false, un
 var DEF_XP={ xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E" };
 
 state.testi = testiDiPartenza();
+state.stats = statsDiPartenza();
 
 var elName=document.getElementById("name"), elHeader=document.getElementById("header"),
     elEyebrow=document.getElementById("eyebrow"), elReadout=document.getElementById("readout"),
@@ -918,6 +1172,20 @@ var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","
 function applicaDati(o){
   if(!o || typeof o!=="object") return;
   SAVE_FIELDS.forEach(function(k){ if(o[k]!==undefined) state[k]=o[k]; });
+  // Le caratteristiche si rileggono una per una, e ogni numero passa da un
+  // controllo: una scheda vecchia non le ha, e una modificata a mano potrebbe
+  // avere dentro qualsiasi cosa.
+  state.stats = statsDiPartenza();
+  if(o.stats && typeof o.stats==="object"){
+    if(o.stats.modo==="mano" || o.stats.modo==="pointbuy" || o.stats.modo==="array") state.stats.modo=o.stats.modo;
+    CARATT.forEach(function(c){
+      var b = o.stats.base && o.stats.base[c.k];
+      if(typeof b==="number" && isFinite(b)) state.stats.base[c.k]=Math.max(CAR_MIN, Math.min(CAR_MAX, Math.round(b)));
+      var x = o.stats.bonus && o.stats.bonus[c.k];
+      if(typeof x==="number" && isFinite(x)) state.stats.bonus[c.k]=Math.max(-10, Math.min(10, Math.round(x)));
+    });
+  }
+
   // le scritte si travasano una per una invece di copiare l'oggetto intero:
   // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
   state.testi = testiDiPartenza();
@@ -938,7 +1206,7 @@ function applicaDati(o){
 function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
   o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
-  o.testi=state.testi;
+  o.testi=state.testi; o.stats=state.stats;
   return o;
 }
 
@@ -1008,7 +1276,7 @@ function nomeDi(id){
 function schedaVuota(){
   for(var k in DEF_NAME) state[k]=DEF_NAME[k];
   for(var j in DEF_XP) state[j]=DEF_XP[j];
-  state.classes=[]; state.xp=0; state.testi=testiDiPartenza();
+  state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   elName.textContent="";
 }
 
@@ -1021,7 +1289,7 @@ function modoScheda(){
     document.getElementById("fasciaModo").textContent = soloLettura ? "sola lettura" : "puoi modificarla e salvarla";
   }
   elName.contentEditable = soloLettura ? "false" : "true";
-  ["gearName","gearXp","gearClass"].forEach(function(id){
+  ["gearName","gearXp","gearClass","gearStats"].forEach(function(id){
     var g=document.getElementById(id); if(g) g.hidden=soloLettura;
   });
   var b=document.getElementById("btnSalva"); if(b) b.hidden=soloLettura;
@@ -1196,7 +1464,7 @@ function apply(){
   var alignIt=state.align==="center"?"al centro":(state.align==="right"?"a destra":"a sinistra");
   var embIt = state.emblemMode==="auto" ? "automatico" : (state.emblemMode==="none" ? "nessuno" : BY_KEY[state.emblemMode].name+" (manuale)");
   applicaTesti();
-  ["name","xp","class"].forEach(sincronizzaAspetto);
+  ["name","xp","class","stats"].forEach(sincronizzaAspetto);
   aggiornaSalva();
   elReadout.innerHTML="Scelta attuale: <b>"+FONT_NAME[state.font]+"</b>, <b>"+state.size+"px</b>, "+alignIt
     +", formato: <b>"+(fmt.length?fmt.join(", "):"nessuno")+"</b>, colore nome <b>"+state.nameColor.toUpperCase()+"</b>"
@@ -1308,6 +1576,10 @@ function doReset(which){
     namePicker.setHex(state.nameColor);
     capPicker.setHex(state.capColor);
     renderCapSuggestions();
+  } else if(which==="Stats"){
+    state.stats=statsDiPartenza();
+    azzeraTesti("stats");
+    statsWarn("");
   } else if(which==="Class"){
     state.classes=[];
     azzeraTesti("class");
@@ -1423,7 +1695,8 @@ function applicaTesti(){
   });
 }
 
-function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog(); apply(); setHub(null); }
+function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
+  renderStats(); renderStatsDialog(); apply(); setHub(null); }
 
 FONT_GROUPS.forEach(function(g){
   var og=document.createElement("optgroup"); og.label=g[0];
@@ -1441,7 +1714,7 @@ FONT_GROUPS.forEach(function(g){
 /* I comandi dell'Aspetto: una fila di pastiglie per scegliere la scritta,
    poi il font, il colore e i due agganci di quella scelta. Un solo picker per
    finestra invece di uno per scritta: le finestre restano leggibili. */
-var aspSel={ name:"etNome", xp:"etLivello", class:"etClasse" }, aspPicker={}, aspFermo=false;
+var aspSel={ name:"etNome", xp:"etLivello", class:"etClasse", stats:"etCar" }, aspPicker={}, aspFermo=false;
 
 function costruisciAspetto(dove){
   var quali=TESTI.filter(function(t){ return t.dove===dove; });
@@ -1519,7 +1792,7 @@ function uniforma(cosa, acceso){
     if(cosa!=="colore") state.testi[t.id].legaFont=acceso;
     if(cosa!=="font") state.testi[t.id].legaColore=acceso;
   });
-  applicaTesti(); ["name","xp","class"].forEach(sincronizzaAspetto); aggiornaSalva();
+  applicaTesti(); ["name","xp","class","stats"].forEach(sincronizzaAspetto); aggiornaSalva();
 }
 
 var modalName=document.getElementById("modalName"), modalClass=document.getElementById("modalClass"),
@@ -1533,8 +1806,10 @@ function openName(){ modalName.hidden=false; elHeader.classList.add("raised"); p
 /* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
    lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
 function openClass(){ modalClass.hidden=false; setHub(null); }
+function openStats(){ document.getElementById("modalStats").hidden=false; renderStatsDialog(); }
 function openXp(){ modalXp.hidden=false; renderXpDialog(); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true;
+  document.getElementById("modalStats").hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
@@ -1560,6 +1835,9 @@ document.getElementById("size").addEventListener("input", function(e){ state.siz
 
 document.addEventListener("click", function(e){
   if(aspettoDaEventi(e)) return;
+  var md=e.target.closest("[data-modo]"); if(md){ cambiaModo(md.getAttribute("data-modo")); return; }
+  var pb=e.target.closest("[data-car]");
+  if(pb && !pb.disabled){ cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
   var r=e.target.closest("[data-reset]"); if(r){ askReset(r.getAttribute("data-reset")); return; }
   var no=e.target.closest("[data-cancel]"); if(no){ cancelReset(no.getAttribute("data-cancel")); return; }
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }
@@ -1588,7 +1866,7 @@ document.getElementById("chosen").addEventListener("click", function(e){
 });
 
 /* ================= AVVIO ================= */
-["name","xp","class"].forEach(costruisciAspetto);
+["name","xp","class","stats"].forEach(costruisciAspetto);
 document.getElementById("unifFont").addEventListener("click", function(){ uniforma("font", true); });
 document.getElementById("unifColore").addEventListener("click", function(){ uniforma("colore", true); });
 document.getElementById("unifVia").addEventListener("click", function(){ uniforma("tutto", false); });
@@ -1609,7 +1887,7 @@ function sincronizzaComandi(){
   capPicker.setHex(state.capColor);
   xpPicker1.setHex(state.xpColor1);
   xpPicker2.setHex(state.xpColor2);
-  ["name","xp","class"].forEach(sincronizzaAspetto);
+  ["name","xp","class","stats"].forEach(sincronizzaAspetto);
   renderCapSuggestions();
   renderAll();
 }
@@ -2130,6 +2408,16 @@ document.getElementById("tabControllo").addEventListener("click", function(){ mo
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
+document.getElementById("gearStats").addEventListener("click", openStats);
+document.getElementById("stBody").addEventListener("change", function(e){
+  var a=e.target.closest("[data-cararr]");
+  if(a){ assegnaArray(a.getAttribute("data-cararr"), parseInt(a.value,10)); return; }
+});
+document.getElementById("stBody").addEventListener("input", function(e){
+  var n=e.target.closest("[data-carnum]");
+  if(n){ scriviCar(n.getAttribute("data-carnum"), n.value); }
+});
+
 document.getElementById("cercaPg").addEventListener("input", function(e){
   cerca=e.target.value; disegnaPersonaggi();
 });

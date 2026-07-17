@@ -108,6 +108,13 @@
   .ctrlhead > div{ display:flex; align-items:baseline; gap:10px; }
   .ctrlhead h2{ font-family:'Cinzel',Georgia,serif; font-size:20px; color:var(--ink); margin:0; font-weight:600; }
   .ctrlnote{ font-size:12px; color:var(--muted); }
+  .cerca{ display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .cerca input{ flex:1 1 220px; min-width:0; background:var(--panel2); border:1px solid var(--line);
+    color:var(--ink); border-radius:9px; padding:8px 12px; font-size:13px; font-family:var(--ui); }
+  .cerca input:focus{ outline:none; border-color:var(--violet); }
+  .cerca select{ flex:0 0 auto; }
+  .cerca .btn-apri{ padding:8px 12px; font-size:12px; }
+  .quando{ font-size:11.5px; color:var(--muted); white-space:nowrap; }
   .tblwrap{ overflow-x:auto; }
   .tbl{ width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
   .tbl th{ text-align:left; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
@@ -689,6 +696,11 @@
           <span class="ctrlnote" id="ctrlMsg"></span>
         </div>
         <button class="btn-out" id="btnCtrlReload">Aggiorna</button>
+      </div>
+      <div class="cerca">
+        <input type="search" id="cercaPg" placeholder="Cerca per nick Discord o nome del personaggio" autocomplete="off">
+        <select id="ordinePg"></select>
+        <button class="btn-apri" id="btnCercaVia" hidden>Azzera</button>
       </div>
       <div class="tblwrap">
         <table class="tbl" id="tblPg">
@@ -1655,6 +1667,7 @@ function applicaRuoli(){
   // risponde in modo diverso, e alcune colonne potrebbero non spettargli piu'
   ctrlCaricato=false;
   document.getElementById("ruoliBlock").hidden = !puoStaff();
+  preparaOrdini();   // "livello" e "XP" spariscono a chi le schede non spettano piu'
 
   var suControllo = !document.getElementById("paneControllo").hidden;
   if(suControllo && !ruoli.length){ mostraPane("scheda"); }
@@ -1774,7 +1787,7 @@ function caricaControllo(){
   body.innerHTML='<tr><td colspan="5" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
 
   var richieste=[
-    sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa"),
+    sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa,ultimo_accesso"),
     puoVedereSchede() ? sb.from("schede").select("user_id,dati") : Promise.resolve({ data:[], error:null }),
     sb.from("ruoli").select("user_id,ruolo")
   ];
@@ -1791,7 +1804,10 @@ function caricaControllo(){
       return String(a.username||"").localeCompare(String(b.username||""));
     });
     mappaRuoli(r[2] ? (r[2].data||[]) : []);
-    disegnaPersonaggi(r[1].data||[]);
+    schedeCache={};
+    (r[1].data||[]).forEach(function(x){ schedeCache[x.user_id]=x.dati||{}; });
+    preparaOrdini();
+    disegnaPersonaggi();
     if(puoStaff()){
       disegnaRuoli();
       document.getElementById("ruoliBlock").hidden=false;
@@ -1809,45 +1825,127 @@ function inAttesa(p){
   return !p.approvato && (ruoliDi[p.user_id]||[]).indexOf("sviluppatore")<0;
 }
 
-function disegnaPersonaggi(righeSchede){
+var schedeCache={}, cerca="", ordine="nick";
+
+/* Le voci dell'ordinamento dipendono da cosa uno puo' vedere: a chi le schede
+   sono chiuse non ha senso proporre "livello" o "XP", che non gli arrivano. */
+function ORDINI(){
+  var v=[["nick","Nick Discord (A-Z)"]];
+  if(puoVedereSchede()) v=v.concat([
+    ["pg",   "Nome del personaggio (A-Z)"],
+    ["lv",   "Livello (dal piu' alto)"],
+    ["xp",   "XP (dal piu' alto)"]
+  ]);
+  v.push(["accesso","Ultimo accesso (dal piu' recente)"]);
+  return v;
+}
+function preparaOrdini(){
+  var sel=document.getElementById("ordinePg"), v=ORDINI();
+  if(!v.some(function(x){ return x[0]===ordine; })) ordine="nick";
+  sel.innerHTML = v.map(function(x){
+    return '<option value="'+x[0]+'">'+esc(x[1])+'</option>';
+  }).join("");
+  sel.value=ordine;
+}
+
+/* Data leggibile invece di un timbro del database. */
+function quando(iso){
+  if(!iso) return '<span class="vuoto">mai</span>';
+  var d=new Date(iso); if(isNaN(d)) return '<span class="vuoto">&mdash;</span>';
+  var ora=d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+  var oggi=new Date(), ieri=new Date(); ieri.setDate(oggi.getDate()-1);
+  function stessoGiorno(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+  if(stessoGiorno(d,oggi)) return '<span class="quando">oggi alle '+ora+'</span>';
+  if(stessoGiorno(d,ieri)) return '<span class="quando">ieri alle '+ora+'</span>';
+  return '<span class="quando">'+d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"2-digit"})+'</span>';
+}
+
+function nomePg(id){
+  var d=schedeCache[id]||{};
+  return (typeof d.name==="string" && d.name.trim()) ? d.name.trim() : "";
+}
+function xpDi(id){
+  var d=schedeCache[id]||{};
+  return (typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
+}
+
+function filtraOrdina(){
+  var q = cerca.trim().toLowerCase();
+  var v = profiliCache.filter(function(p){
+    if(!q) return true;
+    var dove = [p.username||"", p.nome||""];
+    if(puoVedereSchede()) dove.push(nomePg(p.user_id));
+    return dove.join(" \u00B7 ").toLowerCase().indexOf(q)>=0;
+  });
+  function testo(a){ return String(a||"").toLowerCase(); }
+  return v.sort(function(a,b){
+    if(ordine==="pg"){
+      var na=nomePg(a.user_id), nb=nomePg(b.user_id);
+      // chi non ha ancora un personaggio va in fondo, non in cima all'ordine
+      if(!na !== !nb) return na ? -1 : 1;
+      if(na!==nb) return testo(na).localeCompare(testo(nb));
+    }
+    else if(ordine==="lv" || ordine==="xp"){
+      var xa=xpDi(a.user_id), xb=xpDi(b.user_id);
+      var ha=Object.prototype.hasOwnProperty.call(schedeCache,a.user_id);
+      var hb=Object.prototype.hasOwnProperty.call(schedeCache,b.user_id);
+      if(ha!==hb) return ha ? -1 : 1;   // senza scheda, in fondo
+      if(xa!==xb) return xb-xa;
+    }
+    else if(ordine==="accesso"){
+      var ta=a.ultimo_accesso ? Date.parse(a.ultimo_accesso) : -1;
+      var tb=b.ultimo_accesso ? Date.parse(b.ultimo_accesso) : -1;
+      if(ta!==tb) return tb-ta;
+    }
+    return testo(a.username).localeCompare(testo(b.username));   // a parita', il nick
+  });
+}
+
+function disegnaPersonaggi(){
   var body=document.getElementById("tblBody");
   var vede=puoVedereSchede();
-  var schede={};
-  righeSchede.forEach(function(s){ schede[s.user_id]=s.dati||{}; });
 
   // Chi le schede non le vede si ferma al nick e allo stato: le colonne del
   // personaggio resterebbero vuote e farebbero solo credere che manchi qualcosa.
   document.getElementById("tblHead").innerHTML = vede
-    ? '<th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th><th></th>'
-    : '<th>Nick Discord</th>';
-  var quante = vede ? 5 : 1;
+    ? '<th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th><th>Ultimo accesso</th><th></th>'
+    : '<th>Nick Discord</th><th>Ultimo accesso</th>';
+  var quante = vede ? 6 : 2;
 
+  var lista = filtraOrdina();
   var attesa = profiliCache.filter(inAttesa).length;
-  document.getElementById("ctrlNote").textContent =
-    profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate")
-    + (attesa ? " \u00B7 " + attesa + " in attesa di via libera" : "");
+  var q = cerca.trim();
+  document.getElementById("btnCercaVia").hidden = !q;
+  document.getElementById("ctrlNote").textContent = q
+    ? lista.length + (lista.length===1 ? " persona trovata" : " persone trovate") + " su " + profiliCache.length
+    : profiliCache.length + (profiliCache.length===1 ? " persona registrata" : " persone registrate")
+      + (attesa ? " \u00B7 " + attesa + " in attesa di via libera" : "");
 
   if(!profiliCache.length){
     body.innerHTML='<tr><td colspan="'+quante+'" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
     return;
   }
-  body.innerHTML = profiliCache.map(function(p){
+  if(!lista.length){
+    body.innerHTML='<tr><td colspan="'+quante+'" class="ctrlmsg">Nessuno corrisponde a \u201C'+esc(q)+'\u201D.</td></tr>';
+    return;
+  }
+  body.innerHTML = lista.map(function(p){
     var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
     if(p.in_pausa) marchio += ' <span class="tag-pausa">in pausa</span>';
     var prima = '<td>'+nickCell(p)+marchio+'</td>';
-    if(!vede) return '<tr>'+prima+'</tr>';
+    if(!vede) return '<tr>'+prima+'<td>'+quando(p.ultimo_accesso)+'</td></tr>';
 
-    var haScheda = Object.prototype.hasOwnProperty.call(schede, p.user_id);
-    var d = schede[p.user_id]||{};
-    var xp = (typeof d.xp==="number" && isFinite(d.xp) && d.xp>=0) ? d.xp : 0;
-    var pg = (typeof d.name==="string" && d.name.trim()) ? esc(d.name.trim()) : '<span class="vuoto">senza nome</span>';
-    var lv = haScheda ? levelFromXP(xp) : '<span class="vuoto">&mdash;</span>';
-    var xt = haScheda ? numIt(xp) : '<span class="vuoto">nessuna scheda</span>';
+    var haScheda = Object.prototype.hasOwnProperty.call(schedeCache, p.user_id);
+    var nm = nomePg(p.user_id);
+    var pg = nm ? esc(nm) : '<span class="vuoto">senza nome</span>';
+    var lv = haScheda ? levelFromXP(xpDi(p.user_id)) : '<span class="vuoto">&mdash;</span>';
+    var xt = haScheda ? numIt(xpDi(p.user_id)) : '<span class="vuoto">nessuna scheda</span>';
     var apri = (p.user_id===utente.id)
       ? '<span class="vuoto">la tua</span>'
       : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
     return '<tr>'+prima+'<td class="pgname">'+pg+'</td>'
-         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td><td>'+apri+'</td></tr>';
+         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td>'
+         + '<td>'+quando(p.ultimo_accesso)+'</td><td>'+apri+'</td></tr>';
   }).join("");
 }
 
@@ -2032,6 +2130,16 @@ document.getElementById("tabControllo").addEventListener("click", function(){ mo
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
+document.getElementById("cercaPg").addEventListener("input", function(e){
+  cerca=e.target.value; disegnaPersonaggi();
+});
+document.getElementById("ordinePg").addEventListener("change", function(e){
+  ordine=e.target.value; disegnaPersonaggi();
+});
+document.getElementById("btnCercaVia").addEventListener("click", function(){
+  cerca=""; document.getElementById("cercaPg").value=""; disegnaPersonaggi();
+});
+
 document.getElementById("tblBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest("[data-apri]") : null;
   if(b) apriScheda(b.getAttribute("data-apri"));

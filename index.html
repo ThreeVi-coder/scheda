@@ -41,6 +41,12 @@
   .fascia .ftxt{ font-size:13px; color:var(--ink); flex:1 1 auto; }
   .fascia .ftxt b{ color:var(--r-supporto); }
   .fascia .fmodo{ font-size:11px; color:var(--muted); }
+  .fascia.este{ border-color:rgba(167,139,250,.5); background:rgba(124,92,255,.12); }
+  .fascia.este .ftxt b{ color:var(--violet); }
+  .btn-este{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:8px; padding:6px 14px; font-size:12px; font-family:var(--ui); cursor:pointer; }
+  .btn-este:hover{ color:var(--violet); border-color:var(--violet); }
+  .btn-este.on{ border-color:transparent; background:linear-gradient(150deg,var(--violet-2),#5b45c9); color:#fff; font-weight:600; }
   .btn-apri{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:7px; padding:4px 10px; font-size:11.5px; cursor:pointer; font-family:var(--ui); }
   .btn-apri:hover{ color:var(--violet); border-color:var(--violet); }
@@ -435,6 +441,10 @@
     <div id="sheet" hidden>
 
     <div class="authbar" id="authbar"></div>
+    <div class="fascia este" id="fasciaEste" hidden>
+      <span class="ftxt">Sei in <b>personalizzazione</b>: le rotelline aprono font, colori e aspetto. I comandi della scheda tornano quando esci.</span>
+      <button class="btn-out" id="btnEsteVia">Fine</button>
+    </div>
     <div class="fascia" id="fascia" hidden>
       <span class="ftxt" id="fasciaTxt"></span>
       <span class="fmodo" id="fasciaModo"></span>
@@ -603,6 +613,7 @@
           <button class="dlgx" data-close="xp" aria-label="Chiudi">&times;</button>
         </div>
         <div class="dlgbody">
+          <div class="mech">
           <p class="hint">Il livello nasce dai punti esperienza, secondo la tabella del manuale. Quando ci sar&agrave; il bot, sar&agrave; lui a scrivere gli XP dopo le sessioni: questo campo resta per le correzioni a mano.</p>
 
           <div class="xprow">
@@ -616,7 +627,9 @@
           </div>
 
           <div class="xpres" id="xpRes"></div>
+          </div>
 
+          <div class="este">
           <div class="row">
             <span class="rowlab">Barra</span>
             <button class="opt" data-xpstyle="grad">Sfumatura</button>
@@ -649,8 +662,9 @@
             <button class="opt lega" data-lega="colore" data-dove="xp">Segue il nome</button>
           </div>
           <p class="subhint" id="aspNote_xp"></p>
+          </div>
 
-          <table class="xptable" id="xpTable">
+          <table class="xptable mech" id="xpTable">
             <thead><tr><th>Punti esperienza</th><th>Livello</th><th>Competenza</th></tr></thead>
             <tbody></tbody>
           </table>
@@ -682,6 +696,7 @@
           <div class="cwarn" id="cwarn"></div>
           <div class="chosen" id="chosen"></div>
 
+          <div class="este">
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -698,6 +713,7 @@
             <button class="opt lega" data-lega="colore" data-dove="class">Segue il nome</button>
           </div>
           <p class="subhint" id="aspNote_class"></p>
+          </div>
         </div>
         <div class="dlgbar" id="barClass">
           <button class="btn-reset" data-reset="Class">Azzera</button>
@@ -719,11 +735,11 @@
           <button class="dlgx" data-close="stats" aria-label="Chiudi">&times;</button>
         </div>
         <div class="dlgbody">
+          <div class="mech">
           <p class="hint">Scegli come riempirle. Il modificatore lo calcola la scheda dal totale, e i bonus della razza si aggiungeranno qui quando le razze esisteranno.</p>
 
           <div class="row">
             <span class="rowlab">Modo</span>
-            <button class="opt" data-modo="mano">A mano</button>
             <button class="opt" data-modo="pointbuy">Point buy</button>
             <button class="opt" data-modo="array">Array standard</button>
             <span class="punti" id="statsPunti"></span>
@@ -732,7 +748,9 @@
           <div class="cwarn" id="statsWarn"></div>
 
           <table class="stable"><tbody id="stBody"></tbody></table>
+          </div>
 
+          <div class="este">
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -749,6 +767,7 @@
             <button class="opt lega" data-lega="colore" data-dove="stats">Segue il nome</button>
           </div>
           <p class="subhint" id="aspNote_stats"></p>
+          </div>
         </div>
         <div class="dlgbar" id="barStats">
           <button class="btn-reset" data-reset="Stats">Azzera</button>
@@ -991,8 +1010,8 @@ var PB_MIN=8, PB_MAX=15, PB_TOTALE=27;
 var ARRAY_STD=[15,14,13,12,10,8];
 
 function statsDiPartenza(){
-  var o={ modo:"mano", base:{}, bonus:{} };
-  CARATT.forEach(function(c){ o.base[c.k]=10; o.bonus[c.k]=0; });
+  var o={ modo:"pointbuy", base:{}, bonus:{} };
+  CARATT.forEach(function(c){ o.base[c.k]=PB_MIN; o.bonus[c.k]=0; });
   return o;
 }
 function totaleCar(k){
@@ -1019,21 +1038,16 @@ function arrayValido(){
   return v.join(",")===ARRAY_STD.slice().sort(function(a,b){ return b-a; }).join(",");
 }
 
-/* Cambiare modo non butta via il lavoro se quello che c'e' gia' ci sta
-   dentro: si azzera solo quando i numeri di adesso sono impossibili col modo
-   nuovo, e in quel caso lo si dice invece di farlo di nascosto. */
+/* Cambiare modo ricomincia da capo: il point buy riparte sempre da 8 con
+   tutti e 27 i punti in mano, l'array rimette i suoi sei numeri. Premere il
+   modo in cui si e' gia' non fa niente, se no si perderebbe il lavoro per
+   un clic di troppo. */
 function cambiaModo(m){
-  var prima=state.stats.modo;
+  if(m===state.stats.modo) return;
   state.stats.modo=m;
   statsWarn("");
-  if(m==="pointbuy" && !pbValido()){
-    CARATT.forEach(function(c){ state.stats.base[c.k]=PB_MIN; });
-    if(prima!==m) statsWarn("I valori di prima non stanno nel point buy: sono ripartiti da "+PB_MIN+", con "+PB_TOTALE+" punti da spendere.");
-  }
-  if(m==="array" && !arrayValido()){
-    CARATT.forEach(function(c,i){ state.stats.base[c.k]=ARRAY_STD[i]; });
-    if(prima!==m) statsWarn("I valori di prima non erano l'array standard: te l'ho messo in ordine, ora spostali dove vuoi.");
-  }
+  if(m==="pointbuy") CARATT.forEach(function(c){ state.stats.base[c.k]=PB_MIN; });
+  if(m==="array")    CARATT.forEach(function(c,i){ state.stats.base[c.k]=ARRAY_STD[i]; });
   renderAll();
 }
 
@@ -1057,13 +1071,6 @@ function cambiaPb(k, verso){
   if(n<PB_MIN || n>PB_MAX) return;
   if(verso>0 && (pbCosto(n)-pbCosto(v))>pbLiberi()) return;
   state.stats.base[k]=n;
-  renderAll();
-}
-
-function scriviCar(k, testo){
-  var n=parseInt(String(testo).replace(/[^0-9]/g,""),10);
-  if(!isFinite(n)) return;
-  state.stats.base[k]=Math.max(CAR_MIN, Math.min(CAR_MAX, n));
   renderAll();
 }
 
@@ -1091,9 +1098,8 @@ function renderStatsDialog(){
     punti.className="punti"+(pbLiberi()===0?" finiti":"");
   } else punti.textContent="";
 
-  document.getElementById("statsNota").textContent =
-      modo==="mano"      ? "Numero libero da "+CAR_MIN+" a "+CAR_MAX+": nessun controllo, decidete voi."
-    : modo==="pointbuy"  ? "Si parte da "+PB_MIN+" e si sale spendendo punti. Da 14 in su costa di piu\u0300."
+  document.getElementById("statsNota").textContent = modo==="pointbuy"
+    ? "Si parte da "+PB_MIN+" e si sale spendendo punti. Da 14 in su costa di pi\u00F9."
     : "I sei numeri sono sempre questi: scegline uno gi\u00E0 preso e le due caratteristiche se lo scambiano.";
 
   var bonus=conBonus();
@@ -1107,12 +1113,10 @@ function renderStatsDialog(){
         + '<span class="pbv">'+v+'</span>'
         + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
         + '</span>';
-    } else if(modo==="array"){
+    } else {
       comando = '<select data-cararr="'+c.k+'">'+ARRAY_STD.map(function(x){
         return '<option value="'+x+'"'+(x===v?' selected':'')+'>'+x+'</option>';
       }).join("")+'</select>';
-    } else {
-      comando = '<input class="stnum" type="text" inputmode="numeric" data-carnum="'+c.k+'" value="'+v+'">';
     }
     var calc = bonus
       ? v+' '+segno(state.stats.bonus[c.k])+' = <b>'+totaleCar(c.k)+'</b> <i>'+segno(modCar(c.k))+'</i>'
@@ -1177,7 +1181,7 @@ function applicaDati(o){
   // avere dentro qualsiasi cosa.
   state.stats = statsDiPartenza();
   if(o.stats && typeof o.stats==="object"){
-    if(o.stats.modo==="mano" || o.stats.modo==="pointbuy" || o.stats.modo==="array") state.stats.modo=o.stats.modo;
+    if(o.stats.modo==="pointbuy" || o.stats.modo==="array") state.stats.modo=o.stats.modo;
     CARATT.forEach(function(c){
       var b = o.stats.base && o.stats.base[c.k];
       if(typeof b==="number" && isFinite(b)) state.stats.base[c.k]=Math.max(CAR_MIN, Math.min(CAR_MAX, Math.round(b)));
@@ -1260,7 +1264,33 @@ function saveState(poi){
    bersaglio = di chi e' la scheda che ho davanti. null vuol dire la mia.
    Il master guarda e basta, il supporto e lo sviluppatore mettono le mani.
    Il salvataggio finisce sulla riga di quella persona, non sulla propria. */
-var bersaglio=null, soloLettura=false;
+var bersaglio=null, soloLettura=false, personalizza=false;
+
+/* Due fasi separate. Nella scheda si compila: nome, classi, esperienza,
+   caratteristiche. In personalizzazione si guarda come sta: font, colori,
+   aspetto. Tenerle insieme voleva dire avere sempre sotto gli occhi roba che
+   distrae da quella che stai facendo. La finestra del Nome e' tutta estetica,
+   quindi la sua rotellina esiste solo qui dentro. */
+function modoEstetica(acceso){
+  personalizza = !!acceso && !soloLettura;
+  var b=document.getElementById("btnEste");
+  if(b){ b.classList.toggle("on", personalizza); b.textContent = personalizza ? "Fine" : "Personalizza"; }
+  document.getElementById("fasciaEste").hidden = !personalizza;
+  var e=document.querySelectorAll(".este"), m=document.querySelectorAll(".mech"), i;
+  for(i=0;i<e.length;i++) e[i].hidden = !personalizza;
+  for(i=0;i<m.length;i++) m[i].hidden = personalizza;
+  aggiornaRotelline();
+  if(personalizza) ["name","xp","class","stats"].forEach(sincronizzaAspetto);
+}
+
+function aggiornaRotelline(){
+  var g=document.getElementById("gearName");
+  if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
+  ["gearXp","gearClass","gearStats"].forEach(function(id){
+    var x=document.getElementById(id); if(x) x.hidden = soloLettura;
+  });
+  var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
+}
 
 function discordDi(id){
   var p=profiliCache.filter(function(x){ return x.user_id===id; })[0];
@@ -1289,9 +1319,8 @@ function modoScheda(){
     document.getElementById("fasciaModo").textContent = soloLettura ? "sola lettura" : "puoi modificarla e salvarla";
   }
   elName.contentEditable = soloLettura ? "false" : "true";
-  ["gearName","gearXp","gearClass","gearStats"].forEach(function(id){
-    var g=document.getElementById(id); if(g) g.hidden=soloLettura;
-  });
+  if(soloLettura && personalizza) modoEstetica(false);   // guardando quella di un altro non si personalizza
+  aggiornaRotelline();
   var b=document.getElementById("btnSalva"); if(b) b.hidden=soloLettura;
   if(soloLettura) closeAll();
 }
@@ -1802,7 +1831,10 @@ function positionDialog(dlg){
   dlg.style.top=Math.round(b+16)+"px";
   dlg.style.maxHeight="calc(100dvh - "+Math.round(b+36)+"px)";
 }
-function openName(){ modalName.hidden=false; elHeader.classList.add("raised"); positionDialog(document.getElementById("dialogName")); }
+function openName(){
+  if(!personalizza) return;   // e' tutta estetica: esiste solo in quella fase
+  modalName.hidden=false; elHeader.classList.add("raised"); positionDialog(document.getElementById("dialogName"));
+}
 /* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
    lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
 function openClass(){ modalClass.hidden=false; setHub(null); }
@@ -2385,11 +2417,14 @@ function disegnaAuthbar(){
   document.getElementById("authbar").innerHTML=
     '<span class="who">'+(av?'<img src="'+av+'" alt="">':'')+'<b>'+nome+'</b>'+tag+'</span>'
     +'<span class="salvamsg" id="salvaMsg"></span>'
+    +'<button class="btn-este" id="btnEste">Personalizza</button>'
     +'<button class="btn-salva" id="btnSalva" disabled>Salvato</button>'
     +'<button class="btn-out" id="btnOut">Esci</button>';
+  document.getElementById("btnEste").addEventListener("click", function(){ closeAll(); modoEstetica(!personalizza); });
   document.getElementById("btnSalva").addEventListener("click", function(){ if(sporco()) saveState(); });
   document.getElementById("btnOut").addEventListener("click", chiediUscita);
-  aggiornaSalva();   // la barra si ridisegna: il tasto va rimesso com'era
+  aggiornaSalva();      // la barra si ridisegna: i tasti vanno rimessi com'erano
+  modoEstetica(personalizza);
 }
 
 function login(){
@@ -2412,10 +2447,6 @@ document.getElementById("gearStats").addEventListener("click", openStats);
 document.getElementById("stBody").addEventListener("change", function(e){
   var a=e.target.closest("[data-cararr]");
   if(a){ assegnaArray(a.getAttribute("data-cararr"), parseInt(a.value,10)); return; }
-});
-document.getElementById("stBody").addEventListener("input", function(e){
-  var n=e.target.closest("[data-carnum]");
-  if(n){ scriviCar(n.getAttribute("data-carnum"), n.value); }
 });
 
 document.getElementById("cercaPg").addEventListener("input", function(e){
@@ -2448,6 +2479,7 @@ document.getElementById("btnSalvaEsci").addEventListener("click", function(){
   saveState(function(){ closeAll(); var a=inSospeso; inSospeso=null; if(a) a(); });
 });
 document.getElementById("btnTornaMia").addEventListener("click", tornaAllaMia);
+document.getElementById("btnEsteVia").addEventListener("click", function(){ closeAll(); modoEstetica(false); });
 
 document.getElementById("btnRicontrolla").addEventListener("click", function(){ location.reload(); });
 document.getElementById("btnRicontrollaPausa").addEventListener("click", function(){ location.reload(); });

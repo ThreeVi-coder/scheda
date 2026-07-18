@@ -187,28 +187,27 @@
   /* ============ PANNELLO CARATTERISTICHE ============ */
   .spanel{
     background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
-    padding:16px 68px 18px 22px; width:100%; max-width:560px; box-sizing:border-box;
+    padding:20px 68px 22px 24px; width:100%; max-width:640px; box-sizing:border-box;
   }
-  /* In scheda: l'esagono e' la figura, le sei stat in verticale collegate da
-     linee sottili che escono dai vertici. Stile a scheda tecnica. */
+  /* In scheda: l'esagono e' la figura, le sei stat ai lati collegate da linee
+     dritte con un piccolo gomito, ciascuna all'altezza del proprio vertice.
+     Niente pallini sul poligono: solo la forma. */
   .statsline{ width:100%; }
   .statsline svg{ width:100%; height:auto; display:block; overflow:visible; }
-  .slhex{ fill:rgba(124,92,255,.14); stroke:var(--violet); stroke-width:2; stroke-linejoin:round; }
+  .slhex{ fill:rgba(124,92,255,.16); stroke:var(--violet); stroke-width:2.5; stroke-linejoin:round; }
   .slgrid{ fill:none; stroke:var(--line); stroke-width:1; }
-  .slwire{ fill:none; stroke:var(--line); stroke-width:1; }
-  .slwire.att{ stroke:var(--violet); }
-  .slnodo{ fill:var(--panel); stroke:var(--violet); stroke-width:1.5; }
-  .slnodo.conbonus{ stroke:var(--gold); }
-  .slsig{ font-family:var(--ui); font-size:12.5px; font-weight:700; letter-spacing:.06em; fill:var(--muted); }
-  .slval{ font-family:'Cinzel',Georgia,serif; font-weight:700; }
-  .slmod{ font-family:ui-monospace,Consolas,monospace; font-weight:700; fill:var(--gold); }
+  .slwire{ fill:none; stroke:var(--line); stroke-width:1.2; }
+  .slwire.att{ stroke:var(--violet); stroke-width:1.6; }
+  .slsig{ font-family:var(--ui); font-size:13px; font-weight:700; letter-spacing:.08em; fill:var(--muted); }
+  .slval{ font-family:'Cinzel',Georgia,serif; font-size:26px; font-weight:700; fill:var(--ink); }
+  .slmod{ font-family:ui-monospace,Consolas,monospace; font-size:13px; font-weight:700; fill:var(--gold); }
   /* ripiego su telefono: esagono sopra, stat in colonna sotto */
   .stcol{ display:none; }
-  .scrow{ display:flex; align-items:baseline; gap:8px; padding:7px 2px; border-bottom:1px solid var(--line); }
+  .scrow{ display:flex; align-items:baseline; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); }
   .scrow:last-child{ border-bottom:0; }
-  .scrow .ss{ font-size:12px; letter-spacing:.1em; color:var(--muted); font-weight:700; width:40px; }
-  .scrow .sv{ font-family:'Cinzel',Georgia,serif; font-size:20px; font-weight:700; }
-  .scrow .sm{ font-family:ui-monospace,Consolas,monospace; font-size:13px; font-weight:700; color:var(--gold); }
+  .scrow .ss{ font-size:13px; letter-spacing:.1em; color:var(--muted); font-weight:700; width:44px; }
+  .scrow .sv{ font-family:'Cinzel',Georgia,serif; font-size:22px; font-weight:700; }
+  .scrow .sm{ font-family:ui-monospace,Consolas,monospace; font-size:14px; font-weight:700; color:var(--gold); }
   /* L'esagono delle caratteristiche: sei assi dal centro, il poligono e' la
      forma del personaggio. Sotto ci sono i pulsanti, che restano sempre
      perche' sul telefono centrare un vertice col dito e' un incubo. */
@@ -792,11 +791,6 @@
           <div class="mech">
           <p class="hint">Scegli come riempirle. Il modificatore lo calcola la scheda dal totale, e i bonus della razza si aggiungeranno qui quando le razze esisteranno.</p>
 
-          <div class="row">
-            <span class="rowlab">Modo</span>
-            <button class="opt" data-modo="pointbuy">Point buy</button>
-            <button class="opt" data-modo="array">Array standard</button>
-          </div>
           <div class="puntibox" id="statsPunti"></div>
           <p class="subhint" id="statsNota"></p>
           <div class="cwarn" id="statsWarn"></div>
@@ -1069,10 +1063,9 @@ var CAR_MIN=1, CAR_MAX=30;
    cinque miserie. */
 var PB_COSTO={ 8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9 };
 var PB_MIN=8, PB_MAX=15, PB_TOTALE=27;
-var ARRAY_STD=[15,14,13,12,10,8];
 
 function statsDiPartenza(){
-  var o={ modo:"pointbuy", base:{}, bonus:{} };
+  var o={ modo:"pointbuy", base:{}, bonus:{} };   // "modo" resta per compatibilita' con le schede gia' salvate
   CARATT.forEach(function(c){ o.base[c.k]=PB_MIN; o.bonus[c.k]=0; });
   return o;
 }
@@ -1095,37 +1088,11 @@ function pbValido(){
   return CARATT.every(function(c){ var v=state.stats.base[c.k]; return v>=PB_MIN && v<=PB_MAX; })
       && pbUsati()<=PB_TOTALE;
 }
-function arrayValido(){
-  var v=CARATT.map(function(c){ return state.stats.base[c.k]; }).sort(function(a,b){ return b-a; });
-  return v.join(",")===ARRAY_STD.slice().sort(function(a,b){ return b-a; }).join(",");
-}
 
-/* Cambiare modo ricomincia da capo: il point buy riparte sempre da 8 con
-   tutti e 27 i punti in mano, l'array rimette i suoi sei numeri. Premere il
-   modo in cui si e' gia' non fa niente, se no si perderebbe il lavoro per
-   un clic di troppo. */
-function cambiaModo(m){
-  if(m===state.stats.modo) return;
-  state.stats.modo=m;
-  statsWarn("");
-  if(m==="pointbuy") CARATT.forEach(function(c){ state.stats.base[c.k]=PB_MIN; });
-  if(m==="array")    CARATT.forEach(function(c,i){ state.stats.base[c.k]=ARRAY_STD[i]; });
-  renderAll();
-}
 
 function statsWarn(t){
   var el=document.getElementById("statsWarn"); if(!el) return;
   el.textContent=t||""; el.classList.toggle("on", !!t);
-}
-
-/* Array standard: scegliendo un valore gia' preso, le due caratteristiche se
-   lo scambiano. Cosi' l'array resta sempre quello giusto e non si finisce mai
-   con due 15 o con un buco. */
-function assegnaArray(k, v){
-  var altro=CARATT.filter(function(c){ return c.k!==k && state.stats.base[c.k]===v; })[0];
-  if(altro) state.stats.base[altro.k]=state.stats.base[k];
-  state.stats.base[k]=v;
-  renderAll();
 }
 
 function cambiaPb(k, verso){
@@ -1136,23 +1103,32 @@ function cambiaPb(k, verso){
   renderAll();
 }
 
-/* Il riquadro in scheda: l'esagono a un lato, le sei stat in verticale
-   dall'altro, collegate da linee sottili che escono dai vertici e fanno un
-   gomito fino all'etichetta. Il lato lo decide state.statsLato:
-   "sx" = stat a sinistra, "dx" = stat a destra. */
-var SL_W=460, SL_H=250, SL_CY=125;
+/* Quanto e' lontano dal centro il vertice di una caratteristica, tra 0 e 1.
+   Usata sia dall'esagono in scheda sia da quello nella finestra. */
+function frazioneDi(k){
+  var base=Math.max(PB_MIN, Math.min(PB_MAX, state.stats.base[k]));
+  // parte da 0.18 cosi' il poligono non collassa in un punto quando tutto e' al minimo
+  return 0.18 + 0.82*((base-PB_MIN)/(PB_MAX-PB_MIN || 1));
+}
+
+/* Il riquadro in scheda: esagono da un lato, sei stat dall'altro. Ogni
+   etichetta sta ALL'ALTEZZA del suo vertice, e la linea esce dritta dal
+   vertice, gomito, e va all'etichetta. Cosi' le linee non si incrociano mai
+   e restano ordinate. Niente pallini sul poligono, solo la forma. */
+var SL_W=520, SL_H=280, SL_CY=140;
+var statAtt="for";   // quale asse e' evidenziato nell'esagono
 function slLato(){ return state.statsLato==="dx" ? "dx" : "sx"; }
 
 function slVertice(idx, frazione){
-  var cx = slLato()==="sx" ? 320 : 140;   // l'esagono sta dal lato opposto alle stat
-  var ang=(-90+idx*60)*Math.PI/180, r=88*frazione;
+  // l'esagono sta al centro; le etichette lo circondano su entrambi i lati
+  var cx = SL_W/2;
+  var ang=(-90+idx*60)*Math.PI/180, r=84*frazione;
   return [cx + r*Math.cos(ang), SL_CY + r*Math.sin(ang)];
 }
 
 function renderStats(){
   var host=document.getElementById("statsLine");
-  var lato=slLato(), out="";
-  var cx = lato==="sx" ? 320 : 140;
+  var lato=slLato(), out="", wires="", lbls="";
 
   // maglie di fondo
   [1,0.6,0.28].forEach(function(f){
@@ -1163,33 +1139,47 @@ function renderStats(){
   var poly=CARATT.map(function(c,i){ return slVertice(i,frazioneDi(c.k)).map(function(n){return n.toFixed(1);}).join(","); });
   out+='<polygon class="slhex" points="'+poly.join(" ")+'"/>';
 
-  // le sei etichette incolonnate dal lato scelto, e le linee che le agganciano
-  // tre in alto e tre in basso, ordinate: FOR,DES in alto a dx; COS in basso a dx, ecc.
-  // Semplice e simmetrico: assegno le sei a sei altezze fisse, tre per lato verticale.
-  var righe=[24, 74, 124, 174, 224];  // altezze possibili
-  // mappo i sei vertici alle etichette per vicinanza verticale
-  var lblX = lato==="sx" ? 8 : (SL_W-8);
-  var anchor = lato==="sx" ? "start" : "end";
-  // ordino le caratteristiche per y del vertice, cosi' le linee non si incrociano
-  var ord=CARATT.map(function(c,i){ return {c:c,i:i,y:slVertice(i,1)[1]}; })
-                .sort(function(a,b){ return a.y-b.y; });
-  var ys=[18,66,114,163,211,238];  // sei altezze distribuite
-  var wires="", lbls="";
-  ord.forEach(function(o,rank){
-    var v=slVertice(o.i, frazioneDi(o.c.k));
-    var ly=ys[rank];
-    var att=(o.c.k===statAtt);
-    // linea: dal vertice, gomito, orizzontale fino al bordo etichetta
-    var gx = lato==="sx" ? Math.min(v[0]-14, cx-92) : Math.max(v[0]+14, cx+92);
-    var ex = lato==="sx" ? 70 : (SL_W-70);
-    wires+='<path class="slwire'+(att?' att':'')+'" d="M '+v[0].toFixed(1)+' '+v[1].toFixed(1)
-         + ' L '+gx.toFixed(1)+' '+v[1].toFixed(1)
-         + ' L '+gx.toFixed(1)+' '+ly+' L '+ex+' '+ly+'"/>';
-    var b=state.stats.bonus[o.c.k]!==0;
-    wires+='<circle class="slnodo'+(b?' conbonus':'')+'" cx="'+v[0].toFixed(1)+'" cy="'+v[1].toFixed(1)+'" r="3.5"/>';
-    lbls+='<text class="slsig" x="'+lblX+'" y="'+(ly-6)+'" text-anchor="'+anchor+'">'+o.c.sigla+'</text>'
-       + '<text class="slval" x="'+lblX+'" y="'+(ly+13)+'" text-anchor="'+anchor+'" font-size="20">'+totaleCar(o.c.k)
-       + '</text><text class="slmod" x="'+(lato==="sx"?lblX+34:lblX-34)+'" y="'+(ly+13)+'" text-anchor="'+anchor+'" font-size="12"> ['+segno(modCar(o.c.k))+']</text>';
+  // Le sei etichette a quote FISSE e ben spaziate: mettere ognuna all'altezza
+  // del suo vertice le ammucchiava, perche' i tre vertici in alto stanno quasi
+  // alla stessa altezza. Qui le distribuisco su sei righe uguali, e la linea
+  // dal vertice fa un gomito verticale per raggiungerle. Ordine per angolo,
+  // cosi' le linee non si incrociano.
+  // vertici in ordine: 0=su, 1=su-dx, 2=giu-dx, 3=giu, 4=giu-sx, 5=su-sx
+  // sul lato destro voglio, dall'alto: FOR(0), DES(1), COS(2)  -> le tre di destra
+  // sul lato sinistro, dall'alto: CAR(5), SAG(4), INT(3)       -> le tre di sinistra
+  var righe=[34, 96, 158, 220, 220, 158];  // non usato direttamente, vedi sotto
+  var ys=[40, 118, 196, 250, 250, 40];
+
+  // assegno a ciascun vertice una riga, in base al lato dove va la sua etichetta
+  // destra prende i vertici 0,1,2 (su, su-dx, giu-dx); sinistra 5,4,3
+  var quote=[40, 130, 220];   // tre altezze ben separate
+  function posizione(idx){
+    // ritorna [lato, y] per l'etichetta del vertice idx
+    if(idx===0) return ["dx", quote[0]];
+    if(idx===1) return ["dx", quote[1]];
+    if(idx===2) return ["dx", quote[2]];
+    if(idx===3) return ["sx", quote[2]];
+    if(idx===4) return ["sx", quote[1]];
+    return ["sx", quote[0]];   // idx===5
+  }
+
+  CARATT.forEach(function(c,idx){
+    var pos=posizione(idx), suLato=pos[0], ly=pos[1];
+    var vFull=slVertice(idx,1);
+    var att=(c.k===statAtt);
+    var lblX = suLato==="dx" ? SL_W-16 : 16;
+    var anchor = suLato==="dx" ? "end" : "start";
+    // gomito verticale: dal vertice esco in orizzontale fino a una colonna fissa
+    // appena fuori l'esagono, poi salgo/scendo fino alla quota, poi vado al testo
+    var colX = suLato==="dx" ? (SL_W-150) : 150;
+    var endX = suLato==="dx" ? (SL_W-24) : 24;
+    wires+='<path class="slwire'+(att?' att':'')+'" d="M '+vFull[0].toFixed(1)+' '+vFull[1].toFixed(1)
+         + ' L '+colX+' '+vFull[1].toFixed(1)
+         + ' L '+colX+' '+ly
+         + ' L '+endX+' '+ly+'"/>';
+    lbls+='<text class="slsig" x="'+lblX+'" y="'+(ly-9)+'" text-anchor="'+anchor+'">'+c.sigla+'</text>'
+       + '<text class="slval" x="'+lblX+'" y="'+(ly+17)+'" text-anchor="'+anchor+'">'+totaleCar(c.k)+'</text>'
+       + '<text class="slmod" x="'+(suLato==="dx"?lblX-44:lblX+44)+'" y="'+(ly+17)+'" text-anchor="'+anchor+'">['+segno(modCar(c.k))+']</text>';
   });
 
   host.innerHTML =
@@ -1197,7 +1187,6 @@ function renderStats(){
     + '<g class="wires">'+wires+'</g>'
     + out
     + '<g class="lbls">'+lbls+'</g></svg>'
-    // ripiego per telefono: le sei stat in colonna sotto il grafico
     + '<div class="stcol">'+CARATT.map(function(c){
         return '<div class="scrow"><span class="ss">'+c.sigla+'</span>'
              + '<span class="sv">'+totaleCar(c.k)+'</span>'
@@ -1207,45 +1196,24 @@ function renderStats(){
   applicaTesti();
 }
 
-/* L'esagono. Ogni vertice sta su un asse dal centro; quanto e' lontano dipende
-   dal valore, riscalato tra il minimo e il massimo che quel modo permette.
-   Il vertice acceso e' quello della caratteristica su cui stai lavorando. */
-var HEX_CX=150, HEX_CY=150, HEX_R=112;
-var statAtt="for";   // quale asse e' evidenziato
-
-function hexPunto(i, frazione){
-  var ang = (-90 + i*60) * Math.PI/180;
-  var r = HEX_R * frazione;
-  return [HEX_CX + r*Math.cos(ang), HEX_CY + r*Math.sin(ang)];
-}
-function frazioneDi(k){
-  var lo, hi;
-  if(state.stats.modo==="pointbuy"){ lo=PB_MIN; hi=PB_MAX; }
-  else { lo=Math.min.apply(null,ARRAY_STD); hi=Math.max.apply(null,ARRAY_STD); }
-  var base=Math.max(lo, Math.min(hi, state.stats.base[k]));
-  // parte da 0.18 cosi' il poligono non collassa in un punto quando tutto e' al minimo
-  return 0.18 + 0.82*((base-lo)/(hi-lo || 1));
-}
-
 function renderStatsDialog(){
-  var modo=state.stats.modo;
-  setActive("data-modo", modo);
-
+  state.stats.modo="pointbuy";
   var punti=document.getElementById("statsPunti");
-  if(modo==="pointbuy"){
-    punti.innerHTML='<span class="pblab">Punti rimasti</span><span class="pbnum">'+pbLiberi()+'</span><span class="pbtot">/ '+PB_TOTALE+'</span>';
-    punti.className="puntibox"+(pbLiberi()===0?" finiti":"");
-    punti.style.display="";
-  } else punti.style.display="none";
+  punti.innerHTML='<span class="pblab">Punti rimasti</span><span class="pbnum">'+pbLiberi()+'</span><span class="pbtot">/ '+PB_TOTALE+'</span>';
+  punti.className="puntibox"+(pbLiberi()===0?" finiti":"");
 
-  document.getElementById("statsNota").textContent = modo==="pointbuy"
-    ? "Sali e scendi con i pulsanti: la forma dell'esagono \u00E8 il tuo personaggio. Da 14 in su costa di pi\u00F9."
-    : "Assegna i sei numeri: se ne scegli uno gi\u00E0 preso, le due caratteristiche se lo scambiano.";
+  document.getElementById("statsNota").textContent =
+    "Sali e scendi con i pulsanti: la forma dell'esagono \u00E8 il tuo personaggio. Da 14 in su costa di pi\u00F9.";
 
   disegnaEsagono();
   disegnaFila();
 }
 
+var HEX_CX=150, HEX_CY=150, HEX_R=112;
+function hexPunto(idx, frazione){
+  var ang=(-90+idx*60)*Math.PI/180, r=HEX_R*frazione;
+  return [HEX_CX + r*Math.cos(ang), HEX_CY + r*Math.sin(ang)];
+}
 function disegnaEsagono(){
   var out="", i;
   // le maglie di fondo, tre esagoni concentrici
@@ -1272,22 +1240,16 @@ function disegnaEsagono(){
 }
 
 function disegnaFila(){
-  var modo=state.stats.modo, bonus=conBonus();
+  var bonus=conBonus();
   document.getElementById("stFila").innerHTML = CARATT.map(function(c){
-    var v=state.stats.base[c.k], comando;
-    if(modo==="pointbuy"){
-      var giu = v<=PB_MIN;
-      var su  = v>=PB_MAX || (pbCosto(v+1)-pbCosto(v))>pbLiberi();
-      comando = '<span class="pb">'
-        + '<button class="pbtn" data-car="'+c.k+'" data-verso="-1"'+(giu?' disabled':'')+'>&minus;</button>'
-        + '<span class="pbv">'+v+'</span>'
-        + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
-        + '</span>';
-    } else {
-      comando = '<select class="stsel" data-cararr="'+c.k+'">'+ARRAY_STD.map(function(x){
-        return '<option value="'+x+'"'+(x===v?' selected':'')+'>'+x+'</option>';
-      }).join("")+'</select>';
-    }
+    var v=state.stats.base[c.k];
+    var giu = v<=PB_MIN;
+    var su  = v>=PB_MAX || (pbCosto(v+1)-pbCosto(v))>pbLiberi();
+    var comando = '<span class="pb">'
+      + '<button class="pbtn" data-car="'+c.k+'" data-verso="-1"'+(giu?' disabled':'')+'>&minus;</button>'
+      + '<span class="pbv">'+v+'</span>'
+      + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
+      + '</span>';
     var calc = bonus
       ? '<div class="bcalc">'+v+' '+segno(state.stats.bonus[c.k])+' = '+totaleCar(c.k)+' <i>'+segno(modCar(c.k))+'</i></div>'
       : '';
@@ -1352,7 +1314,7 @@ function applicaDati(o){
   // avere dentro qualsiasi cosa.
   state.stats = statsDiPartenza();
   if(o.stats && typeof o.stats==="object"){
-    if(o.stats.modo==="pointbuy" || o.stats.modo==="array") state.stats.modo=o.stats.modo;
+    state.stats.modo="pointbuy";   // unico modo rimasto
     CARATT.forEach(function(c){
       var b = o.stats.base && o.stats.base[c.k];
       if(typeof b==="number" && isFinite(b)) state.stats.base[c.k]=Math.max(CAR_MIN, Math.min(CAR_MAX, Math.round(b)));
@@ -1892,7 +1854,10 @@ function applicaTesti(){
     var lista=document.querySelectorAll(t.sel);
     for(var i=0;i<lista.length;i++){
       lista[i].style.fontFamily=f;   // vuoto = torna quello del foglio di stile
+      // le scritte SVG colorano con "fill", quelle HTML con "color": scrivo
+      // entrambe, quella che non serve viene ignorata
       lista[i].style.color=c;
+      lista[i].style.fill=c;
     }
   });
 }
@@ -2066,7 +2031,6 @@ document.getElementById("size").addEventListener("input", function(e){ state.siz
 
 document.addEventListener("click", function(e){
   if(aspettoDaEventi(e)) return;
-  var md=e.target.closest("[data-modo]"); if(md){ cambiaModo(md.getAttribute("data-modo")); return; }
   var pb=e.target.closest("[data-car]");
   if(pb && !pb.disabled){ statAtt=pb.getAttribute("data-car"); cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
   var pk=e.target.closest("[data-pick]");
@@ -2647,10 +2611,6 @@ document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
 document.getElementById("gearStats").addEventListener("click", openStats);
-document.getElementById("stFila").addEventListener("change", function(e){
-  var a=e.target.closest("[data-cararr]");
-  if(a){ statAtt=a.getAttribute("data-cararr"); assegnaArray(a.getAttribute("data-cararr"), parseInt(a.value,10)); return; }
-});
 
 document.getElementById("cercaPg").addEventListener("input", function(e){
   cerca=e.target.value; disegnaPersonaggi();

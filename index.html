@@ -220,17 +220,17 @@
   /* i sei comandi sotto l'esagono */
   .stfila{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
   .stbox{ border:1px solid var(--line); background:var(--panel2); border-radius:12px;
-    padding:7px 8px 8px; width:96px; text-align:center; }
+    padding:10px 10px 11px; width:112px; text-align:center; }
   .stbox.att{ border-color:var(--violet); }
   .stbox.conbonus{ border-color:rgba(224,177,94,.5); }
-  .stbox .bs{ font-size:10px; letter-spacing:.12em; color:var(--muted); }
-  .stbox .bn{ font-size:9px; color:var(--muted); display:block; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stbox .bs{ font-size:11.5px; letter-spacing:.12em; color:var(--muted); font-weight:600; }
+  .stbox .bn{ font-size:10px; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pb{ display:inline-flex; align-items:center; gap:7px; justify-content:center; }
-  .pbtn{ width:26px; height:26px; border-radius:7px; border:1px solid var(--line); background:transparent;
-    color:var(--ink); font-size:15px; line-height:1; cursor:pointer; font-family:var(--ui); flex:0 0 auto; }
+  .pbtn{ width:30px; height:30px; border-radius:8px; border:1px solid var(--line); background:transparent;
+    color:var(--ink); font-size:17px; line-height:1; cursor:pointer; font-family:var(--ui); flex:0 0 auto; }
   .pbtn:hover:not(:disabled){ border-color:var(--violet); color:var(--violet); }
   .pbtn:disabled{ opacity:.28; cursor:default; }
-  .pbv{ font-family:ui-monospace,Consolas,monospace; font-size:15px; font-weight:700; min-width:20px; }
+  .pbv{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:700; min-width:22px; }
   .stsel{ width:100%; margin-top:1px; }
   .bcalc{ font-size:10px; color:var(--muted); margin-top:3px; font-family:ui-monospace,Consolas,monospace; }
   .bcalc i{ color:var(--gold); font-style:normal; font-weight:700; }
@@ -287,14 +287,14 @@
   .backdrop{ position:fixed; inset:0; z-index:40; background:rgba(10,10,16,.55);
     backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px); }
   .dialog{ position:fixed; z-index:60; left:50%; top:172px; transform:translateX(-50%);
-    width:min(720px,92vw); max-height:calc(100dvh - 200px);
+    width:min(820px,94vw); max-height:calc(100dvh - 160px);
     display:flex; flex-direction:column; overflow:hidden;
     background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,.5); }
   .dlghead{ flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; padding:16px 20px 4px; }
-  .dlghead h2{ font-size:15px; font-weight:600; margin:0; }
+  .dlghead h2{ font-size:18px; font-weight:600; margin:0; }
   .dlgx{ border:0; background:transparent; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; padding:0 4px; }
   .dlgx:hover{ color:var(--ink); }
-  .dlgbody{ flex:1 1 auto; overflow-y:auto; padding:12px 20px 8px; }
+  .dlgbody{ flex:1 1 auto; overflow-y:auto; padding:16px 26px 10px; font-size:14.5px; }
   .dlgbar{ flex:0 0 auto; display:flex; align-items:center; justify-content:flex-end; gap:10px;
     padding:14px 20px; border-top:1px solid var(--line); background:var(--panel); }
   .savemsg{ margin-right:auto; font-size:12px; color:var(--gold); }
@@ -333,8 +333,14 @@
   select{ background:var(--panel2); color:var(--ink); border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:14px; min-width:230px; cursor:pointer; }
   select optgroup{ color:var(--muted); }
   /* Aspetto delle scritte */
-  .asplab{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
-    margin:18px 0 8px; padding-top:14px; border-top:1px solid var(--line); }
+  .antep{ background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    padding:20px 16px; margin-bottom:16px; text-align:center; overflow:hidden; }
+  .antep .aplab{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+  .antep .apbig{ font-size:34px; font-weight:700; line-height:1.1; word-break:break-word; }
+  .antep .apmid{ font-size:22px; font-weight:700; }
+  .antep .aprow{ display:flex; gap:16px; justify-content:center; align-items:baseline; flex-wrap:wrap; }
+  .asplab{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    margin:20px 0 12px; padding-top:16px; border-top:1px solid var(--line); }
   .opt.lega.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
   .picker.legato{ pointer-events:none; opacity:.4; }
   select:disabled{ opacity:.4; }
@@ -665,6 +671,7 @@
           </div>
 
 
+          <div class="antep" id="antep_xp"></div>
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -716,6 +723,7 @@
           <div class="chosen" id="chosen"></div>
 
           <div class="este">
+          <div class="antep" id="antep_class"></div>
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -771,6 +779,7 @@
           </div>
 
           <div class="este">
+          <div class="antep" id="antep_stats"></div>
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -1860,7 +1869,25 @@ function costruisciAspetto(dove){
   });
 }
 
+/* Quali scritte fanno parte di quale finestra, per l'anteprima estetica. */
+var ANTEP={
+  xp:    [{id:"etLivello", cls:"apmid"}, {id:"numLv", cls:"apbig", testo:"7"}],
+  class: [{id:"etClasse", cls:"apmid"}, {id:"nomeCl", cls:"apbig", testo:"Bardo"}, {id:"lvCl", cls:"apmid", testo:"1"}],
+  stats: [{id:"siglaCar", cls:"apmid", testo:"FOR"}, {id:"valCar", cls:"apbig", testo:"15"}, {id:"modiCar", cls:"apmid", testo:"+2"}]
+};
+function disegnaAntep(dove){
+  var host=document.getElementById("antep_"+dove); if(!host) return;
+  var voci=ANTEP[dove]||[];
+  var testo = voci.map(function(v){
+    var t=TESTO[v.id], val=v.testo!==undefined ? v.testo : t.nome;
+    var f=fontDi(v.id), c=coloreDi(v.id);
+    return '<span class="'+v.cls+'" style="'+(f?'font-family:'+f+';':'')+'color:'+c+'">'+esc(val)+'</span>';
+  }).join(" ");
+  host.innerHTML = '<div class="aplab">Anteprima</div><div class="aprow">'+testo+'</div>';
+}
+
 function sincronizzaAspetto(dove){
+  disegnaAntep(dove);
   var id=aspSel[dove], s=state.testi[id];
   var chips=document.querySelectorAll('#aspChips_'+dove+' [data-asp]');
   for(var i=0;i<chips.length;i++) chips[i].classList.toggle("on", chips[i].getAttribute("data-asp")===id);

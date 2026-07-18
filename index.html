@@ -197,24 +197,43 @@
   .mod{ font-family:ui-monospace,Consolas,monospace; font-size:14px; font-weight:700; color:var(--gold); }
   .conbonus{ border-color:rgba(167,139,250,.45); }
   .bmk{ display:block; font-size:9.5px; color:var(--violet); margin-top:1px; }
-  /* la tabella dentro la finestra */
-  .stable{ width:100%; border-collapse:collapse; margin-top:4px; }
-  .stable td{ padding:7px 4px; border-bottom:1px solid var(--line); vertical-align:middle; }
-  .stable tr:last-child td{ border-bottom:0; }
-  .stnome{ font-size:12.5px; color:var(--muted); white-space:nowrap; }
-  .stnome b{ color:var(--ink); font-size:13px; letter-spacing:.1em; display:block; }
-  .stcalc{ text-align:right; font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--muted); white-space:nowrap; }
-  .stcalc b{ color:var(--ink); font-size:15px; }
-  .stcalc i{ color:var(--gold); font-style:normal; font-weight:700; }
-  .pb{ display:inline-flex; align-items:center; gap:8px; }
-  .pbtn{ width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:transparent;
-    color:var(--ink); font-size:16px; line-height:1; cursor:pointer; font-family:var(--ui); }
+  /* L'esagono delle caratteristiche: sei assi dal centro, il poligono e' la
+     forma del personaggio. Sotto ci sono i pulsanti, che restano sempre
+     perche' sul telefono centrare un vertice col dito e' un incubo. */
+  .hexwrap{ position:relative; width:100%; max-width:340px; margin:4px auto 2px; aspect-ratio:1; }
+  .hexwrap svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .hexgrid{ fill:none; stroke:var(--line); stroke-width:1; }
+  .hexspoke{ stroke:var(--line); stroke-width:1; }
+  .hexfill{ fill:rgba(124,92,255,.16); stroke:var(--violet); stroke-width:2;
+    stroke-linejoin:round; transition:all .18s ease; }
+  .hexdot{ fill:var(--violet-2); stroke:#fff; stroke-width:1.5; transition:all .18s ease; cursor:pointer; }
+  .hexdot.conbonus{ fill:var(--gold); }
+  .hexsig{ font-family:var(--ui); font-size:15px; font-weight:700; letter-spacing:.08em; fill:var(--muted); }
+  .hexsig.att{ fill:var(--ink); }
+  .hexval{ font-family:'Cinzel',Georgia,serif; font-size:20px; font-weight:700; fill:var(--ink); }
+  .hexmod{ font-family:ui-monospace,Consolas,monospace; font-size:12px; font-weight:700; fill:var(--gold); }
+  .hexcore{ text-align:center; }
+  .hexcore .cpunti{ font-family:ui-monospace,Consolas,monospace; font-size:26px; font-weight:700; fill:var(--ink); }
+  .hexcore .cpunti.finiti{ fill:var(--gold); }
+  .hexcore .clab{ font-family:var(--ui); font-size:9px; letter-spacing:.14em; fill:var(--muted); }
+
+  /* i sei comandi sotto l'esagono */
+  .stfila{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
+  .stbox{ border:1px solid var(--line); background:var(--panel2); border-radius:12px;
+    padding:7px 8px 8px; width:96px; text-align:center; }
+  .stbox.att{ border-color:var(--violet); }
+  .stbox.conbonus{ border-color:rgba(224,177,94,.5); }
+  .stbox .bs{ font-size:10px; letter-spacing:.12em; color:var(--muted); }
+  .stbox .bn{ font-size:9px; color:var(--muted); display:block; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pb{ display:inline-flex; align-items:center; gap:7px; justify-content:center; }
+  .pbtn{ width:26px; height:26px; border-radius:7px; border:1px solid var(--line); background:transparent;
+    color:var(--ink); font-size:15px; line-height:1; cursor:pointer; font-family:var(--ui); flex:0 0 auto; }
   .pbtn:hover:not(:disabled){ border-color:var(--violet); color:var(--violet); }
   .pbtn:disabled{ opacity:.28; cursor:default; }
-  .pbv{ font-family:ui-monospace,Consolas,monospace; font-size:16px; font-weight:700; min-width:22px; text-align:center; }
-  .stnum{ width:66px; background:var(--panel2); border:1px solid var(--line); color:var(--ink);
-    border-radius:8px; padding:6px 8px; font-size:14px; font-family:ui-monospace,Consolas,monospace; text-align:center; }
-  .stnum:focus{ outline:none; border-color:var(--violet); }
+  .pbv{ font-family:ui-monospace,Consolas,monospace; font-size:15px; font-weight:700; min-width:20px; }
+  .stsel{ width:100%; margin-top:1px; }
+  .bcalc{ font-size:10px; color:var(--muted); margin-top:3px; font-family:ui-monospace,Consolas,monospace; }
+  .bcalc i{ color:var(--gold); font-style:normal; font-weight:700; }
   .punti{ font-size:12.5px; color:var(--muted); }
   .punti b{ font-family:ui-monospace,Consolas,monospace; font-size:15px; color:var(--ink); }
   .punti.finiti b{ color:var(--gold); }
@@ -747,7 +766,8 @@
           <p class="subhint" id="statsNota"></p>
           <div class="cwarn" id="statsWarn"></div>
 
-          <table class="stable"><tbody id="stBody"></tbody></table>
+          <div class="hexwrap"><svg id="hexSvg" viewBox="0 0 300 300"></svg></div>
+          <div class="stfila" id="stFila"></div>
           </div>
 
           <div class="este">
@@ -1088,6 +1108,26 @@ function renderStats(){
   applicaTesti();   // le sei caselle sono appena nate: vanno dipinte
 }
 
+/* L'esagono. Ogni vertice sta su un asse dal centro; quanto e' lontano dipende
+   dal valore, riscalato tra il minimo e il massimo che quel modo permette.
+   Il vertice acceso e' quello della caratteristica su cui stai lavorando. */
+var HEX_CX=150, HEX_CY=150, HEX_R=98;
+var statAtt="for";   // quale asse e' evidenziato
+
+function hexPunto(i, frazione){
+  var ang = (-90 + i*60) * Math.PI/180;
+  var r = HEX_R * frazione;
+  return [HEX_CX + r*Math.cos(ang), HEX_CY + r*Math.sin(ang)];
+}
+function frazioneDi(k){
+  var lo, hi;
+  if(state.stats.modo==="pointbuy"){ lo=PB_MIN; hi=PB_MAX; }
+  else { lo=Math.min.apply(null,ARRAY_STD); hi=Math.max.apply(null,ARRAY_STD); }
+  var base=Math.max(lo, Math.min(hi, state.stats.base[k]));
+  // parte da 0.18 cosi' il poligono non collassa in un punto quando tutto e' al minimo
+  return 0.18 + 0.82*((base-lo)/(hi-lo || 1));
+}
+
 function renderStatsDialog(){
   var modo=state.stats.modo;
   setActive("data-modo", modo);
@@ -1099,11 +1139,53 @@ function renderStatsDialog(){
   } else punti.textContent="";
 
   document.getElementById("statsNota").textContent = modo==="pointbuy"
-    ? "Si parte da "+PB_MIN+" e si sale spendendo punti. Da 14 in su costa di pi\u00F9."
-    : "I sei numeri sono sempre questi: scegline uno gi\u00E0 preso e le due caratteristiche se lo scambiano.";
+    ? "Sali e scendi con i pulsanti: la forma dell'esagono \u00E8 il tuo personaggio. Da 14 in su costa di pi\u00F9."
+    : "Assegna i sei numeri: se ne scegli uno gi\u00E0 preso, le due caratteristiche se lo scambiano.";
 
-  var bonus=conBonus();
-  document.getElementById("stBody").innerHTML = CARATT.map(function(c){
+  disegnaEsagono();
+  disegnaFila();
+}
+
+function disegnaEsagono(){
+  var out="", i;
+  // le maglie di fondo, tre esagoni concentrici
+  [1, 0.62, 0.3].forEach(function(f){
+    var p=CARATT.map(function(c,idx){ return hexPunto(idx,f).map(function(n){return n.toFixed(1);}).join(","); }).join(" ");
+    out+='<polygon class="hexgrid" points="'+p+'"/>';
+  });
+  // i sei raggi
+  CARATT.forEach(function(c,idx){
+    var e=hexPunto(idx,1);
+    out+='<line class="hexspoke" x1="'+HEX_CX+'" y1="'+HEX_CY+'" x2="'+e[0].toFixed(1)+'" y2="'+e[1].toFixed(1)+'"/>';
+  });
+  // il poligono del personaggio
+  var pts=CARATT.map(function(c,idx){ return hexPunto(idx,frazioneDi(c.k)).map(function(n){return n.toFixed(1);}).join(","); });
+  out+='<polygon class="hexfill" points="'+pts.join(" ")+'"/>';
+  // le etichette agli angoli, un filo piu' in la' del vertice
+  CARATT.forEach(function(c,idx){
+    var lab=hexPunto(idx,1.28), att=(c.k===statAtt);
+    var dy = idx===0 ? -4 : (idx===3 ? 16 : 4);
+    out+='<text class="hexsig'+(att?' att':'')+'" x="'+lab[0].toFixed(1)+'" y="'+(lab[1]+dy).toFixed(1)+'" text-anchor="middle">'+c.sigla+'</text>'
+       + '<text class="hexval" x="'+lab[0].toFixed(1)+'" y="'+(lab[1]+dy+18).toFixed(1)+'" text-anchor="middle">'+totaleCar(c.k)+'</text>'
+       + '<text class="hexmod" x="'+lab[0].toFixed(1)+'" y="'+(lab[1]+dy+33).toFixed(1)+'" text-anchor="middle">'+segno(modCar(c.k))+'</text>';
+  });
+  // i vertici trascinabili... o meglio, cliccabili per scegliere l'asse
+  CARATT.forEach(function(c,idx){
+    var v=hexPunto(idx,frazioneDi(c.k)), b=state.stats.bonus[c.k]!==0;
+    out+='<circle class="hexdot'+(b?' conbonus':'')+'" data-pick="'+c.k+'" cx="'+v[0].toFixed(1)+'" cy="'+v[1].toFixed(1)+'" r="'+(c.k===statAtt?7:5)+'"/>';
+  });
+  // al centro, nel point buy, i punti rimasti
+  if(state.stats.modo==="pointbuy"){
+    out+='<g class="hexcore"><text class="cpunti'+(pbLiberi()===0?" finiti":"")+'" x="'+HEX_CX+'" y="'+(HEX_CY+4)+'" text-anchor="middle">'+pbLiberi()+'</text>'
+       + '<text class="clab" x="'+HEX_CX+'" y="'+(HEX_CY+18)+'" text-anchor="middle">PUNTI</text></g>';
+  }
+  document.getElementById("hexSvg").innerHTML=out;
+  applicaTesti();
+}
+
+function disegnaFila(){
+  var modo=state.stats.modo, bonus=conBonus();
+  document.getElementById("stFila").innerHTML = CARATT.map(function(c){
     var v=state.stats.base[c.k], comando;
     if(modo==="pointbuy"){
       var giu = v<=PB_MIN;
@@ -1114,15 +1196,16 @@ function renderStatsDialog(){
         + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
         + '</span>';
     } else {
-      comando = '<select data-cararr="'+c.k+'">'+ARRAY_STD.map(function(x){
+      comando = '<select class="stsel" data-cararr="'+c.k+'">'+ARRAY_STD.map(function(x){
         return '<option value="'+x+'"'+(x===v?' selected':'')+'>'+x+'</option>';
       }).join("")+'</select>';
     }
     var calc = bonus
-      ? v+' '+segno(state.stats.bonus[c.k])+' = <b>'+totaleCar(c.k)+'</b> <i>'+segno(modCar(c.k))+'</i>'
-      : '<b>'+totaleCar(c.k)+'</b> <i>'+segno(modCar(c.k))+'</i>';
-    return '<tr><td class="stnome"><b>'+c.sigla+'</b>'+c.nome+'</td>'
-         + '<td>'+comando+'</td><td class="stcalc">'+calc+'</td></tr>';
+      ? '<div class="bcalc">'+v+' '+segno(state.stats.bonus[c.k])+' = '+totaleCar(c.k)+' <i>'+segno(modCar(c.k))+'</i></div>'
+      : '';
+    var cls="stbox"+(c.k===statAtt?" att":"")+(state.stats.bonus[c.k]!==0?" conbonus":"");
+    return '<div class="'+cls+'" data-pick="'+c.k+'"><span class="bs">'+c.sigla+'</span>'
+         + '<span class="bn">'+c.nome+'</span>'+comando+calc+'</div>';
   }).join("");
 }
 
@@ -1869,7 +1952,9 @@ document.addEventListener("click", function(e){
   if(aspettoDaEventi(e)) return;
   var md=e.target.closest("[data-modo]"); if(md){ cambiaModo(md.getAttribute("data-modo")); return; }
   var pb=e.target.closest("[data-car]");
-  if(pb && !pb.disabled){ cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
+  if(pb && !pb.disabled){ statAtt=pb.getAttribute("data-car"); cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
+  var pk=e.target.closest("[data-pick]");
+  if(pk){ statAtt=pk.getAttribute("data-pick"); renderStatsDialog(); return; }
   var r=e.target.closest("[data-reset]"); if(r){ askReset(r.getAttribute("data-reset")); return; }
   var no=e.target.closest("[data-cancel]"); if(no){ cancelReset(no.getAttribute("data-cancel")); return; }
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }
@@ -2444,9 +2529,9 @@ document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
 document.getElementById("gearStats").addEventListener("click", openStats);
-document.getElementById("stBody").addEventListener("change", function(e){
+document.getElementById("stFila").addEventListener("change", function(e){
   var a=e.target.closest("[data-cararr]");
-  if(a){ assegnaArray(a.getAttribute("data-cararr"), parseInt(a.value,10)); return; }
+  if(a){ statAtt=a.getAttribute("data-cararr"); assegnaArray(a.getAttribute("data-cararr"), parseInt(a.value,10)); return; }
 });
 
 document.getElementById("cercaPg").addEventListener("input", function(e){

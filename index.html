@@ -365,6 +365,7 @@
     margin:20px 0 12px; padding-top:16px; border-top:1px solid var(--line); }
   .opt.lega.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
   .aspfmt{ display:inline-flex; gap:6px; flex-wrap:wrap; }
+  .aspfmt.legato{ opacity:.4; pointer-events:none; }
   .fmtb{ min-width:30px; }
   .fmtb[data-fmtcar="bold"]{ font-weight:800; }
   .fmtb[data-fmtcar="italic"]{ font-style:italic; }
@@ -1046,18 +1047,31 @@ function makePicker(host, initialHex, onChange){
     hk.style.left=((h/360)*(hs.clientWidth||180))+'px';
     var hex=curHex(); pv.style.background=hex; if(document.activeElement!==hx) hx.value=hex.toUpperCase();
   }
-  function emit(){ onChange(curHex()); updateUI(); }
+  // Mentre si trascina, la pallina segue il dito subito (updateUI e' leggero),
+  // ma il lavoro pesante -- ridipingere le scritte, ridisegnare il grafico,
+  // ricalcolare il salvataggio -- gira al massimo una volta per fotogramma.
+  // Cosi' sul telefono il colore smette di arrivare in ritardo.
+  var raf=0;
+  function applica(){ onChange(curHex()); }
+  function emitLive(){
+    updateUI();
+    if(!raf) raf=requestAnimationFrame(function(){ raf=0; applica(); });
+  }
+  function emitNow(){
+    if(raf){ cancelAnimationFrame(raf); raf=0; }
+    applica(); updateUI();
+  }
   function sqAt(e){ var r=sq.getBoundingClientRect();
     s=Math.min(Math.max(e.clientX-r.left,0),r.width)/r.width;
-    v=1-Math.min(Math.max(e.clientY-r.top,0),r.height)/r.height; emit(); }
-  function hueAt(e){ var r=hs.getBoundingClientRect(); h=Math.min(Math.max(e.clientX-r.left,0),r.width)/r.width*360; emit(); }
+    v=1-Math.min(Math.max(e.clientY-r.top,0),r.height)/r.height; emitLive(); }
+  function hueAt(e){ var r=hs.getBoundingClientRect(); h=Math.min(Math.max(e.clientX-r.left,0),r.width)/r.width*360; emitLive(); }
   function drag(t,fn){ t.addEventListener('pointerdown', function(e){ e.preventDefault(); fn(e);
     function m(ev){ fn(ev); } function u(){ document.removeEventListener('pointermove',m); document.removeEventListener('pointerup',u); }
     document.addEventListener('pointermove',m); document.addEventListener('pointerup',u); }); }
   drag(sq,sqAt); drag(hs,hueAt);
   swrap.addEventListener('click', function(e){ var b=e.target.closest('[data-hex]'); if(b) setHex(b.getAttribute('data-hex')); });
   hx.addEventListener('change', function(){ var val=hx.value.trim().replace('#',''); if(/^([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) setHex('#'+val); else updateUI(); });
-  function setHex(hex){ var r=hexToRgb(hex), q=rgbToHsv(r.r,r.g,r.b); h=q.h;s=q.s;v=q.v; emit(); }
+  function setHex(hex){ var r=hexToRgb(hex), q=rgbToHsv(r.r,r.g,r.b); h=q.h;s=q.s;v=q.v; emitNow(); }
   updateUI();
   return { setHex:setHex, refresh:updateUI };
 }
@@ -1975,7 +1989,7 @@ function costruisciAspetto(dove){
     if(aspFermo) return;
     var s=state.testi[aspSel[dove]];
     if(s.legaColore) return;
-    s.colore=hex; applicaTesti(); aggiornaSalva();
+    s.colore=hex; applicaTesti(); disegnaAntep(dove); aggiornaSalva();
   });
 }
 
@@ -2029,16 +2043,34 @@ function sincronizzaAspetto(dove){
   try{ aspPicker[dove].setHex(s.legaColore ? state.nameColor : s.colore); }
   finally{ aspFermo=false; }
 
+  // I tasti del Formato: si accendono su quelli attivi. Se il formato segue il
+  // nome, mostrano quelli del nome ma restano bloccati (non si toccano).
+  var fm=fmtDi(id);
+  var fbox=document.getElementById("aspFmt_"+dove);
+  if(fbox) fbox.classList.toggle("legato", s.legaFmt);
+  var fbtn=document.querySelectorAll('#aspFmt_'+dove+' [data-fmtcar]');
+  for(var j=0;j<fbtn.length;j++){
+    fbtn[j].classList.toggle("on", !!fm[fbtn[j].getAttribute("data-fmtcar")]);
+  }
+
+  // I tre "Segue il nome": ognuno riflette il proprio aggancio. Prima quello
+  // del formato mostrava per sbaglio lo stato del colore.
   document.querySelectorAll('[data-lega][data-dove="'+dove+'"]').forEach(function(b){
-    b.classList.toggle("on", b.getAttribute("data-lega")==="font" ? s.legaFont : s.legaColore);
+    var q=b.getAttribute("data-lega");
+    b.classList.toggle("on", q==="font" ? s.legaFont : (q==="colore" ? s.legaColore : s.legaFmt));
   });
 
   var v=[];
-  if(s.legaFont) v.push("il font segue il nome");
-  if(s.legaColore) v.push("il colore segue il nome");
-  document.getElementById("aspNote_"+dove).textContent =
-    v.length ? TESTO[id].nome+": "+v.join(" e ")+". Cambia il nome e cambia anche questa."
-             : TESTO[id].nome+": font e colore suoi, non seguono il nome.";
+  if(s.legaFont) v.push("il font");
+  if(s.legaColore) v.push("il colore");
+  if(s.legaFmt) v.push("il formato");
+  var nota;
+  if(!v.length) nota = TESTO[id].nome+": font, colore e formato suoi, non seguono il nome.";
+  else {
+    var elenco = v.length===1 ? v[0] : v.slice(0,-1).join(", ")+" e "+v[v.length-1];
+    nota = TESTO[id].nome+": "+elenco+(v.length===1?" segue":" seguono")+" il nome. Cambi il nome e cambia anche qui.";
+  }
+  document.getElementById("aspNote_"+dove).textContent = nota;
 }
 
 function aspettoDaEventi(e){

@@ -208,6 +208,7 @@
   .scrow .ss{ font-size:13px; letter-spacing:.1em; color:var(--muted); font-weight:700; width:44px; }
   .scrow .sv{ font-family:'Cinzel',Georgia,serif; font-size:22px; font-weight:700; }
   .scrow .sm{ font-family:ui-monospace,Consolas,monospace; font-size:14px; font-weight:700; color:var(--gold); }
+  .scrow.att .ss, .scrow.att .sv{ color:var(--violet); }
   /* L'esagono delle caratteristiche: sei assi dal centro, il poligono e' la
      forma del personaggio. Sotto ci sono i pulsanti, che restano sempre
      perche' sul telefono centrare un vertice col dito e' un incubo. */
@@ -363,6 +364,12 @@
   .asplab{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
     margin:20px 0 12px; padding-top:16px; border-top:1px solid var(--line); }
   .opt.lega.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
+  .aspfmt{ display:inline-flex; gap:6px; flex-wrap:wrap; }
+  .fmtb{ min-width:30px; }
+  .fmtb[data-fmtcar="bold"]{ font-weight:800; }
+  .fmtb[data-fmtcar="italic"]{ font-style:italic; }
+  .fmtb[data-fmtcar="underline"]{ text-decoration:underline; }
+  .fmtb.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
   .picker.legato{ pointer-events:none; opacity:.4; }
   select:disabled{ opacity:.4; }
   select option{ background:#201f2e; color:var(--ink); }
@@ -616,13 +623,19 @@
             <div id="aspPicker_name" class="picker"></div>
             <button class="opt lega" data-lega="colore" data-dove="name">Segue il nome</button>
           </div>
+          <div class="row">
+            <span class="rowlab">Formato</span>
+            <span class="aspfmt" id="aspFmt_name"></span>
+            <button class="opt lega" data-lega="fmt" data-dove="name">Segue il nome</button>
+          </div>
           <p class="subhint" id="aspNote_name"></p>
 
           <div class="asplab">Uniforma tutta la scheda</div>
           <div class="row">
             <span class="rowlab">Aggancia</span>
-            <button class="opt" id="unifFont">Tutti i font al nome</button>
-            <button class="opt" id="unifColore">Tutti i colori al nome</button>
+            <button class="opt" id="unifFont">Font</button>
+            <button class="opt" id="unifColore">Colori</button>
+            <button class="opt" id="unifFmt">Formati</button>
             <button class="opt" id="unifVia">Slega tutto</button>
           </div>
           <p class="subhint">Aggancia le scritte di tutta la scheda a questo nome: da l&igrave; in poi si muovono con lui. Slegandole tornano come le avevi lasciate.</p>
@@ -711,6 +724,11 @@
             <div id="aspPicker_xp" class="picker"></div>
             <button class="opt lega" data-lega="colore" data-dove="xp">Segue il nome</button>
           </div>
+          <div class="row">
+            <span class="rowlab">Formato</span>
+            <span class="aspfmt" id="aspFmt_xp"></span>
+            <button class="opt lega" data-lega="fmt" data-dove="xp">Segue il nome</button>
+          </div>
           <p class="subhint" id="aspNote_xp"></p>
           </div>
 
@@ -765,6 +783,11 @@
             <div id="aspPicker_class" class="picker"></div>
             <button class="opt lega" data-lega="colore" data-dove="class">Segue il nome</button>
           </div>
+          <div class="row">
+            <span class="rowlab">Formato</span>
+            <span class="aspfmt" id="aspFmt_class"></span>
+            <button class="opt lega" data-lega="fmt" data-dove="class">Segue il nome</button>
+          </div>
           <p class="subhint" id="aspNote_class"></p>
           </div>
         </div>
@@ -802,10 +825,15 @@
           <div class="este">
           <div class="antep" id="antep_stats"></div>
           <div class="row">
-            <span class="rowlab">Stat a</span>
-            <button class="opt" data-lato="sx">Sinistra</button>
-            <button class="opt" data-lato="dx">Destra</button>
+            <span class="rowlab">Colore grafico</span>
+            <div id="statsPicker" class="picker"></div>
           </div>
+          <div class="row">
+            <span class="rowlab">Stat pi\u00F9 alta</span>
+            <button class="opt" data-evid="on">Illuminala</button>
+            <button class="opt" data-evid="off">Non evidenziare</button>
+          </div>
+          <p class="subhint">La linea della caratteristica pi\u00F9 alta si accende del colore del grafico, e cambia da sola quando cambia la pi\u00F9 alta.</p>
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -820,6 +848,11 @@
             <span class="rowlab">Colore</span>
             <div id="aspPicker_stats" class="picker"></div>
             <button class="opt lega" data-lega="colore" data-dove="stats">Segue il nome</button>
+          </div>
+          <div class="row">
+            <span class="rowlab">Formato</span>
+            <span class="aspfmt" id="aspFmt_stats"></span>
+            <button class="opt lega" data-lega="fmt" data-dove="stats">Segue il nome</button>
           </div>
           <p class="subhint" id="aspNote_stats"></p>
           </div>
@@ -1038,7 +1071,8 @@ var state={
   classes:[],
   xp:0,
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
-  statsLato:"sx",   // da che lato stanno le sei stat rispetto all'esagono
+  statsEvid:true,   // illumina la stat piu' alta sul grafico
+  statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -1116,8 +1150,16 @@ function frazioneDi(k){
    vertice, gomito, e va all'etichetta. Cosi' le linee non si incrociano mai
    e restano ordinate. Niente pallini sul poligono, solo la forma. */
 var SL_W=520, SL_H=280, SL_CY=140;
-var statAtt="for";   // quale asse e' evidenziato nell'esagono
-function slLato(){ return state.statsLato==="dx" ? "dx" : "sx"; }
+var statAtt="for";   // quale asse si sta modificando nella finestra
+
+/* La stat piu' alta, per illuminarla sul grafico. A parita' vince la prima
+   in ordine (FOR, DES, ...): una sola linea accesa, senza ambiguita'. */
+function statPiuAlta(){
+  var top=CARATT[0].k, val=totaleCar(CARATT[0].k);
+  CARATT.forEach(function(c){ if(totaleCar(c.k)>val){ val=totaleCar(c.k); top=c.k; } });
+  return top;
+}
+function slLato(){ return "sx"; }   // le stat stanno sui due lati: il parametro non serve piu\u0027
 
 function slVertice(idx, frazione){
   // l'esagono sta al centro; le etichette lo circondano su entrambi i lati
@@ -1129,55 +1171,46 @@ function slVertice(idx, frazione){
 function renderStats(){
   var host=document.getElementById("statsLine");
   var lato=slLato(), out="", wires="", lbls="";
+  var col=state.statsColor||"#7C5CFF";
+  var alta=statPiuAlta();
 
   // maglie di fondo
   [1,0.6,0.28].forEach(function(f){
     var pts=CARATT.map(function(c,i){ return slVertice(i,f).map(function(n){return n.toFixed(1);}).join(","); }).join(" ");
     out+='<polygon class="slgrid" points="'+pts+'"/>';
   });
-  // poligono del personaggio
+  // poligono del personaggio, col colore scelto
   var poly=CARATT.map(function(c,i){ return slVertice(i,frazioneDi(c.k)).map(function(n){return n.toFixed(1);}).join(","); });
-  out+='<polygon class="slhex" points="'+poly.join(" ")+'"/>';
+  out+='<polygon class="slhex" points="'+poly.join(" ")+'" style="fill:'+col+'22;stroke:'+col+'"/>';
 
-  // Le sei etichette a quote FISSE e ben spaziate: mettere ognuna all'altezza
-  // del suo vertice le ammucchiava, perche' i tre vertici in alto stanno quasi
-  // alla stessa altezza. Qui le distribuisco su sei righe uguali, e la linea
-  // dal vertice fa un gomito verticale per raggiungerle. Ordine per angolo,
-  // cosi' le linee non si incrociano.
-  // vertici in ordine: 0=su, 1=su-dx, 2=giu-dx, 3=giu, 4=giu-sx, 5=su-sx
-  // sul lato destro voglio, dall'alto: FOR(0), DES(1), COS(2)  -> le tre di destra
-  // sul lato sinistro, dall'alto: CAR(5), SAG(4), INT(3)       -> le tre di sinistra
-  var righe=[34, 96, 158, 220, 220, 158];  // non usato direttamente, vedi sotto
-  var ys=[40, 118, 196, 250, 250, 40];
-
-  // assegno a ciascun vertice una riga, in base al lato dove va la sua etichetta
-  // destra prende i vertici 0,1,2 (su, su-dx, giu-dx); sinistra 5,4,3
-  var quote=[40, 130, 220];   // tre altezze ben separate
+  var quote=[40, 130, 220];
   function posizione(idx){
-    // ritorna [lato, y] per l'etichetta del vertice idx
     if(idx===0) return ["dx", quote[0]];
     if(idx===1) return ["dx", quote[1]];
     if(idx===2) return ["dx", quote[2]];
     if(idx===3) return ["sx", quote[2]];
     if(idx===4) return ["sx", quote[1]];
-    return ["sx", quote[0]];   // idx===5
+    return ["sx", quote[0]];
   }
 
   CARATT.forEach(function(c,idx){
     var pos=posizione(idx), suLato=pos[0], ly=pos[1];
     var vFull=slVertice(idx,1);
-    var att=(c.k===statAtt);
+    // illumina solo la stat piu' alta, se l'opzione e' accesa
+    var acceso = state.statsEvid && c.k===alta;
     var lblX = suLato==="dx" ? SL_W-16 : 16;
     var anchor = suLato==="dx" ? "end" : "start";
-    // gomito verticale: dal vertice esco in orizzontale fino a una colonna fissa
-    // appena fuori l'esagono, poi salgo/scendo fino alla quota, poi vado al testo
     var colX = suLato==="dx" ? (SL_W-150) : 150;
-    var endX = suLato==="dx" ? (SL_W-24) : 24;
-    wires+='<path class="slwire'+(att?' att':'')+'" d="M '+vFull[0].toFixed(1)+' '+vFull[1].toFixed(1)
+    // la linea finisce prima del numero: lascio uno spazio, cosi' non si
+    // sovrappone alle cifre a due caratteri come "14" o "20"
+    var endX = suLato==="dx" ? (SL_W-74) : 74;
+    var stile = acceso ? ' style="stroke:'+col+';stroke-width:2"' : '';
+    wires+='<path class="slwire'+(acceso?' att':'')+'"'+stile+' d="M '+vFull[0].toFixed(1)+' '+vFull[1].toFixed(1)
          + ' L '+colX+' '+vFull[1].toFixed(1)
          + ' L '+colX+' '+ly
          + ' L '+endX+' '+ly+'"/>';
-    lbls+='<text class="slsig" x="'+lblX+'" y="'+(ly-9)+'" text-anchor="'+anchor+'">'+c.sigla+'</text>'
+    var colSig = acceso ? ' style="fill:'+col+'"' : '';
+    lbls+='<text class="slsig'+(acceso?' att':'')+'"'+colSig+' x="'+lblX+'" y="'+(ly-9)+'" text-anchor="'+anchor+'">'+c.sigla+'</text>'
        + '<text class="slval" x="'+lblX+'" y="'+(ly+17)+'" text-anchor="'+anchor+'">'+totaleCar(c.k)+'</text>'
        + '<text class="slmod" x="'+(suLato==="dx"?lblX-44:lblX+44)+'" y="'+(ly+17)+'" text-anchor="'+anchor+'">['+segno(modCar(c.k))+']</text>';
   });
@@ -1188,7 +1221,8 @@ function renderStats(){
     + out
     + '<g class="lbls">'+lbls+'</g></svg>'
     + '<div class="stcol">'+CARATT.map(function(c){
-        return '<div class="scrow"><span class="ss">'+c.sigla+'</span>'
+        var acceso = state.statsEvid && c.k===alta;
+        return '<div class="scrow'+(acceso?' att':'')+'"><span class="ss">'+c.sigla+'</span>'
              + '<span class="sv">'+totaleCar(c.k)+'</span>'
              + '<span class="sm">['+segno(modCar(c.k))+']</span></div>';
       }).join("")+'</div>';
@@ -1226,9 +1260,10 @@ function disegnaEsagono(){
     var e=hexPunto(idx,1);
     out+='<line class="hexspoke" x1="'+HEX_CX+'" y1="'+HEX_CY+'" x2="'+e[0].toFixed(1)+'" y2="'+e[1].toFixed(1)+'"/>';
   });
-  // il poligono del personaggio
+  // il poligono del personaggio, col colore scelto
+  var col=state.statsColor||"#7C5CFF";
   var pts=CARATT.map(function(c,idx){ return hexPunto(idx,frazioneDi(c.k)).map(function(n){return n.toFixed(1);}).join(","); });
-  out+='<polygon class="hexfill" points="'+pts.join(" ")+'"/>';
+  out+='<polygon class="hexfill" points="'+pts.join(" ")+'" style="fill:'+col+'26;stroke:'+col+'"/>';
   // solo le sigle agli angoli: niente numeri, quelli stanno nei riquadri sotto
   CARATT.forEach(function(c,idx){
     var lab=hexPunto(idx,1.24), att=(c.k===statAtt);
@@ -1283,8 +1318,17 @@ var TESTI=[
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
   var o={};
-  TESTI.forEach(function(t){ o[t.id]={ font:t.font, colore:t.colore, legaFont:false, legaColore:false }; });
+  TESTI.forEach(function(t){ o[t.id]={ font:t.font, colore:t.colore, legaFont:false, legaColore:false,
+    bold:false, italic:false, underline:false, smallcaps:false, neon:false, legaFmt:false }; });
   return o;
+}
+var FORMATI=["bold","italic","underline","smallcaps","neon"];
+/* Quali formati valgono per una scritta: i suoi, o quelli del nome se
+   l'aggancio dei formati e' acceso. Il nome tiene i suoi in state.bold ecc. */
+function fmtDi(id){
+  var s=state.testi[id];
+  if(s.legaFmt) return { bold:state.bold, italic:state.italic, underline:state.underline, smallcaps:state.smallcaps, neon:state.neon };
+  return { bold:s.bold, italic:s.italic, underline:s.underline, smallcaps:s.smallcaps, neon:s.neon };
 }
 
 /* Valori di partenza, usati dai tasti Azzera */
@@ -1301,7 +1345,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsLato"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -1322,7 +1366,9 @@ function applicaDati(o){
       if(typeof x==="number" && isFinite(x)) state.stats.bonus[c.k]=Math.max(-10, Math.min(10, Math.round(x)));
     });
   }
-  state.statsLato = (o.statsLato==="dx") ? "dx" : "sx";
+  state.statsEvid = (o.statsEvid!==false);   // acceso di default
+  if(typeof o.statsColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.statsColor)) state.statsColor=o.statsColor;
+  else state.statsColor="#7C5CFF";
 
   // le scritte si travasano una per una invece di copiare l'oggetto intero:
   // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
@@ -1333,7 +1379,8 @@ function applicaDati(o){
       if(!v || typeof v!=="object") return;
       if(v.font==="" || FONTS[v.font]) d.font=v.font;
       if(typeof v.colore==="string" && /^#[0-9a-fA-F]{6}$/.test(v.colore)) d.colore=v.colore;
-      d.legaFont=!!v.legaFont; d.legaColore=!!v.legaColore;
+      d.legaFont=!!v.legaFont; d.legaColore=!!v.legaColore; d.legaFmt=!!v.legaFmt;
+      FORMATI.forEach(function(k){ d[k]=!!v[k]; });
     });
   }
   if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
@@ -1850,14 +1897,25 @@ function coloreDi(id){ var s=state.testi[id]; return s.legaColore ? state.nameCo
    scheda viene ridisegnata, perche' i pezzi nuovi nascono senza stile. */
 function applicaTesti(){
   TESTI.forEach(function(t){
-    var f=fontDi(t.id), c=coloreDi(t.id);
+    var f=fontDi(t.id), c=coloreDi(t.id), fm=fmtDi(t.id);
     var lista=document.querySelectorAll(t.sel);
     for(var i=0;i<lista.length;i++){
-      lista[i].style.fontFamily=f;   // vuoto = torna quello del foglio di stile
-      // le scritte SVG colorano con "fill", quelle HTML con "color": scrivo
-      // entrambe, quella che non serve viene ignorata
-      lista[i].style.color=c;
-      lista[i].style.fill=c;
+      var el=lista[i], svg=(el.namespaceURI==="http://www.w3.org/2000/svg");
+      el.style.fontFamily=f;   // vuoto = torna quello del foglio di stile
+      // le scritte SVG colorano con "fill", quelle HTML con "color"
+      el.style.color=c; el.style.fill=c;
+      el.style.fontWeight = fm.bold ? "700" : "";
+      el.style.fontStyle  = fm.italic ? "italic" : "";
+      el.style.fontVariant= fm.smallcaps ? "small-caps" : "";
+      // il sottolineato: in SVG e' text-decoration sul testo, funziona uguale
+      el.style.textDecoration = fm.underline ? "underline" : "";
+      // il neon: un alone dello stesso colore. Sull'SVG con drop-shadow, sull'HTML con text-shadow.
+      if(fm.neon){
+        if(svg) el.style.filter = "drop-shadow(0 0 3px "+c+") drop-shadow(0 0 7px "+c+")";
+        else el.style.textShadow = "0 0 4px "+c+",0 0 9px "+c+",0 0 18px "+c;
+      } else {
+        el.style.filter=""; el.style.textShadow="";
+      }
     }
   });
 }
@@ -1904,6 +1962,12 @@ function costruisciAspetto(dove){
     s.font=sel.value; applicaTesti(); sincronizzaAspetto(dove); aggiornaSalva();
   });
 
+  var FMT_NOMI={ bold:"G", italic:"C", underline:"S", smallcaps:"maiuscoletto", neon:"neon" };
+  var FMT_TIT={ bold:"Grassetto", italic:"Corsivo", underline:"Sottolineato", smallcaps:"Maiuscoletto", neon:"Neon" };
+  document.getElementById("aspFmt_"+dove).innerHTML = FORMATI.map(function(k){
+    return '<button class="opt fmtb" data-fmtcar="'+k+'" data-dove="'+dove+'" title="'+FMT_TIT[k]+'">'+FMT_NOMI[k]+'</button>';
+  }).join(" ");
+
   aspPicker[dove]=makePicker(document.getElementById("aspPicker_"+dove), "#9A97AD", function(hex){
     // setHex fa scattare questa funzione anche quando siamo noi a mettere il
     // picker in pari: li' non si scrive niente, se no la scritta si prende il
@@ -1933,15 +1997,24 @@ function disegnaAntep(dove){
   var voci=ANTEP[dove]||[];
   var testo = voci.map(function(v){
     var t=TESTO[v.id], val=v.testo!==undefined ? v.testo : t.nome;
-    var f=fontDi(v.id), c=coloreDi(v.id);
-    return '<span class="'+v.cls+'" style="'+(f?'font-family:'+f+';':'')+'color:'+c+'">'+esc(val)+'</span>';
+    var f=fontDi(v.id), c=coloreDi(v.id), fm=fmtDi(v.id);
+    var st = (f?'font-family:'+f+';':'')+'color:'+c+';';
+    if(fm.bold) st+='font-weight:700;';
+    if(fm.italic) st+='font-style:italic;';
+    if(fm.underline) st+='text-decoration:underline;';
+    if(fm.smallcaps) st+='font-variant:small-caps;';
+    if(fm.neon) st+='text-shadow:0 0 4px '+c+',0 0 9px '+c+',0 0 18px '+c+';';
+    return '<span class="'+v.cls+'" style="'+st+'">'+esc(val)+'</span>';
   }).join(" ");
   host.innerHTML = '<div class="aplab">Anteprima</div><div class="aprow">'+testo+'</div>';
 }
 
 function sincronizzaAspetto(dove){
   disegnaAntep(dove);
-  if(dove==="stats") setActive("data-lato", slLato());
+  if(dove==="stats"){
+    setActive("data-evid", state.statsEvid?"on":"off");
+    if(statsPicker){ statsFermo=true; try{ statsPicker.setHex(state.statsColor); } finally{ statsFermo=false; } }
+  }
   var id=aspSel[dove], s=state.testi[id];
   var chips=document.querySelectorAll('#aspChips_'+dove+' [data-asp]');
   for(var i=0;i<chips.length;i++) chips[i].classList.toggle("on", chips[i].getAttribute("data-asp")===id);
@@ -1971,10 +2044,18 @@ function sincronizzaAspetto(dove){
 function aspettoDaEventi(e){
   var c=e.target.closest ? e.target.closest("[data-asp]") : null;
   if(c){ var dv=c.getAttribute("data-dove"); aspSel[dv]=c.getAttribute("data-asp"); sincronizzaAspetto(dv); return true; }
+  var fb=e.target.closest ? e.target.closest("[data-fmtcar]") : null;
+  if(fb){
+    var dv=fb.getAttribute("data-dove"), st=state.testi[aspSel[dv]], key=fb.getAttribute("data-fmtcar");
+    if(st.legaFmt) return true;   // se segue il nome, i suoi formati non si toccano
+    st[key]=!st[key]; applicaTesti(); sincronizzaAspetto(dv); aggiornaSalva(); return true;
+  }
   var l=e.target.closest ? e.target.closest("[data-lega]") : null;
   if(l){
-    var dove=l.getAttribute("data-dove"), s=state.testi[aspSel[dove]];
-    if(l.getAttribute("data-lega")==="font") s.legaFont=!s.legaFont; else s.legaColore=!s.legaColore;
+    var dove=l.getAttribute("data-dove"), s=state.testi[aspSel[dove]], quale=l.getAttribute("data-lega");
+    if(quale==="font") s.legaFont=!s.legaFont;
+    else if(quale==="colore") s.legaColore=!s.legaColore;
+    else s.legaFmt=!s.legaFmt;
     applicaTesti(); sincronizzaAspetto(dove); aggiornaSalva(); return true;
   }
   return false;
@@ -1982,8 +2063,9 @@ function aspettoDaEventi(e){
 
 function uniforma(cosa, acceso){
   TESTI.forEach(function(t){
-    if(cosa!=="colore") state.testi[t.id].legaFont=acceso;
-    if(cosa!=="font") state.testi[t.id].legaColore=acceso;
+    if(cosa==="tutto"||cosa==="font") state.testi[t.id].legaFont=acceso;
+    if(cosa==="tutto"||cosa==="colore") state.testi[t.id].legaColore=acceso;
+    if(cosa==="tutto"||cosa==="fmt") state.testi[t.id].legaFmt=acceso;
   });
   applicaTesti(); ["name","xp","class","stats"].forEach(sincronizzaAspetto); aggiornaSalva();
 }
@@ -2035,8 +2117,8 @@ document.addEventListener("click", function(e){
   if(pb && !pb.disabled){ statAtt=pb.getAttribute("data-car"); cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
   var pk=e.target.closest("[data-pick]");
   if(pk){ statAtt=pk.getAttribute("data-pick"); renderStatsDialog(); return; }
-  var lt=e.target.closest("[data-lato]");
-  if(lt){ state.statsLato=lt.getAttribute("data-lato"); renderStats(); sincronizzaAspetto("stats"); aggiornaSalva(); return; }
+  var ev=e.target.closest("[data-evid]");
+  if(ev){ state.statsEvid=(ev.getAttribute("data-evid")==="on"); renderStats(); sincronizzaAspetto("stats"); aggiornaSalva(); return; }
   var r=e.target.closest("[data-reset]"); if(r){ askReset(r.getAttribute("data-reset")); return; }
   var no=e.target.closest("[data-cancel]"); if(no){ cancelReset(no.getAttribute("data-cancel")); return; }
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }
@@ -2068,9 +2150,12 @@ document.getElementById("chosen").addEventListener("click", function(e){
 ["name","xp","class","stats"].forEach(costruisciAspetto);
 document.getElementById("unifFont").addEventListener("click", function(){ uniforma("font", true); });
 document.getElementById("unifColore").addEventListener("click", function(){ uniforma("colore", true); });
+document.getElementById("unifFmt").addEventListener("click", function(){ uniforma("fmt", true); });
 document.getElementById("unifVia").addEventListener("click", function(){ uniforma("tutto", false); });
 
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
+var statsFermo=false;
+var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsColor, function(hex){ if(statsFermo) return; state.statsColor=hex; renderStats(); aggiornaSalva(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });

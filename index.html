@@ -363,6 +363,57 @@
   .apbarwrap{ width:100%; max-width:280px; margin:0 auto; height:9px; background:var(--panel);
     border:1px solid var(--line); border-radius:99px; overflow:hidden; }
   .apbarfill{ height:100%; border-radius:99px; }
+
+  /* ===== Pannello nuovo della Classe ===== */
+  .hintsel{ font-size:11.5px; color:var(--muted); text-align:center; margin:0 0 12px; }
+  .antepsel{ background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    padding:18px 14px; margin-bottom:16px; text-align:center; }
+  .antepsel .apet{ display:inline-block; font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:12px; }
+  .aprowcls{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; }
+  .apone{ display:inline-flex; align-items:center; gap:4px; }
+  .apce{ width:36px; height:36px; color:var(--violet); flex:0 0 auto; display:inline-flex; }
+  .apce svg{ width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  .apcn{ font-family:'Cinzel',Georgia,serif; font-size:23px; font-weight:700; color:var(--ink); line-height:1.15; }
+  .apcl{ font-family:ui-monospace,Consolas,monospace; font-size:15px; color:var(--gold); }
+  .apdiv{ width:1px; height:24px; background:var(--line); flex:0 0 auto; }
+  .apnone{ font-size:12.5px; color:var(--muted); }
+  /* la cornice di selezione e' DENTRO il riquadro (inset): non sborda sui vicini */
+  .apcls{ cursor:pointer; border-radius:8px; padding:3px 8px; transition:box-shadow .12s, background .12s; }
+  .apcls:hover{ background:rgba(124,92,255,.09); }
+  .apcls.sel{ background:rgba(124,92,255,.13); box-shadow:inset 0 0 0 1.5px var(--violet); }
+
+  .comandi .editnow{ margin-bottom:14px; }
+  .comandi .editlab{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .comandi .editrow{ display:flex; align-items:center; gap:10px; margin-top:6px; }
+  .comandi .cbadge{ width:30px; height:30px; border-radius:8px; background:var(--panel2); border:1px solid var(--line);
+    display:inline-flex; align-items:center; justify-content:center; color:var(--violet); flex:0 0 auto; }
+  .comandi .cbadge svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .comandi .cwhat{ font-size:16px; font-weight:600; }
+  .comandi .csub{ font-size:11.5px; color:var(--muted); }
+  .comandi .cctl{ display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; }
+  .comandi .clab{ width:64px; flex:0 0 auto; font-size:12.5px; color:var(--muted); padding-top:7px; }
+  .comandi .cfont{ flex:1; min-width:0; background:var(--panel2); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:7px 9px; font-size:13px; }
+  .comandi .cfont option, .comandi .cfont optgroup{ background:#201f2e; color:var(--ink); }
+  .comandi .cfmt{ display:inline-flex; gap:6px; flex-wrap:wrap; flex:1; }
+  .comandi .cfmt button{ min-width:32px; height:30px; padding:0 8px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--ink); cursor:pointer; font-size:13px; }
+  .comandi .cfmt button[data-cf=bold]{ font-weight:800; }
+  .comandi .cfmt button[data-cf=italic]{ font-style:italic; }
+  .comandi .cfmt button[data-cf=underline]{ text-decoration:underline; }
+  .comandi .cfmt button.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
+  .comandi .clock{ display:inline-flex; align-items:center; gap:5px; height:30px; padding:0 9px; border-radius:8px;
+    border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; font-size:11.5px; white-space:nowrap; flex:0 0 auto; }
+  .comandi .clock svg{ width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.7; }
+  .comandi .clock.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
+  .comandi .cctl.locked .cfont, .comandi .cctl.locked .picker, .comandi .cctl.locked .cfmt{ opacity:.38; pointer-events:none; }
+  .comandi .ctoggle{ display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .comandi .ctoggle button{ border:0; background:var(--panel2); color:var(--muted); padding:7px 15px; cursor:pointer; font-size:12.5px; }
+  .comandi .ctoggle button.on{ background:rgba(124,92,255,.16); color:var(--violet); }
+  .comandi .cbig{ width:100%; border:1px dashed var(--line); background:transparent; color:var(--muted);
+    border-radius:9px; padding:10px; cursor:pointer; font-size:12.5px; margin-top:2px; }
+  .comandi .cbig:hover{ border-color:var(--violet); color:var(--violet); }
   .asplab{ font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
     margin:20px 0 12px; padding-top:16px; border-top:1px solid var(--line); }
   .opt.lega.on{ color:var(--violet); border-color:var(--violet); background:rgba(124,92,255,.14); }
@@ -770,32 +821,9 @@
           </div>
 
           <div class="este">
-          <div class="antep" id="antep_class"></div>
-          <div class="row top">
-            <span class="rowlab">Colore simbolo</span>
-            <div id="classSymPicker" class="picker"></div>
-          </div>
-          <div class="asplab">Aspetto delle scritte</div>
-          <div class="row">
-            <span class="rowlab">Scritta</span>
-            <span class="aspchips" id="aspChips_class"></span>
-          </div>
-          <div class="row">
-            <span class="rowlab">Font</span>
-            <select id="aspFont_class"></select>
-            <button class="opt lega" data-lega="font" data-dove="class">Segue il nome</button>
-          </div>
-          <div class="row top">
-            <span class="rowlab">Colore</span>
-            <div id="aspPicker_class" class="picker"></div>
-            <button class="opt lega" data-lega="colore" data-dove="class">Segue il nome</button>
-          </div>
-          <div class="row">
-            <span class="rowlab">Formato</span>
-            <span class="aspfmt" id="aspFmt_class"></span>
-            <button class="opt lega" data-lega="fmt" data-dove="class">Segue il nome</button>
-          </div>
-          <p class="subhint" id="aspNote_class"></p>
+          <p class="hint hintsel">Tocca la scritta o il simbolo che vuoi cambiare.</p>
+          <div class="antepsel" id="antep_classe"></div>
+          <div class="comandi" id="comandi_classe"></div>
           </div>
         </div>
         <div class="dlgbar" id="barClass">
@@ -1093,7 +1121,9 @@ var state={
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
-  classSymColor:"#a78bfa",   // colore dei simboli di classe sul foglio
+  classSymColor:"#a78bfa",   // colore di partenza dei simboli (seme per i nuovi)
+  nomiClasse:{},   // stile del nome, per ogni classe (chiave = classe)
+  simboli:{},      // colore e neon del simbolo, per ogni classe
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -1329,7 +1359,6 @@ var TESTI=[
   { id:"txtPE",     dove:"xp",    nome:"Riga dei PE",          sel:"#xpTxt, #lvMax",       font:"",       colore:"#9A97AD" },
   { id:"numPE",     dove:"xp",    nome:"Numeri dei PE",        sel:"#xpTxt b",             font:"",       colore:"#E8E6F0" },
   { id:"etClasse",  dove:"class", nome:"Etichetta",            sel:"#classPanel .eyebrow", font:"",       colore:"#9A97AD" },
-  { id:"nomeCl",    dove:"class", nome:"Nome della classe",    sel:".cn",                  font:"cinzel", colore:"#E8E6F0" },
   { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" },
   { id:"etCar",     dove:"stats", nome:"Etichetta",            sel:"#statsPanel .eyebrow",   font:"",       colore:"#9A97AD" },
   { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".slsig, .scrow .ss, .hexsig", font:"", colore:"#9A97AD" },
@@ -1407,6 +1436,33 @@ function applicaDati(o){
     });
   }
   if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
+
+  // Nomi e simboli per-classe. Se mancano (scheda vecchia), si ricava lo stile
+  // dal vecchio nome unico e dal vecchio colore simbolo, cosi' l'aspetto non cambia.
+  state.nomiClasse={}; state.simboli={};
+  function validaNomeCl(v){
+    if(!v || typeof v!=="object") return null;
+    var d={}; for(var kk in DEF_NOMECL) d[kk]=DEF_NOMECL[kk];
+    if(v.font==="" || FONTS[v.font]) d.font=v.font;
+    if(typeof v.colore==="string" && /^#[0-9a-fA-F]{6}$/.test(v.colore)) d.colore=v.colore;
+    d.legaFont=!!v.legaFont; d.legaColore=!!v.legaColore; d.legaFmt=!!v.legaFmt;
+    FORMATI.forEach(function(k){ d[k]=!!v[k]; });
+    return d;
+  }
+  var vecchioNome = (o.testi && typeof o.testi==="object") ? o.testi.nomeCl : null;
+  state.classes.forEach(function(c){
+    var v = o.nomiClasse && o.nomiClasse[c.key];
+    var d = validaNomeCl(v) || validaNomeCl(vecchioNome);
+    if(d) state.nomiClasse[c.key]=d;
+    var sv = o.simboli && o.simboli[c.key];
+    if(sv && typeof sv==="object"){
+      var col = (typeof sv.colore==="string" && /^#[0-9a-fA-F]{6}$/.test(sv.colore)) ? sv.colore : state.classSymColor;
+      state.simboli[c.key]={ colore:col, neon:!!sv.neon };
+    } else {
+      state.simboli[c.key]={ colore:state.classSymColor, neon:false };
+    }
+  });
+  selClasse=null;
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
   elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
@@ -1415,6 +1471,7 @@ function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
   o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
   o.testi=state.testi; o.stats=state.stats;
+  o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
   return o;
 }
 
@@ -1511,6 +1568,7 @@ function schedaVuota(){
   for(var k in DEF_NAME) state[k]=DEF_NAME[k];
   for(var j in DEF_XP) state[j]=DEF_XP[j];
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
+  state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; selClasse=null;
   elName.textContent="";
 }
 
@@ -1697,7 +1755,9 @@ function apply(){
   var alignIt=state.align==="center"?"al centro":(state.align==="right"?"a destra":"a sinistra");
   var embIt = state.emblemMode==="auto" ? "automatico" : (state.emblemMode==="none" ? "nessuno" : BY_KEY[state.emblemMode].name+" (manuale)");
   applicaTesti();
+  applicaClassi();   // i nomi/simboli agganciati al nome vanno ridipinti
   ["name","xp","class","stats"].forEach(sincronizzaAspetto);
+  if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden && personalizza) disegnaAntepClasse();
   aggiornaSalva();
   elReadout.innerHTML="Scelta attuale: <b>"+FONT_NAME[state.font]+"</b>, <b>"+state.size+"px</b>, "+alignIt
     +", formato: <b>"+(fmt.length?fmt.join(", "):"nessuno")+"</b>, colore nome <b>"+state.nameColor.toUpperCase()+"</b>"
@@ -1816,7 +1876,11 @@ function doReset(which){
   } else if(which==="Class"){
     state.classes=[];
     state.classSymColor="#a78bfa";
+    state.nomiClasse={};
+    state.simboli={};
+    selClasse=null;
     azzeraTesti("class");
+    if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden && personalizza) sincronizzaClasse();
   } else if(which==="Xp"){
     state.xp=0;
     azzeraTesti("xp");
@@ -1907,20 +1971,190 @@ function renderPanel(){
   }
   // il livello totale non si ripete qui: lo mostra gia' il riquadro Livello
   line.innerHTML=state.classes.map(function(c){
-    return '<span class="cls"><span class="ce">'+emblemSVG(c.key)+'</span>'
-      +'<span class="cn">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
+    return '<span class="cls"><span class="ce" data-clskey="'+c.key+'">'+emblemSVG(c.key)+'</span>'
+      +'<span class="cn" data-clskey="'+c.key+'">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
   }).join('<span class="cdiv"></span>');
-  applicaTesti();   // i nomi delle classi sono appena nati: vanno dipinti
-  applicaSimboliClasse();   // e i simboli prendono il colore scelto
+  applicaTesti();     // etichetta e livello (condivisi)
+  applicaClassi();    // nomi e simboli, uno per classe
 }
-/* I simboli di classe sul foglio (.ce): nascono col colore dello stato, cosi'
-   non restano piu' bloccati sul viola. Vanno ridipinti dopo ogni renderPanel
-   perche' quel riquadro si riscrive da capo. */
-function applicaSimboliClasse(){
-  var col=state.classSymColor||"#a78bfa";
-  var l=document.querySelectorAll(".ce");
-  for(var i=0;i<l.length;i++) l[i].style.color=col;
+
+/* ===== Classe: nomi e simboli, uno per classe =====
+   Ogni nome di classe ha uno stile suo (nomiClasse), e ogni simbolo pure
+   (simboli): colore e neon. I nuovi nascono da un modello, cosi' una scheda
+   che non ha questi dati non cambia aspetto. */
+var DEF_NOMECL={ font:"cinzel", colore:"#E8E6F0", bold:false, italic:false, underline:false, smallcaps:false, neon:false, legaFont:false, legaColore:false, legaFmt:false };
+function stileNome(key){
+  if(!state.nomiClasse[key]){ var d={}; for(var k in DEF_NOMECL) d[k]=DEF_NOMECL[k]; state.nomiClasse[key]=d; }
+  return state.nomiClasse[key];
 }
+function simboloDi(key){
+  if(!state.simboli[key]) state.simboli[key]={ colore:(state.classSymColor||"#a78bfa"), neon:false };
+  return state.simboli[key];
+}
+/* Risolve gli agganci al nome e restituisce i valori veri di una scritta */
+function risolviTesto(s){
+  return {
+    font:   s.legaFont  ? state.font      : s.font,
+    colore: s.legaColore? state.nameColor : s.colore,
+    bold:      s.legaFmt ? state.bold      : s.bold,      italic:    s.legaFmt ? state.italic    : s.italic,
+    underline: s.legaFmt ? state.underline : s.underline, smallcaps: s.legaFmt ? state.smallcaps : s.smallcaps,
+    neon:      s.legaFmt ? state.neon      : s.neon
+  };
+}
+function pitturaTesto(el, s){
+  var r=risolviTesto(s), svg=(el.namespaceURI==="http://www.w3.org/2000/svg");
+  el.style.fontFamily = r.font ? FONTS[r.font] : "";
+  el.style.color=r.colore; el.style.fill=r.colore;
+  el.style.fontWeight = r.bold ? "700" : "";
+  el.style.fontStyle  = r.italic ? "italic" : "";
+  el.style.fontVariant= r.smallcaps ? "small-caps" : "";
+  el.style.textDecoration = r.underline ? "underline" : "";
+  if(r.neon){
+    if(svg) el.style.filter="drop-shadow(0 0 3px "+r.colore+") drop-shadow(0 0 7px "+r.colore+")";
+    else el.style.textShadow="0 0 4px "+r.colore+",0 0 9px "+r.colore+",0 0 18px "+r.colore;
+  } else { el.style.filter=""; el.style.textShadow=""; }
+}
+function pitturaSimbolo(el, s){
+  el.style.color=s.colore;
+  el.style.filter = s.neon ? ("drop-shadow(0 0 3px "+s.colore+") drop-shadow(0 0 7px "+s.colore+")") : "";
+}
+function applicaClassi(){
+  var nomi=document.querySelectorAll("#classLine .cn");
+  for(var i=0;i<nomi.length;i++){ var k=nomi[i].getAttribute("data-clskey"); if(k) pitturaTesto(nomi[i], stileNome(k)); }
+  var simb=document.querySelectorAll("#classLine .ce");
+  for(var j=0;j<simb.length;j++){ var q=simb[j].getAttribute("data-clskey"); if(q) pitturaSimbolo(simb[j], simboloDi(q)); }
+}
+
+/* ===== Il pannello nuovo della Classe =====
+   Si sceglie l'elemento toccandolo nell'anteprima, e sotto compaiono solo i
+   comandi che servono a quell'elemento. */
+var selClasse=null;   // "etClasse" | "lvCl" | "nome:<k>" | "simb:<k>"
+
+function targetValido(key){
+  if(key==="etClasse"||key==="lvCl") return true;
+  if(!key) return false;
+  var k=key.slice(5);
+  if(key.indexOf("nome:")===0||key.indexOf("simb:")===0)
+    return state.classes.some(function(c){ return c.key===k; });
+  return false;
+}
+function primoTarget(){ return state.classes.length ? "nome:"+state.classes[0].key : "etClasse"; }
+function stileTarget(key){
+  if(key.indexOf("nome:")===0) return stileNome(key.slice(5));
+  if(key.indexOf("simb:")===0) return simboloDi(key.slice(5));
+  return state.testi[key];
+}
+function kindTarget(key){ return key.indexOf("simb:")===0 ? "symbol" : "text"; }
+function metaTarget(key){
+  if(key==="etClasse") return {nome:"Etichetta"};
+  if(key==="lvCl") return {nome:"Livello", sub:"vale per tutte le classi"};
+  if(key.indexOf("nome:")===0) return {nome:"Nome", sub:BY_KEY[key.slice(5)].name};
+  return {nome:"Simbolo", sub:BY_KEY[key.slice(5)].name, symkey:key.slice(5)};
+}
+function stileInline(s){
+  var r=risolviTesto(s);
+  var st=(r.font?'font-family:'+FONTS[r.font]+';':'')+'color:'+r.colore+';';
+  if(r.bold) st+='font-weight:700;';
+  if(r.italic) st+='font-style:italic;';
+  if(r.underline) st+='text-decoration:underline;';
+  if(r.smallcaps) st+='font-variant:small-caps;';
+  if(r.neon) st+='text-shadow:0 0 4px '+r.colore+',0 0 9px '+r.colore+',0 0 18px '+r.colore+';';
+  return st;
+}
+function disegnaAntepClasse(){
+  var host=document.getElementById("antep_classe"); if(!host) return;
+  if(!targetValido(selClasse)) selClasse=primoTarget();
+  var html='<span class="apet apcls'+(selClasse==="etClasse"?" sel":"")+'" data-ctarget="etClasse" style="'+stileInline(state.testi.etClasse)+'">CLASSE</span>';
+  html+='<div class="aprowcls">';
+  if(!state.classes.length){
+    html+='<span class="apnone">Scegli una classe dalla ruota per poterla stilizzare.</span>';
+  } else {
+    state.classes.forEach(function(c,i){
+      if(i) html+='<span class="apdiv"></span>';
+      var sy=simboloDi(c.key);
+      html+='<span class="apone">'
+        +'<span class="apce apcls'+(selClasse==="simb:"+c.key?" sel":"")+'" data-ctarget="simb:'+c.key+'" style="color:'+sy.colore+';'+(sy.neon?"filter:drop-shadow(0 0 3px "+sy.colore+") drop-shadow(0 0 7px "+sy.colore+");":"")+'">'+emblemSVG(c.key)+'</span>'
+        +'<span class="apcn apcls'+(selClasse==="nome:"+c.key?" sel":"")+'" data-ctarget="nome:'+c.key+'" style="'+stileInline(stileNome(c.key))+'">'+esc(BY_KEY[c.key].name)+'</span>'
+        +'<span class="apcl apcls'+(selClasse==="lvCl"?" sel":"")+'" data-ctarget="lvCl" style="'+stileInline(state.testi.lvCl)+'">'+c.level+'</span>'
+        +'</span>';
+    });
+  }
+  html+='</div>';
+  host.innerHTML=html;
+}
+function lockBtn(quale, on){
+  return '<button type="button" class="clock'+(on?" on":"")+'" data-clock="'+quale+'">'
+    +'<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V8 a4 4 0 0 1 8 0 v3"/></svg>'
+    +(on?"segue il nome":"nome")+'</button>';
+}
+function costruisciComandiClasse(){
+  var host=document.getElementById("comandi_classe"); if(!host) return;
+  if(!targetValido(selClasse)) selClasse=primoTarget();
+  var key=selClasse, kind=kindTarget(key), meta=metaTarget(key), s=stileTarget(key);
+  host.innerHTML="";
+
+  var head=document.createElement("div"); head.className="editnow";
+  var badge = kind==="symbol" ? '<span class="cbadge">'+emblemSVG(meta.symkey)+'</span>' : '';
+  head.innerHTML='<div class="editlab">Stai modificando</div><div class="editrow">'+badge
+    +'<div><div class="cwhat">'+meta.nome+'</div>'+(meta.sub?'<div class="csub">'+esc(meta.sub)+'</div>':'')+'</div></div>';
+  host.appendChild(head);
+
+  if(kind==="symbol"){
+    var c1=document.createElement("div"); c1.className="cctl"; c1.innerHTML='<span class="clab">Colore</span><div class="picker cpk"></div>'; host.appendChild(c1);
+    var c2=document.createElement("div"); c2.className="cctl"; c2.innerHTML='<span class="clab">Neon</span><span class="ctoggle"><button type="button" data-cneon="off">Spento</button><button type="button" data-cneon="on">Acceso</button></span>'; host.appendChild(c2);
+    var c3=document.createElement("div"); c3.innerHTML='<button type="button" class="cbig" id="cUnifSimb">Uniforma tutti i simboli a questo</button>'; host.appendChild(c3);
+    makePicker(c1.querySelector(".cpk"), s.colore, function(hex){ s.colore=hex; applicaClassi(); disegnaAntepClasse(); aggiornaSalva(); });
+    c2.querySelectorAll("[data-cneon]").forEach(function(b){
+      b.classList.toggle("on",(b.getAttribute("data-cneon")==="on")===s.neon);
+      b.onclick=function(){ s.neon=b.getAttribute("data-cneon")==="on"; applicaClassi(); disegnaAntepClasse(); costruisciComandiClasse(); aggiornaSalva(); };
+    });
+    document.getElementById("cUnifSimb").onclick=function(){ state.classes.forEach(function(c){ var t=simboloDi(c.key); t.colore=s.colore; t.neon=s.neon; }); applicaClassi(); disegnaAntepClasse(); aggiornaSalva(); };
+    return;
+  }
+
+  var perClasse = key.indexOf("nome:")===0;
+  var rF=document.createElement("div"); rF.className="cctl"+(s.legaFont?" locked":"");
+  rF.innerHTML='<span class="clab">Font</span><select class="cfont"></select>'+lockBtn("font",s.legaFont); host.appendChild(rF);
+  var sel=rF.querySelector(".cfont");
+  var o0=document.createElement("option"); o0.value=""; o0.textContent="Come adesso"; sel.appendChild(o0);
+  FONT_GROUPS.forEach(function(g){ var og=document.createElement("optgroup"); og.label=g[0];
+    g[1].forEach(function(f){ var x=document.createElement("option"); x.value=f[0]; x.textContent=f[1]; x.style.fontFamily=f[2]; og.appendChild(x); }); sel.appendChild(og); });
+  sel.value=s.font; sel.disabled=s.legaFont;
+  sel.onchange=function(){ s.font=sel.value; applicaClassi(); disegnaAntepClasse(); aggiornaSalva(); };
+
+  var rC=document.createElement("div"); rC.className="cctl"+(s.legaColore?" locked":"");
+  rC.innerHTML='<span class="clab">Colore</span><div class="picker cpk"></div>'+lockBtn("colore",s.legaColore); host.appendChild(rC);
+  makePicker(rC.querySelector(".cpk"), s.legaColore?state.nameColor:s.colore, function(hex){ if(s.legaColore) return; s.colore=hex; applicaClassi(); disegnaAntepClasse(); aggiornaSalva(); });
+
+  var eff=risolviTesto(s);
+  var fmts=[["bold","G"],["italic","C"],["underline","S"],["smallcaps","ab"],["neon","\u2726"]];
+  var rM=document.createElement("div"); rM.className="cctl"+(s.legaFmt?" locked":"");
+  rM.innerHTML='<span class="clab">Formato</span><span class="cfmt">'
+    +fmts.map(function(f){ return '<button type="button" data-cf="'+f[0]+'"'+(eff[f[0]]?' class="on"':'')+'>'+f[1]+'</button>'; }).join("")
+    +'</span>'+lockBtn("fmt",s.legaFmt); host.appendChild(rM);
+
+  if(perClasse){
+    var rU=document.createElement("div"); rU.innerHTML='<button type="button" class="cbig" id="cUnifNomi">Uniforma tutti i nomi a questo</button>'; host.appendChild(rU);
+    document.getElementById("cUnifNomi").onclick=function(){ state.classes.forEach(function(c){ var t=stileNome(c.key); for(var kk in DEF_NOMECL) t[kk]=s[kk]; }); applicaClassi(); disegnaAntepClasse(); aggiornaSalva(); };
+  }
+
+  rM.querySelectorAll(".cfmt [data-cf]").forEach(function(b){
+    b.onclick=function(){ if(s.legaFmt) return; var k=b.getAttribute("data-cf"); s[k]=!s[k]; applicaClassi(); disegnaAntepClasse(); costruisciComandiClasse(); aggiornaSalva(); };
+  });
+  host.querySelectorAll("[data-clock]").forEach(function(b){
+    b.onclick=function(){ var q=b.getAttribute("data-clock");
+      if(q==="font") s.legaFont=!s.legaFont; else if(q==="colore") s.legaColore=!s.legaColore; else s.legaFmt=!s.legaFmt;
+      applicaClassi(); disegnaAntepClasse(); costruisciComandiClasse(); aggiornaSalva(); };
+  });
+}
+function sincronizzaClasse(){ disegnaAntepClasse(); costruisciComandiClasse(); }
+(function(){
+  var ap=document.getElementById("antep_classe");
+  if(ap) ap.addEventListener("click", function(e){
+    var t=e.target.closest("[data-ctarget]"); if(!t) return;
+    selClasse=t.getAttribute("data-ctarget"); disegnaAntepClasse(); costruisciComandiClasse();
+  });
+})();
 /* Prende il font e il colore buoni per una scritta: i suoi, oppure quelli
    del nome se l'aggancio e' acceso. */
 function fontDi(id){ var s=state.testi[id]; var k = s.legaFont ? state.font : s.font; return k ? FONTS[k] : ""; }
@@ -1954,7 +2188,8 @@ function applicaTesti(){
 }
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
-  renderStats(); renderStatsDialog(); apply(); setHub(null); }
+  renderStats(); renderStatsDialog(); apply(); setHub(null);
+  if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden && personalizza) sincronizzaClasse(); }
 
 FONT_GROUPS.forEach(function(g){
   var og=document.createElement("optgroup"); og.label=g[0];
@@ -1975,6 +2210,7 @@ FONT_GROUPS.forEach(function(g){
 var aspSel={ name:"etNome", xp:"etLivello", class:"etClasse", stats:"etCar" }, aspPicker={}, aspFermo=false;
 
 function costruisciAspetto(dove){
+  if(!document.getElementById("aspChips_"+dove)) return;   // la Classe usa il pannello nuovo
   var quali=TESTI.filter(function(t){ return t.dove===dove; });
   document.getElementById("aspChips_"+dove).innerHTML = quali.map(function(t){
     return '<button class="opt" data-asp="'+t.id+'" data-dove="'+dove+'">'+t.nome+'</button>';
@@ -2015,7 +2251,6 @@ function costruisciAspetto(dove){
 /* Quali scritte fanno parte di quale finestra, per l'anteprima estetica. */
 var ANTEP={
   xp:    [{id:"etLivello", cls:"apmid"}, {id:"numLv", cls:"apbig", testo:"7"}],
-  class: [{id:"etClasse", cls:"apmid"}, {id:"nomeCl", cls:"apbig", testo:"Bardo"}, {id:"lvCl", cls:"apmid", testo:"1"}],
   stats: [{id:"siglaCar", cls:"apmid", testo:"FOR"}, {id:"valCar", cls:"apbig", testo:"15"}, {id:"modiCar", cls:"apmid", testo:"+2"}]
 };
 function disegnaAntepBar(){
@@ -2040,21 +2275,15 @@ function disegnaAntep(dove){
     return '<span class="'+v.cls+'" style="'+st+'">'+esc(val)+'</span>';
   }).join(" ");
   var extra="";
-  if(dove==="class"){
-    var key=(state.classes[0]&&state.classes[0].key)||"bardo";
-    extra='<span class="apemb" style="color:'+(state.classSymColor||"#a78bfa")+'">'+emblemSVG(key)+'</span>';
-  }
   host.innerHTML = '<div class="aplab">Anteprima</div><div class="aprow">'+extra+testo+'</div>';
 }
 
 function sincronizzaAspetto(dove){
+  if(!document.getElementById("aspFont_"+dove)) return;   // la Classe usa il pannello nuovo
   disegnaAntep(dove);
   if(dove==="stats"){
     setActive("data-evid", state.statsEvid?"on":"off");
     if(statsPicker){ statsFermo=true; try{ statsPicker.setHex(state.statsColor); } finally{ statsFermo=false; } }
-  }
-  if(dove==="class"){
-    if(classSymPicker){ classSymFermo=true; try{ classSymPicker.setHex(state.classSymColor); } finally{ classSymFermo=false; } }
   }
   var id=aspSel[dove], s=state.testi[id];
   var chips=document.querySelectorAll('#aspChips_'+dove+' [data-asp]');
@@ -2126,7 +2355,14 @@ function uniforma(cosa, acceso){
     if(cosa==="tutto"||cosa==="colore") state.testi[t.id].legaColore=acceso;
     if(cosa==="tutto"||cosa==="fmt") state.testi[t.id].legaFmt=acceso;
   });
-  applicaTesti(); ["name","xp","class","stats"].forEach(sincronizzaAspetto); aggiornaSalva();
+  for(var key in state.nomiClasse){ var n=state.nomiClasse[key];
+    if(cosa==="tutto"||cosa==="font") n.legaFont=acceso;
+    if(cosa==="tutto"||cosa==="colore") n.legaColore=acceso;
+    if(cosa==="tutto"||cosa==="fmt") n.legaFmt=acceso;
+  }
+  applicaTesti(); applicaClassi(); ["name","xp","class","stats"].forEach(sincronizzaAspetto);
+  if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden && personalizza) sincronizzaClasse();
+  aggiornaSalva();
 }
 
 var modalName=document.getElementById("modalName"), modalClass=document.getElementById("modalClass"),
@@ -2142,7 +2378,7 @@ function openName(){
 }
 /* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
    lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
-function openClass(){ modalClass.hidden=false; setHub(null); }
+function openClass(){ modalClass.hidden=false; setHub(null); if(personalizza) sincronizzaClasse(); }
 function openStats(){ document.getElementById("modalStats").hidden=false; renderStatsDialog(); }
 function openXp(){ modalXp.hidden=false; renderXpDialog(); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true;
@@ -2215,8 +2451,6 @@ document.getElementById("unifVia").addEventListener("click", function(){ uniform
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
 var statsFermo=false;
 var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsColor, function(hex){ if(statsFermo) return; state.statsColor=hex; renderStats(); aggiornaSalva(); });
-var classSymFermo=false;
-var classSymPicker=makePicker(document.getElementById("classSymPicker"), state.classSymColor, function(hex){ if(classSymFermo) return; state.classSymColor=hex; applicaSimboliClasse(); disegnaAntep("class"); aggiornaSalva(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });

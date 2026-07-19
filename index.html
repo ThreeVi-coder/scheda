@@ -358,6 +358,8 @@
   .antep .apbig{ font-size:34px; font-weight:700; line-height:1.1; word-break:break-word; }
   .antep .apmid{ font-size:22px; font-weight:700; }
   .antep .aprow{ display:flex; gap:16px; justify-content:center; align-items:baseline; flex-wrap:wrap; }
+  .antep .apemb{ display:inline-flex; width:32px; height:32px; align-self:center; flex:0 0 auto; }
+  .antep .apemb svg{ width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
   .apbarwrap{ width:100%; max-width:280px; margin:0 auto; height:9px; background:var(--panel);
     border:1px solid var(--line); border-radius:99px; overflow:hidden; }
   .apbarfill{ height:100%; border-radius:99px; }
@@ -769,6 +771,10 @@
 
           <div class="este">
           <div class="antep" id="antep_class"></div>
+          <div class="row top">
+            <span class="rowlab">Colore simbolo</span>
+            <div id="classSymPicker" class="picker"></div>
+          </div>
           <div class="asplab">Aspetto delle scritte</div>
           <div class="row">
             <span class="rowlab">Scritta</span>
@@ -1087,6 +1093,7 @@ var state={
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
+  classSymColor:"#a78bfa",   // colore dei simboli di classe sul foglio
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -1359,7 +1366,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -1383,6 +1390,8 @@ function applicaDati(o){
   state.statsEvid = (o.statsEvid!==false);   // acceso di default
   if(typeof o.statsColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.statsColor)) state.statsColor=o.statsColor;
   else state.statsColor="#7C5CFF";
+  if(typeof o.classSymColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.classSymColor)) state.classSymColor=o.classSymColor;
+  else state.classSymColor="#a78bfa";
 
   // le scritte si travasano una per una invece di copiare l'oggetto intero:
   // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
@@ -1806,6 +1815,7 @@ function doReset(which){
     statsWarn("");
   } else if(which==="Class"){
     state.classes=[];
+    state.classSymColor="#a78bfa";
     azzeraTesti("class");
   } else if(which==="Xp"){
     state.xp=0;
@@ -1901,6 +1911,15 @@ function renderPanel(){
       +'<span class="cn">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
   }).join('<span class="cdiv"></span>');
   applicaTesti();   // i nomi delle classi sono appena nati: vanno dipinti
+  applicaSimboliClasse();   // e i simboli prendono il colore scelto
+}
+/* I simboli di classe sul foglio (.ce): nascono col colore dello stato, cosi'
+   non restano piu' bloccati sul viola. Vanno ridipinti dopo ogni renderPanel
+   perche' quel riquadro si riscrive da capo. */
+function applicaSimboliClasse(){
+  var col=state.classSymColor||"#a78bfa";
+  var l=document.querySelectorAll(".ce");
+  for(var i=0;i<l.length;i++) l[i].style.color=col;
 }
 /* Prende il font e il colore buoni per una scritta: i suoi, oppure quelli
    del nome se l'aggancio e' acceso. */
@@ -2020,7 +2039,12 @@ function disegnaAntep(dove){
     if(fm.neon) st+='text-shadow:0 0 4px '+c+',0 0 9px '+c+',0 0 18px '+c+';';
     return '<span class="'+v.cls+'" style="'+st+'">'+esc(val)+'</span>';
   }).join(" ");
-  host.innerHTML = '<div class="aplab">Anteprima</div><div class="aprow">'+testo+'</div>';
+  var extra="";
+  if(dove==="class"){
+    var key=(state.classes[0]&&state.classes[0].key)||"bardo";
+    extra='<span class="apemb" style="color:'+(state.classSymColor||"#a78bfa")+'">'+emblemSVG(key)+'</span>';
+  }
+  host.innerHTML = '<div class="aplab">Anteprima</div><div class="aprow">'+extra+testo+'</div>';
 }
 
 function sincronizzaAspetto(dove){
@@ -2028,6 +2052,9 @@ function sincronizzaAspetto(dove){
   if(dove==="stats"){
     setActive("data-evid", state.statsEvid?"on":"off");
     if(statsPicker){ statsFermo=true; try{ statsPicker.setHex(state.statsColor); } finally{ statsFermo=false; } }
+  }
+  if(dove==="class"){
+    if(classSymPicker){ classSymFermo=true; try{ classSymPicker.setHex(state.classSymColor); } finally{ classSymFermo=false; } }
   }
   var id=aspSel[dove], s=state.testi[id];
   var chips=document.querySelectorAll('#aspChips_'+dove+' [data-asp]');
@@ -2188,6 +2215,8 @@ document.getElementById("unifVia").addEventListener("click", function(){ uniform
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
 var statsFermo=false;
 var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsColor, function(hex){ if(statsFermo) return; state.statsColor=hex; renderStats(); aggiornaSalva(); });
+var classSymFermo=false;
+var classSymPicker=makePicker(document.getElementById("classSymPicker"), state.classSymColor, function(hex){ if(classSymFermo) return; state.classSymColor=hex; applicaSimboliClasse(); disegnaAntep("class"); aggiornaSalva(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });

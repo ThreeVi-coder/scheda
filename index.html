@@ -275,6 +275,14 @@
   .freelv.over{ color:var(--danger); }
   .freelv.hidden{ display:none; }
 
+  /* ============ PANNELLO BONUS DI COMPETENZA ============ */
+  .ppanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 68px 18px 22px; width:fit-content; max-width:100%; min-width:200px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .profval{ font-family:'Cinzel',Georgia,serif; font-size:44px; font-weight:700; color:var(--gold); line-height:1; margin-top:2px; }
+
   /* ============ FINESTRA XP ============ */
   .xprow{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:14px; }
   .xpin{ background:var(--panel2); border:1px solid var(--line); color:var(--ink); border-radius:9px;
@@ -509,6 +517,7 @@
     .stcol{ display:block; margin-top:12px; }
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
+    .ppanel{ min-width:0; width:100%; padding-right:56px; }
     .prow{ gap:12px; }
     .lvnum{ font-size:38px; }
     .cn{ font-size:26px; }
@@ -589,6 +598,12 @@
         <div class="xptxt" id="xpTxt"></div>
         <div class="freelv hidden" id="freeLv"></div>
         <button class="gear" id="gearXp" title="Esperienza" aria-label="Esperienza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
+
+      <div class="ppanel" id="profPanel">
+        <div class="eyebrow">Competenza</div>
+        <div class="profval" id="profVal">+2</div>
+        <button class="gear" id="gearProf" title="Bonus di competenza" aria-label="Bonus di competenza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
       <div class="cpanel" id="classPanel">
@@ -851,6 +866,42 @@
           <span class="cfmtxt">Riportare le sei caratteristiche a 10 e le loro scritte com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
           <button class="btn-no" data-cancel="Stats">Annulla</button>
           <button class="btn-yes" data-yes="Stats">Azzera</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalProf" hidden>
+      <div class="backdrop" data-close="prof"></div>
+      <div class="dialog centrata" id="dialogProf">
+        <div class="dlghead">
+          <h2>Bonus di competenza</h2>
+          <button class="dlgx" data-close="prof" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <div class="mech">
+          <p class="hint">Nasce dal livello del personaggio e si aggiorna da solo: non si imposta a mano. Si somma ai tiri salvezza, alle prove di abilit&agrave; e ai tiri per colpire in cui il personaggio &egrave; competente.</p>
+          <div class="xpres" id="profRes"></div>
+          <table class="xptable" id="profTable">
+            <thead><tr><th>Livelli</th><th>Bonus</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          </div>
+
+          <div class="este">
+          <div class="asplab">Aspetto delle scritte</div>
+          <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
+          <div class="antepsel" id="antsel_prof"></div>
+          <div class="comandi" id="com_prof"></div>
+          </div>
+        </div>
+        <div class="dlgbar" id="barProf">
+          <button class="btn-reset" data-reset="Prof">Azzera</button>
+          <button class="btn-close" data-close="prof">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmProf" hidden>
+          <span class="cfmtxt">Riportare le scritte del bonus di competenza com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Prof">Annulla</button>
+          <button class="btn-yes" data-yes="Prof">Azzera</button>
         </div>
       </div>
     </div>
@@ -1314,7 +1365,9 @@ var TESTI=[
   { id:"etCar",     dove:"stats", nome:"Etichetta",            sel:"#statsPanel .eyebrow",   font:"",       colore:"#9A97AD" },
   { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".slsig, .scrow .ss, .hexsig", font:"", colore:"#9A97AD" },
   { id:"valCar",    dove:"stats", nome:"Valore",               sel:".slval, .scrow .sv, .hexval", font:"cinzel", colore:"#E8E6F0" },
-  { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" }
+  { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
+  { id:"etProf",    dove:"prof",  nome:"Etichetta",            sel:"#profPanel .eyebrow",  font:"",       colore:"#9A97AD" },
+  { id:"valProf",   dove:"prof",  nome:"Bonus",                sel:"#profVal",             font:"cinzel", colore:"#E0B15E" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -1498,7 +1551,7 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearStats"].forEach(function(id){
+  ["gearXp","gearClass","gearStats","gearProf"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
   var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
@@ -1838,6 +1891,8 @@ function doReset(which){
     document.getElementById("xpInput").value=0;
     xpPicker1.setHex(state.xpColor1);
     xpPicker2.setHex(state.xpColor2);
+  } else if(which==="Prof"){
+    azzeraTesti("prof");
   }
   cancelReset(which);
   renderAll();
@@ -1874,6 +1929,7 @@ function xpFillStyle(){
 function renderLevel(){
   var lv=totalLevel(), xp=state.xp, free=freeLevels();
   document.getElementById("lvNum").textContent=lv;
+  renderProf();
   var isMax = lv>=20;
   document.getElementById("lvMax").textContent = isMax ? "livello massimo" : "";
   var cur=xpForLevel(lv), next=isMax?null:xpForLevel(lv+1);
@@ -1912,6 +1968,26 @@ function renderXpDialog(){
   var inp=document.getElementById("xpInput");
   if(document.activeElement!==inp) inp.value=state.xp;
   disegnaAntepBar();
+}
+
+/* Il bonus di competenza: un numero solo, ricavato dal livello, mai salvato.
+   Il pannello mostra il valore; la finestra spiega da dove viene e la tabella
+   dei cinque scaglioni. */
+function renderProf(){
+  var el=document.getElementById("profVal"); if(!el) return;
+  el.textContent="+"+profForLevel(totalLevel());
+}
+function renderProfDialog(){
+  var lv=totalLevel(), pb=profForLevel(lv);
+  var res=document.getElementById("profRes");
+  if(res) res.innerHTML='<div class="big">+'+pb+'</div><div class="sub">Livello '+lv
+    +'. Si somma a tiri salvezza, prove di abilit\u00E0 e tiri per colpire in cui sei competente.</div>';
+  var tb=document.querySelector("#profTable tbody"); if(!tb) return;
+  var scaglioni=[[1,4],[5,8],[9,12],[13,16],[17,20]];
+  tb.innerHTML=scaglioni.map(function(r){
+    var cur = lv>=r[0] && lv<=r[1];
+    return '<tr'+(cur?' class="cur"':'')+'><td>'+r[0]+'\u2013'+r[1]+'</td><td>+'+profForLevel(r[0])+'</td></tr>';
+  }).join("");
 }
 function renderPanel(){
   var line=document.getElementById("classLine");
@@ -1983,13 +2059,15 @@ var ASP_CONT={
   name: { ant:"antsel_name",  com:"com_name" },
   xp:   { ant:"antsel_xp",    com:"com_xp" },
   class:{ ant:"antep_classe", com:"comandi_classe" },
-  stats:{ ant:"antsel_stats", com:"com_stats" }
+  stats:{ ant:"antsel_stats", com:"com_stats" },
+  prof: { ant:"antsel_prof",  com:"com_prof" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
   etNome:{t:"ETICHETTA",cls:"apmid"},
   etLivello:{t:"LIVELLO",cls:"apmid"}, numLv:{t:"7",cls:"apbig"}, txtPE:{t:"prossimo livello",cls:"apsmall"}, numPE:{t:"2.500",cls:"apmid"},
-  etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"}
+  etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
+  etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"}
 };
 
 function targetValido(dove,key){
@@ -2149,10 +2227,11 @@ function apertaAspetto(){
   if(typeof modalXp!=="undefined"    && modalXp    && !modalXp.hidden)    return "xp";
   if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden) return "class";
   var ms=document.getElementById("modalStats"); if(ms && !ms.hidden) return "stats";
+  if(typeof modalProf!=="undefined" && modalProf && !modalProf.hidden) return "prof";
   return null;
 }
 (function(){
-  ["name","xp","class","stats"].forEach(function(dove){
+  ["name","xp","class","stats","prof"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -2193,7 +2272,7 @@ function applicaTesti(){
 }
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
-  renderStats(); renderStatsDialog(); apply(); setHub(null);
+  renderProfDialog(); renderStats(); renderStatsDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
 
 FONT_GROUPS.forEach(function(g){
@@ -2233,7 +2312,7 @@ function uniforma(cosa, acceso){
 }
 
 var modalName=document.getElementById("modalName"), modalClass=document.getElementById("modalClass"),
-    modalXp=document.getElementById("modalXp");
+    modalXp=document.getElementById("modalXp"), modalProf=document.getElementById("modalProf");
 function positionDialog(dlg){
   var b=elHeader.getBoundingClientRect().bottom;
   dlg.style.top=Math.round(b+16)+"px";
@@ -2249,12 +2328,14 @@ function openName(){
 function openClass(){ modalClass.hidden=false; setHub(null); if(personalizza) sincronizzaClasse(); }
 function openStats(){ document.getElementById("modalStats").hidden=false; renderStatsDialog(); if(personalizza) sincronizzaSel("stats"); }
 function openXp(){ modalXp.hidden=false; renderXpDialog(); if(personalizza) sincronizzaSel("xp"); }
-function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true;
+function openProf(){ modalProf.hidden=false; renderProfDialog(); if(personalizza) sincronizzaSel("prof"); }
+function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; modalProf.hidden=true;
   document.getElementById("modalStats").hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
+document.getElementById("gearProf").addEventListener("click", openProf);
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
 window.addEventListener("resize", function(){
   apply();

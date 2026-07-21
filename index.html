@@ -97,6 +97,15 @@
         <div class="stats" id="statsLine"></div>
         <button class="gear" id="gearStats" title="Caratteristiche" aria-label="Caratteristiche"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
+
+      <div class="tspanel" id="tsPanel">
+        <div class="eyebrow">Tiri salvezza</div>
+        <div class="tsbody">
+          <div class="tswrap" id="tsGrid"></div>
+          <div class="tshint" id="tsHint"></div>
+        </div>
+        <button class="gear" id="gearTs" title="Tiri salvezza" aria-label="Tiri salvezza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
     </div>
 
     <div class="modal" id="modalName" hidden>
@@ -382,6 +391,50 @@
           <span class="cfmtxt">Riportare le scritte del bonus di competenza com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
           <button class="btn-no" data-cancel="Prof">Annulla</button>
           <button class="btn-yes" data-yes="Prof">Azzera</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalTs" hidden>
+      <div class="backdrop" data-close="ts"></div>
+      <div class="dialog centrata" id="dialogTs">
+        <div class="dlghead">
+          <h2>Tiri salvezza</h2>
+          <button class="dlgx" data-close="ts" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <div class="mech">
+          <p class="hint">Si tira un tiro salvezza quando una minaccia improvvisa ti coglie: una trappola, un incantesimo, il soffio di un drago. Tiri 1d20 e aggiungi il numero che vedi nel riquadro. Non si imposta a mano: nasce dalle caratteristiche e dal bonus di competenza.</p>
+
+          <div class="row" id="tsIniRow" hidden>
+            <span class="rowlab">Classe iniziale</span>
+            <select id="tsIni"></select>
+          </div>
+          <p class="hintsel" id="tsIniNota" hidden></p>
+
+          <table class="xptable" id="tsTable">
+            <thead><tr><th>Tiro salvezza</th><th>Caratt.</th><th>Comp.</th><th>Totale</th></tr></thead>
+            <tbody></tbody>
+          </table>
+
+          <div class="tscosa" id="tsCosa"></div>
+          </div>
+
+          <div class="este">
+          <div class="asplab">Aspetto delle scritte</div>
+          <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
+          <div class="antepsel" id="antsel_ts"></div>
+          <div class="comandi" id="com_ts"></div>
+          </div>
+        </div>
+        <div class="dlgbar" id="barTs">
+          <button class="btn-reset" data-reset="Ts">Azzera</button>
+          <button class="btn-close" data-close="ts">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmTs" hidden>
+          <span class="cfmtxt">Riportare le scritte dei tiri salvezza com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Ts">Annulla</button>
+          <button class="btn-yes" data-yes="Ts">Azzera</button>
         </div>
       </div>
     </div>

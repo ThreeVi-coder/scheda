@@ -160,7 +160,17 @@
   .header.neon .emgroup{ color:#fff; filter:drop-shadow(0 0 3px var(--name-color)) drop-shadow(0 0 7px var(--name-color)); }
 
   /* ============ RIGA PANNELLI ============ */
-  .prow{ display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
+  /* I riquadri non stanno piu' in colonna: fluiscono e vanno a capo da soli.
+     Sui grandi schermi i tre piccoli (Livello, Competenza, Classe) formano una
+     fascia in alto, e i due visivi (Caratteristiche e Tiri salvezza) si mettono
+     fianco a fianco sotto. Su schermi stretti tornano uno sotto l'altro. */
+  .prow{ display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; }
+  .prow > div{ min-width:0; }
+  .lpanel{ flex:2 1 250px; }
+  .ppanel{ flex:1 1 150px; }
+  .cpanel{ flex:2 1 250px; }
+  .spanel{ flex:5 1 380px; }
+  .tspanel{ flex:3 1 300px; }
 
   /* ============ PANNELLO CLASSE ============ */
   .cpanel{
@@ -274,6 +284,40 @@
     display:flex; flex-direction:column; justify-content:center;
   }
   .profval{ font-family:'Cinzel',Georgia,serif; font-size:44px; font-weight:700; color:var(--gold); line-height:1; margin-top:2px; }
+
+  /* ============ PANNELLO TIRI SALVEZZA ============ */
+  /* Un favo: sei esagoni attorno a un d20. Le posizioni sono le stesse del
+     grafico delle caratteristiche, cosi' Forza sta in cima in tutti e due.
+     Il colore del numero lo decide la personalizzazione: a segnare la
+     competenza ci pensa l'esagono, che si accende. */
+  .tspanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 68px 18px 22px; width:fit-content; max-width:100%;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .tsbody{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:4px; }
+  .tswrap{ flex:0 0 auto; width:228px; }
+  .tswrap svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .tshex{ fill:var(--panel2); stroke:var(--line); stroke-width:1.2; }
+  .tssig{ font-family:var(--ui); font-size:9.5px; font-weight:700; letter-spacing:.1em; fill:var(--muted); }
+  .tsval{ font-family:'Cinzel',Georgia,serif; font-size:20px; font-weight:700; fill:var(--ink); }
+  /* competente: l'esagono si accende d'oro, con un alone appena percettibile */
+  .tscell.comp .tshex{ fill:rgba(224,177,94,.13); stroke:var(--gold); stroke-width:1.7;
+    filter:drop-shadow(0 0 5px rgba(224,177,94,.45)); }
+  /* Il dado al centro: viola come l'accento dell'app, cosi' si vede senza
+     rubare l'oro, che qui vuol dire una cosa precisa (sei competente). */
+  .tsdadohex{ fill:rgba(124,92,255,.07); stroke:rgba(167,139,250,.35); }
+  .tsemb{ fill:none; stroke:var(--violet); stroke-width:1.3; stroke-linejoin:round;
+    stroke-linecap:round; opacity:.7; }
+  .tshint{ flex:1 1 170px; min-width:150px; max-width:225px;
+    font-size:11px; color:var(--muted); line-height:1.6; }
+  .tshint b{ color:var(--ink); font-weight:700; }
+  /* nella finestra: a cosa serve ogni tiro salvezza */
+  .tscosa{ margin-top:18px; }
+  .tscr{ font-size:12.5px; color:var(--muted); line-height:1.55; padding:7px 0;
+    border-bottom:1px solid var(--line); }
+  .tscr:last-child{ border-bottom:0; }
+  .tscr b{ color:var(--ink); font-weight:700; margin-right:4px; }
 
   /* ============ FINESTRA XP ============ */
   .xprow{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:14px; }
@@ -510,6 +554,12 @@
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }
+    .tspanel{ min-width:0; width:100%; padding-right:56px; }
+    .tsbody{ flex-direction:column; align-items:flex-start; gap:14px; }
+    .tswrap{ width:100%; max-width:210px; margin:0 auto; }
+    /* in colonna la base flex vale come ALTEZZA: va azzerata, altrimenti
+       riserva spazio vuoto sotto la didascalia */
+    .tshint{ flex:0 0 auto; max-width:none; }
     .prow{ gap:12px; }
     .lvnum{ font-size:38px; }
     .cn{ font-size:26px; }

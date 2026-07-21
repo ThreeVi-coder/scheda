@@ -24,20 +24,23 @@ var ICONS={
 };
 function emblemSVG(key){ return ICONS[key] ? '<svg viewBox="0 0 24 24">'+ICONS[key]+'</svg>' : ''; }
 
+/* "ts" sono i due tiri salvezza in cui la classe rende competenti. Attenzione:
+   valgono solo se e' la classe INIZIALE del personaggio. Multiclassando non se
+   ne guadagnano altri: e' una regola del manuale, non una semplificazione. */
 var CLASSES=[
-  {key:"artificere", name:"Artificere", die:8,  sug:"Intelligenza e Costituzione"},
-  {key:"barbaro",    name:"Barbaro",    die:12, sug:"Forza e Costituzione"},
-  {key:"bardo",      name:"Bardo",      die:8,  sug:"Carisma"},
-  {key:"chierico",   name:"Chierico",   die:8,  sug:"Saggezza"},
-  {key:"druido",     name:"Druido",     die:8,  sug:"Saggezza"},
-  {key:"guerriero",  name:"Guerriero",  die:10, sug:"Forza (o Destrezza) e Costituzione"},
-  {key:"ladro",      name:"Ladro",      die:8,  sug:"Destrezza e Intelligenza (o Costituzione)"},
-  {key:"mago",       name:"Mago",       die:6,  sug:"Intelligenza"},
-  {key:"monaco",     name:"Monaco",     die:8,  sug:"Destrezza e Saggezza"},
-  {key:"paladino",   name:"Paladino",   die:10, sug:"Forza e Carisma"},
-  {key:"ranger",     name:"Ranger",     die:10, sug:"Destrezza e Saggezza"},
-  {key:"stregone",   name:"Stregone",   die:6,  sug:"Carisma"},
-  {key:"warlock",    name:"Warlock",    die:8,  sug:"Carisma"}
+  {key:"artificere", name:"Artificere", die:8,  sug:"Intelligenza e Costituzione",              ts:["cos","int"]},
+  {key:"barbaro",    name:"Barbaro",    die:12, sug:"Forza e Costituzione",                     ts:["for","cos"]},
+  {key:"bardo",      name:"Bardo",      die:8,  sug:"Carisma",                                  ts:["des","car"]},
+  {key:"chierico",   name:"Chierico",   die:8,  sug:"Saggezza",                                 ts:["sag","car"]},
+  {key:"druido",     name:"Druido",     die:8,  sug:"Saggezza",                                 ts:["int","sag"]},
+  {key:"guerriero",  name:"Guerriero",  die:10, sug:"Forza (o Destrezza) e Costituzione",       ts:["for","cos"]},
+  {key:"ladro",      name:"Ladro",      die:8,  sug:"Destrezza e Intelligenza (o Costituzione)",ts:["des","int"]},
+  {key:"mago",       name:"Mago",       die:6,  sug:"Intelligenza",                             ts:["int","sag"]},
+  {key:"monaco",     name:"Monaco",     die:8,  sug:"Destrezza e Saggezza",                     ts:["for","des"]},
+  {key:"paladino",   name:"Paladino",   die:10, sug:"Forza e Carisma",                          ts:["sag","car"]},
+  {key:"ranger",     name:"Ranger",     die:10, sug:"Destrezza e Saggezza",                     ts:["for","des"]},
+  {key:"stregone",   name:"Stregone",   die:6,  sug:"Carisma",                                  ts:["cos","car"]},
+  {key:"warlock",    name:"Warlock",    die:8,  sug:"Carisma",                                  ts:["sag","car"]}
 ];
 var BY_KEY={}; CLASSES.forEach(function(c){ BY_KEY[c.key]=c; });
 var MAX_CLASSI=3;   /* fino al triclasse, non oltre */
@@ -141,6 +144,7 @@ var state={
   nameColor:"#E8E6F0", capColor:"#E0B15E",
   emblemMode:"auto",
   classes:[],
+  classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
   xp:0,
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
@@ -185,6 +189,38 @@ function totaleCar(k){
 function modCar(k){ return Math.floor((totaleCar(k)-10)/2); }
 function segno(n){ return (n>=0?"+":"\u2212")+Math.abs(n); }
 function conBonus(){ return CARATT.some(function(c){ return state.stats.bonus[c.k]!==0; }); }
+
+/* ================= TIRI SALVEZZA =================
+   Un tiro salvezza e' il modificatore della caratteristica piu' il bonus di
+   competenza, ma solo dove si e' competenti. Come il modificatore, il numero
+   non si salva: si ricalcola sempre, cosi' non puo' raccontare una cosa
+   diversa dai riquadri qui sopra.
+
+   La competenza arriva SOLO dalla classe iniziale. Chi multiclassa non ne
+   guadagna altre: e' una regola del manuale, non una scorciatoia nostra. */
+var TS_A_COSA={
+  for:"Resistere a chi ti spinge, ti trascina o ti costringe a muoverti contro la tua volont\u00E0.",
+  des:"Schivare le minacce ad area, come una palla di fuoco o il soffio di un drago.",
+  cos:"Resistere a veleni, malattie e sfinimento, e tenere la concentrazione su un incantesimo quando ti feriscono.",
+  int:"Resistere agli attacchi che colpiscono la mente e riconoscere le illusioni per quello che sono.",
+  sag:"Restare padrone di te contro fascino, paura e tentativi di dominarti.",
+  car:"Resistere alle magie che alterano la tua essenza o che vogliono bandirti in un altro piano."
+};
+/* La classe iniziale e' quella scelta, se e' ancora nella scheda; altrimenti
+   la prima della lista, che e' la prima che era stata aggiunta. Cosi' anche
+   una scheda salvata prima di questa scelta si comporta come deve. */
+function classeTs(){
+  if(!state.classes.length) return "";
+  var scelta=state.classeIniziale;
+  if(scelta && state.classes.some(function(c){ return c.key===scelta; })) return scelta;
+  return state.classes[0].key;
+}
+function competenzeTs(){
+  var k=classeTs();
+  return (k && BY_KEY[k] && BY_KEY[k].ts) ? BY_KEY[k].ts : [];
+}
+function competenteTs(k){ return competenzeTs().indexOf(k)>=0; }
+function valoreTs(k){ return modCar(k) + (competenteTs(k) ? profForLevel(totalLevel()) : 0); }
 
 function pbCosto(v){ return PB_COSTO[v]; }
 function pbUsati(){
@@ -389,7 +425,10 @@ var TESTI=[
   { id:"valCar",    dove:"stats", nome:"Valore",               sel:".slval, .scrow .sv, .hexval", font:"cinzel", colore:"#E8E6F0" },
   { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
   { id:"etProf",    dove:"prof",  nome:"Etichetta",            sel:"#profPanel .eyebrow",  font:"",       colore:"#9A97AD" },
-  { id:"valProf",   dove:"prof",  nome:"Bonus",                sel:"#profVal",             font:"cinzel", colore:"#E0B15E" }
+  { id:"valProf",   dove:"prof",  nome:"Bonus",                sel:"#profVal",             font:"cinzel", colore:"#E0B15E" },
+  { id:"etTs",      dove:"ts",    nome:"Etichetta",            sel:"#tsPanel .eyebrow",    font:"",       colore:"#9A97AD" },
+  { id:"siglaTs",   dove:"ts",    nome:"Sigla",                sel:".tssig",               font:"",       colore:"#9A97AD" },
+  { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -463,6 +502,14 @@ function applicaDati(o){
   }
   if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
 
+  // Classe iniziale: da qui arrivano i tiri salvezza. Se la scheda e' vecchia
+  // e non ce l'ha, o indica una classe che non c'e' piu', vale la prima della
+  // lista, cioe' la prima che era stata aggiunta.
+  state.classeIniziale = (typeof o.classeIniziale==="string"
+      && state.classes.some(function(c){ return c.key===o.classeIniziale; }))
+    ? o.classeIniziale
+    : (state.classes.length ? state.classes[0].key : "");
+
   // Nomi e simboli per-classe. Se mancano (scheda vecchia), si ricava lo stile
   // dal vecchio nome unico e dal vecchio colore simbolo, cosi' l'aspetto non cambia.
   state.nomiClasse={}; state.simboli={};
@@ -495,7 +542,7 @@ function applicaDati(o){
 /* Impacchetta lo stato per il database */
 function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
-  o.classes=state.classes; o.xp=state.xp; o.name=elName.textContent.trim();
+  o.classes=state.classes; o.classeIniziale=classeTs(); o.xp=state.xp; o.name=elName.textContent.trim();
   o.testi=state.testi; o.stats=state.stats;
   o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
   return o;
@@ -573,7 +620,7 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearStats","gearProf"].forEach(function(id){
+  ["gearXp","gearClass","gearStats","gearProf","gearTs"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
   var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
@@ -900,6 +947,7 @@ function doReset(which){
     statsWarn("");
   } else if(which==="Class"){
     state.classes=[];
+    state.classeIniziale="";
     state.classSymColor="#a78bfa";
     state.nomiClasse={};
     state.simboli={};
@@ -915,6 +963,8 @@ function doReset(which){
     xpPicker2.setHex(state.xpColor2);
   } else if(which==="Prof"){
     azzeraTesti("prof");
+  } else if(which==="Ts"){
+    azzeraTesti("ts");
   }
   cancelReset(which);
   renderAll();
@@ -1011,6 +1061,94 @@ function renderProfDialog(){
     return '<tr'+(cur?' class="cur"':'')+'><td>'+r[0]+'\u2013'+r[1]+'</td><td>+'+profForLevel(r[0])+'</td></tr>';
   }).join("");
 }
+/* ===== Riquadro dei tiri salvezza =====
+   Un favo: sei esagoni attorno a un settimo. I sei stanno nelle STESSE
+   posizioni che le caratteristiche hanno nel grafico qui sopra (Forza in
+   cima, poi in senso orario), cosi' la mappa mentale e' una sola.
+   Al centro un d20, che e' il dado che si tira davvero per un tiro salvezza:
+   niente cuore e niente scudo, perche' quelli serviranno ai punti ferita e
+   alla classe armatura, che arriveranno piu' avanti.
+   Il colore del numero resta in mano alla personalizzazione: a dire dove sei
+   competente ci pensa l'esagono, che si accende. */
+var TS_R=35;                                   // raggio di ogni esagono
+function tsPoli(x,y,r){
+  var p=[];
+  for(var i=0;i<6;i++){ var a=i*Math.PI/3; p.push((x+r*Math.cos(a)).toFixed(1)+","+(y+r*Math.sin(a)).toFixed(1)); }
+  return p.join(" ");
+}
+function tsPunto(gradi,d,cx,cy){ var a=gradi*Math.PI/180; return [cx+d*Math.cos(a), cy+d*Math.sin(a)]; }
+
+function renderTs(){
+  var host=document.getElementById("tsGrid");
+  if(host){
+    var R=TS_R, D=Math.sqrt(3)*R, W=5*R, H=3*Math.sqrt(3)*R, CX=W/2, CY=H/2, out="";
+
+    // il dado al centro: l'esagono stesso e' la sagoma vista di piatto di un d20
+    out+='<g class="tsdado"><polygon class="tshex tsdadohex" points="'+tsPoli(CX,CY,R)+'"/>';
+    var tri=[-90,30,150].map(function(g){ return tsPunto(g,R*0.46,CX,CY); });
+    out+='<polygon class="tsemb" points="'+tri.map(function(p){ return p[0].toFixed(1)+","+p[1].toFixed(1); }).join(" ")+'"/>';
+    [[-90,[240,300]],[30,[0,60]],[150,[120,180]]].forEach(function(par){
+      var da=tsPunto(par[0],R*0.46,CX,CY);
+      par[1].forEach(function(gv){
+        var a=tsPunto(gv,R,CX,CY);
+        out+='<line class="tsemb" x1="'+da[0].toFixed(1)+'" y1="'+da[1].toFixed(1)
+          +'" x2="'+a[0].toFixed(1)+'" y2="'+a[1].toFixed(1)+'"/>';
+      });
+    });
+    out+='</g>';
+
+    // i sei attorno, nell'ordine del grafico delle caratteristiche
+    CARATT.forEach(function(c,idx){
+      var p=tsPunto(-90+idx*60, D, CX, CY), comp=competenteTs(c.k);
+      out+='<g class="tscell'+(comp?' comp':'')+'" data-tsk="'+c.k+'">'
+        +'<polygon class="tshex" points="'+tsPoli(p[0],p[1],R)+'"/>'
+        +'<text class="tssig" x="'+p[0].toFixed(1)+'" y="'+(p[1]-10).toFixed(1)+'" text-anchor="middle">'+c.sigla+'</text>'
+        +'<text class="tsval" x="'+p[0].toFixed(1)+'" y="'+(p[1]+14).toFixed(1)+'" text-anchor="middle">'+segno(valoreTs(c.k))+'</text>'
+        +'</g>';
+    });
+    host.innerHTML='<svg viewBox="0 0 '+W.toFixed(0)+' '+H.toFixed(0)+'" role="img" aria-label="Tiri salvezza">'+out+'</svg>';
+  }
+  var hint=document.getElementById("tsHint");
+  if(hint){
+    var k=classeTs();
+    hint.innerHTML = k
+      ? '<b>Esagono dorato</b> = sei competente, bonus gi\u00E0 compreso.<br>Competenze da <b>'+esc(BY_KEY[k].name)+'</b>, la classe iniziale.'
+      : 'Scegli una classe per le competenze: per ora c\u2019\u00E8 solo il modificatore.';
+  }
+  applicaTesti();
+}
+
+/* La finestra spiega da dove nasce ogni numero e, se le classi sono piu' di
+   una, lascia dire qual e' quella iniziale: e' l'unica che da' competenze. */
+function renderTsDialog(){
+  var pb=profForLevel(totalLevel()), kIni=classeTs(), molte=state.classes.length>1;
+
+  var row=document.getElementById("tsIniRow"), pick=document.getElementById("tsIni"),
+      nota=document.getElementById("tsIniNota");
+  if(row) row.hidden=!molte;
+  if(nota){
+    nota.hidden=!molte;
+    nota.textContent="Le competenze arrivano solo dalla classe con cui hai cominciato: multiclassando non se ne guadagnano altre.";
+  }
+  if(pick && molte){
+    pick.innerHTML=state.classes.map(function(c){
+      return '<option value="'+c.key+'"'+(c.key===kIni?' selected':'')+'>'+esc(BY_KEY[c.key].name)+'</option>';
+    }).join("");
+  }
+
+  var tb=document.querySelector("#tsTable tbody");
+  if(tb) tb.innerHTML=CARATT.map(function(c){
+    var comp=competenteTs(c.k);
+    return '<tr'+(comp?' class="cur"':'')+'><td>'+c.nome+'</td><td>'+segno(modCar(c.k))
+      +'</td><td>'+(comp?"+"+pb:"\u2014")+'</td><td>'+segno(valoreTs(c.k))+'</td></tr>';
+  }).join("");
+
+  var cosa=document.getElementById("tsCosa");
+  if(cosa) cosa.innerHTML=CARATT.map(function(c){
+    return '<div class="tscr"><b>'+c.nome+'</b> '+TS_A_COSA[c.k]+'</div>';
+  }).join("");
+}
+
 function renderPanel(){
   var line=document.getElementById("classLine");
   if(!state.classes.length){
@@ -1082,14 +1220,16 @@ var ASP_CONT={
   xp:   { ant:"antsel_xp",    com:"com_xp" },
   class:{ ant:"antep_classe", com:"comandi_classe" },
   stats:{ ant:"antsel_stats", com:"com_stats" },
-  prof: { ant:"antsel_prof",  com:"com_prof" }
+  prof: { ant:"antsel_prof",  com:"com_prof" },
+  ts:   { ant:"antsel_ts",    com:"com_ts" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
   etNome:{t:"ETICHETTA",cls:"apmid"},
   etLivello:{t:"LIVELLO",cls:"apmid"}, numLv:{t:"7",cls:"apbig"}, txtPE:{t:"prossimo livello",cls:"apsmall"}, numPE:{t:"2.500",cls:"apmid"},
   etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
-  etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"}
+  etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
+  etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"}
 };
 
 function targetValido(dove,key){
@@ -1250,6 +1390,7 @@ function apertaAspetto(){
   if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden) return "class";
   var ms=document.getElementById("modalStats"); if(ms && !ms.hidden) return "stats";
   if(typeof modalProf!=="undefined" && modalProf && !modalProf.hidden) return "prof";
+  var mt=document.getElementById("modalTs"); if(mt && !mt.hidden) return "ts";
   return null;
 }
 (function(){
@@ -1294,7 +1435,7 @@ function applicaTesti(){
 }
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
-  renderProfDialog(); renderStats(); renderStatsDialog(); apply(); setHub(null);
+  renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
 
 FONT_GROUPS.forEach(function(g){
@@ -1351,13 +1492,22 @@ function openClass(){ modalClass.hidden=false; setHub(null); if(personalizza) si
 function openStats(){ document.getElementById("modalStats").hidden=false; renderStatsDialog(); if(personalizza) sincronizzaSel("stats"); }
 function openXp(){ modalXp.hidden=false; renderXpDialog(); if(personalizza) sincronizzaSel("xp"); }
 function openProf(){ modalProf.hidden=false; renderProfDialog(); if(personalizza) sincronizzaSel("prof"); }
+function openTs(){ document.getElementById("modalTs").hidden=false; renderTsDialog(); if(personalizza) sincronizzaSel("ts"); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; modalProf.hidden=true;
   document.getElementById("modalStats").hidden=true;
+  document.getElementById("modalTs").hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
+document.getElementById("gearTs").addEventListener("click", openTs);
+/* Cambiare la classe iniziale sposta le competenze: si ridisegna tutto e il
+   tasto Salva si accende da solo, perche' questa scelta finisce nella scheda. */
+document.getElementById("tsIni").addEventListener("change", function(){
+  var v=this.value;
+  if(state.classes.some(function(c){ return c.key===v; })){ state.classeIniziale=v; renderAll(); aggiornaSalva(); }
+});
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
 window.addEventListener("resize", function(){
   apply();

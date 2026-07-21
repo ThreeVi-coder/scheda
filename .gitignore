@@ -2,3 +2,7 @@
 # HTML + CSS + JS). Serve solo in locale come rete di sicurezza: online
 # non deve finire, appesantirebbe il repository senza servire al sito.
 index.html.backup
+
+# Note di lavoro del progetto, tenute solo in locale.
+CLAUDE.md
+RIASSUNTO_PROGETTO.md

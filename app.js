@@ -145,6 +145,7 @@ var state={
   emblemMode:"auto",
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
+  abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   xp:0,
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
@@ -223,6 +224,76 @@ function competenzeTs(){
 }
 function competenteTs(k){ return competenzeTs().indexOf(k)>=0; }
 function valoreTs(k){ return modCar(k) + (competenteTs(k) ? profForLevel(totalLevel()) : 0); }
+
+/* ================= ABILITA' =================
+   Diciotto abilita', ognuna legata a una caratteristica. Il numero e' il
+   modificatore piu' il bonus di competenza: una volta con la Competenza, due
+   volte con la Maestria. Come i tiri salvezza, il numero non si salva mai: si
+   salva solo la scelta (0 niente, 1 competenza, 2 maestria).
+
+   La Costituzione non ha abilita': non e' una nostra dimenticanza, e' cosi'
+   nel manuale, e va detto a chi guarda o pensera' a un buco.
+
+   Oggi le competenze si spuntano a mano. Quando arriveranno background e
+   specie potranno assegnarle da sole: per quel giorno il dato e' gia' nella
+   forma giusta, una mappa abilita' -> livello. */
+var ABILITA=[
+  { k:"atletica",        nome:"Atletica",           car:"for" },
+  { k:"acrobazia",       nome:"Acrobazia",          car:"des" },
+  { k:"furtivita",       nome:"Furtivit\u00E0",          car:"des" },
+  { k:"rapidita",        nome:"Rapidit\u00E0 di Mano",   car:"des" },
+  { k:"arcani",          nome:"Arcani",             car:"int" },
+  { k:"indagini",        nome:"Indagini",           car:"int" },
+  { k:"natura",          nome:"Natura",             car:"int" },
+  { k:"religione",       nome:"Religione",          car:"int" },
+  { k:"storia",          nome:"Storia",             car:"int" },
+  { k:"animali",         nome:"Addestrare Animali", car:"sag" },
+  { k:"intuizione",      nome:"Intuizione",         car:"sag" },
+  { k:"medicina",        nome:"Medicina",           car:"sag" },
+  { k:"percezione",      nome:"Percezione",         car:"sag" },
+  { k:"sopravvivenza",   nome:"Sopravvivenza",      car:"sag" },
+  { k:"inganno",         nome:"Inganno",            car:"car" },
+  { k:"intimidazione",   nome:"Intimidazione",      car:"car" },
+  { k:"intrattenimento", nome:"Intrattenimento",    car:"car" },
+  { k:"persuasione",     nome:"Persuasione",        car:"car" }
+];
+var ABIL_BY={}; ABILITA.forEach(function(a){ ABIL_BY[a.k]=a; });
+var ABIL_NOME_LIV=["Nessuna", "Competenza", "Maestria"];
+/* Le caratteristiche che hanno almeno un'abilita', nell'ordine di D&D */
+function carConAbilita(){
+  return CARATT.filter(function(c){
+    return ABILITA.some(function(a){ return a.car===c.k; });
+  });
+}
+function abilitaDi(kCar){ return ABILITA.filter(function(a){ return a.car===kCar; }); }
+
+function livelloAbil(k){
+  var v = state.abilita && state.abilita[k];
+  return (v===1 || v===2) ? v : 0;
+}
+function valoreAbil(k){
+  var a=ABIL_BY[k]; if(!a) return 0;
+  return modCar(a.car) + profForLevel(totalLevel())*livelloAbil(k);
+}
+/* Gira tra i tre stati: niente -> competenza -> maestria -> niente */
+function giraAbil(k){
+  if(!state.abilita) state.abilita={};
+  var v=livelloAbil(k)+1; if(v>2) v=0;
+  if(v===0) delete state.abilita[k]; else state.abilita[k]=v;
+}
+function quanteAbil(liv){
+  return ABILITA.filter(function(a){ return livelloAbil(a.k)===liv; }).length;
+}
+/* Percezione passiva: dieci piu' il valore di Percezione. Dice al master cosa
+   noti senza bisogno che tu tiri. Si ricava, non si salva. */
+function percezionePassiva(){ return 10 + valoreAbil("percezione"); }
+/* Si salvano solo le abilita' scelte: le altre sarebbero diciotto zeri inutili
+   dentro la scheda di ogni giocatore. */
+function abilitaDaSalvare(){
+  var o={};
+  ABILITA.forEach(function(a){ var v=livelloAbil(a.k); if(v) o[a.k]=v; });
+  return o;
+}
 
 function pbCosto(v){ return PB_COSTO[v]; }
 function pbUsati(){
@@ -430,7 +501,13 @@ var TESTI=[
   { id:"valProf",   dove:"prof",  nome:"Bonus",                sel:"#profVal",             font:"cinzel", colore:"#E0B15E" },
   { id:"etTs",      dove:"ts",    nome:"Etichetta",            sel:"#tsPanel .eyebrow",    font:"",       colore:"#9A97AD" },
   { id:"siglaTs",   dove:"ts",    nome:"Sigla",                sel:".tssig",               font:"",       colore:"#9A97AD" },
-  { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" }
+  { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" },
+  { id:"etAbil",    dove:"abil",  nome:"Etichetta",            sel:"#abilPanel .eyebrow",  font:"",       colore:"#9A97AD" },
+  { id:"carAbil",   dove:"abil",  nome:"Caratteristica",       sel:".abcar",               font:"",       colore:"#9A97AD" },
+  { id:"nomeAbil",  dove:"abil",  nome:"Nome dell'abilit\u00E0",    sel:".abnome",              font:"",       colore:"#E8E6F0" },
+  { id:"valAbil",   dove:"abil",  nome:"Valore",               sel:".abval",               font:"cinzel", colore:"#E0B15E" },
+  { id:"etPP",      dove:"abil",  nome:"Etichetta passiva",    sel:".ppet",                font:"",       colore:"#9A97AD" },
+  { id:"valPP",     dove:"abil",  nome:"Valore passivo",       sel:".ppval",               font:"cinzel", colore:"#E8E6F0" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -510,6 +587,16 @@ function applicaDati(o){
   }
   if(Array.isArray(o.classes)) state.classes=o.classes.filter(function(c){ return BY_KEY[c.key]; }).slice(0,MAX_CLASSI);
 
+  // Abilita': si rileggono una per una e si accettano solo 1 e 2. Una scheda
+  // vecchia non ce le ha, una modificata a mano potrebbe avere dentro di tutto.
+  state.abilita={};
+  if(o.abilita && typeof o.abilita==="object"){
+    ABILITA.forEach(function(a){
+      var v=o.abilita[a.k];
+      if(v===1 || v===2) state.abilita[a.k]=v;
+    });
+  }
+
   // Classe iniziale: da qui arrivano i tiri salvezza. Se la scheda e' vecchia
   // e non ce l'ha, o indica una classe che non c'e' piu', vale la prima della
   // lista, cioe' la prima che era stata aggiunta.
@@ -551,6 +638,7 @@ function applicaDati(o){
 function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
   o.classes=state.classes; o.classeIniziale=classeTs(); o.xp=state.xp; o.name=elName.textContent.trim();
+  o.abilita=abilitaDaSalvare();
   o.testi=state.testi; o.stats=state.stats;
   o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
   return o;
@@ -628,7 +716,7 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearStats","gearProf","gearTs"].forEach(function(id){
+  ["gearXp","gearClass","gearStats","gearProf","gearTs","gearAbil"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
   var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
@@ -780,7 +868,7 @@ function setNameSize(px){
 function fitName(){
   var row=document.getElementById("namerow");
   var avail=row.clientWidth;
-  // Se la scheda è ancora nascosta la larghezza è zero: misurare ora darebbe un nome minuscolo
+  // Se la scheda \u00E8 ancora nascosta la larghezza \u00E8 zero: misurare ora darebbe un nome minuscolo
   if(!avail){ setNameSize(state.size); return; }
   var size=state.size, guard=0;
   setNameSize(size);
@@ -978,6 +1066,9 @@ function doReset(which){
     tsFermo=true;
     try{ tsCompPicker.setHex(state.tsCompColor); tsDadoPicker.setHex(state.tsDadoColor); }
     finally{ tsFermo=false; }
+  } else if(which==="Abil"){
+    state.abilita={};      // via tutte le competenze scelte
+    azzeraTesti("abil");
   }
   cancelReset(which);
   renderAll();
@@ -1175,6 +1266,62 @@ function renderTsDialog(){
   }).join("");
 }
 
+/* ===== Riquadro delle abilita' =====
+   Raggruppate per caratteristica, col segno di competenza (un punto) e di
+   maestria (due). La Percezione passiva sta in fondo, staccata da una riga:
+   non e' un'abilita' da tirare, e' il numero che il master guarda quando tu
+   non tiri affatto, e mescolarla alle altre confonderebbe. */
+function renderAbil(){
+  var host=document.getElementById("abilGrid");
+  if(host){
+    host.innerHTML=carConAbilita().map(function(c){
+      var righe=abilitaDi(c.k).map(function(a){
+        var liv=livelloAbil(a.k);
+        var seg = liv===0 ? '<i class="vuoto"></i>' : (liv===1 ? '<i></i>' : '<i></i><i></i>');
+        return '<div class="abrow'+(liv?" lv"+liv:"")+'" data-abil="'+a.k+'">'
+          +'<span class="abseg" aria-hidden="true">'+seg+'</span>'
+          +'<span class="abnome">'+a.nome+'</span>'
+          +'<span class="abval">'+segno(valoreAbil(a.k))+'</span>'
+          +'</div>';
+      }).join("");
+      return '<div class="abgrp"><div class="abcar">'+c.nome+'</div>'+righe+'</div>';
+    }).join("");
+  }
+  var pp=document.getElementById("abilPP");
+  if(pp) pp.innerHTML='<span class="ppet">Percezione passiva</span>'
+    +'<span class="ppval">'+percezionePassiva()+'</span>';
+
+  var hint=document.getElementById("abilHint");
+  if(hint) hint.innerHTML='Una prova di abilit\u00E0 \u00E8 1d20 pi\u00F9 questo numero.'
+    +'<br><b>Un punto</b> = Competenza, <b>due punti</b> = Maestria, che raddoppia il bonus.'
+    +'<br>La <b>Costituzione</b> non ha abilit\u00E0: \u00E8 cos\u00EC nel manuale, non manca niente.'
+    +'<br>La <b>percezione passiva</b> \u00E8 quanto noti senza bisogno di tirare.';
+  applicaTesti();
+}
+
+/* La finestra: qui si scelgono le competenze, e si vede da dove nasce ogni
+   numero. Un solo pulsante per abilita' che gira fra i tre stati: con
+   diciotto righe, due caselle per riga sarebbero state un muro. */
+function renderAbilDialog(){
+  var pb=profForLevel(totalLevel());
+  var conta=document.getElementById("abilConta");
+  if(conta) conta.innerHTML='Competenza: <b>'+quanteAbil(1)+'</b> \u00B7 Maestria: <b>'+quanteAbil(2)+'</b>'
+    +' \u00B7 bonus attuale <b>+'+pb+'</b>';
+  var host=document.getElementById("abilSel");
+  if(host) host.innerHTML=carConAbilita().map(function(c){
+    var righe=abilitaDi(c.k).map(function(a){
+      var liv=livelloAbil(a.k), agg = liv ? "+"+(pb*liv) : "\u2014";
+      return '<button type="button" class="absel'+(liv?" lv"+liv:"")+'" data-abilsel="'+a.k+'">'
+        +'<span class="asnome">'+a.nome+'</span>'
+        +'<span class="asliv">'+ABIL_NOME_LIV[liv]+'</span>'
+        +'<span class="ascalc">'+segno(modCar(a.car))+' <b>'+agg+'</b></span>'
+        +'<span class="asval">'+segno(valoreAbil(a.k))+'</span>'
+        +'</button>';
+    }).join("");
+    return '<div class="asgrp"><div class="ascar">'+c.nome+'</div>'+righe+'</div>';
+  }).join("");
+}
+
 function renderPanel(){
   var line=document.getElementById("classLine");
   if(!state.classes.length){
@@ -1247,7 +1394,8 @@ var ASP_CONT={
   class:{ ant:"antep_classe", com:"comandi_classe" },
   stats:{ ant:"antsel_stats", com:"com_stats" },
   prof: { ant:"antsel_prof",  com:"com_prof" },
-  ts:   { ant:"antsel_ts",    com:"com_ts" }
+  ts:   { ant:"antsel_ts",    com:"com_ts" },
+  abil: { ant:"antsel_abil",  com:"com_abil" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
@@ -1255,7 +1403,10 @@ var CAMPIONI={
   etLivello:{t:"LIVELLO",cls:"apmid"}, numLv:{t:"7",cls:"apbig"}, txtPE:{t:"prossimo livello",cls:"apsmall"}, numPE:{t:"2.500",cls:"apmid"},
   etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
   etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
-  etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"}
+  etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
+  etAbil:{t:"ABILIT\u00C0",cls:"apmid"}, carAbil:{t:"Destrezza",cls:"apmid"},
+  nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
+  etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"}
 };
 
 function targetValido(dove,key){
@@ -1424,10 +1575,11 @@ function apertaAspetto(){
   var ms=document.getElementById("modalStats"); if(ms && !ms.hidden) return "stats";
   if(typeof modalProf!=="undefined" && modalProf && !modalProf.hidden) return "prof";
   var mt=document.getElementById("modalTs"); if(mt && !mt.hidden) return "ts";
+  var ma=document.getElementById("modalAbil"); if(ma && !ma.hidden) return "abil";
   return null;
 }
 (function(){
-  ["name","xp","class","stats","prof","ts"].forEach(function(dove){
+  ["name","xp","class","stats","prof","ts","abil"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -1468,7 +1620,7 @@ function applicaTesti(){
 }
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
-  renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); apply(); setHub(null);
+  renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
 
 FONT_GROUPS.forEach(function(g){
@@ -1526,15 +1678,29 @@ function openStats(){ document.getElementById("modalStats").hidden=false; render
 function openXp(){ modalXp.hidden=false; renderXpDialog(); if(personalizza) sincronizzaSel("xp"); }
 function openProf(){ modalProf.hidden=false; renderProfDialog(); if(personalizza) sincronizzaSel("prof"); }
 function openTs(){ document.getElementById("modalTs").hidden=false; renderTsDialog(); if(personalizza) sincronizzaSel("ts"); }
+function openAbil(){ document.getElementById("modalAbil").hidden=false; renderAbilDialog(); if(personalizza) sincronizzaSel("abil"); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; modalProf.hidden=true;
   document.getElementById("modalStats").hidden=true;
   document.getElementById("modalTs").hidden=true;
+  document.getElementById("modalAbil").hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
 document.getElementById("gearTs").addEventListener("click", openTs);
+document.getElementById("gearAbil").addEventListener("click", openAbil);
+
+/* Le abilita' si scelgono qui: un clic gira fra Nessuna, Competenza e
+   Maestria. Ridisegno tutto perche' il numero cambia anche in scheda, e la
+   percezione passiva si muove insieme alla Percezione. */
+document.getElementById("abilSel").addEventListener("click", function(e){
+  var b = e.target && e.target.closest ? e.target.closest("[data-abilsel]") : null;
+  if(!b || soloLettura) return;
+  giraAbil(b.getAttribute("data-abilsel"));
+  renderAll();
+  aggiornaSalva();
+});
 /* Cambiare la classe iniziale sposta le competenze: si ridisegna tutto e il
    tasto Salva si accende da solo, perche' questa scelta finisce nella scheda. */
 document.getElementById("tsIni").addEventListener("change", function(){
@@ -1542,12 +1708,13 @@ document.getElementById("tsIni").addEventListener("change", function(){
   if(state.classes.some(function(c){ return c.key===v; })){ state.classeIniziale=v; renderAll(); aggiornaSalva(); }
 });
 
-/* Tasto informazioni dei tiri salvezza. Col mouse il fumetto compare dopo
-   mezzo secondo di sosta, cosi' non lampeggia se ci si passa sopra per caso,
-   e sparisce appena ci si allontana. Col dito si apre e si chiude toccando,
-   perche' sul telefono il passaggio del mouse non esiste. */
-(function(){
-  var btn=document.getElementById("tsInfoBtn"), pop=document.getElementById("tsHint");
+/* Tasto informazioni col fumetto. Col mouse compare dopo mezzo secondo di
+   sosta, cosi' non lampeggia se ci si passa sopra per caso, e sparisce appena
+   ci si allontana. Col dito si apre e si chiude toccando, perche' sul telefono
+   il passaggio del mouse non esiste.
+   Vale per ogni riquadro che ne ha bisogno: si passa la coppia tasto/fumetto. */
+function collegaInfo(idBtn, idPop){
+  var btn=document.getElementById(idBtn), pop=document.getElementById(idPop);
   if(!btn || !pop) return;
   var attesa=null;
   function mostraInfo(){ clearTimeout(attesa); attesa=null; pop.hidden=false; btn.classList.add("on"); }
@@ -1564,7 +1731,9 @@ document.getElementById("tsIni").addEventListener("change", function(){
   document.addEventListener("click", function(e){
     if(!pop.hidden && !btn.contains(e.target) && !pop.contains(e.target)) nascondiInfo();
   });
-})();
+}
+collegaInfo("tsInfoBtn", "tsHint");
+collegaInfo("abilInfoBtn", "abilHint");
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
 window.addEventListener("resize", function(){
   apply();

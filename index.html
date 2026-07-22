@@ -108,6 +108,16 @@
         <div class="infopop" id="tsHint" role="tooltip" hidden></div>
         <button class="gear" id="gearTs" title="Tiri salvezza" aria-label="Tiri salvezza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
+
+      <div class="apanel" id="abilPanel">
+        <div class="eyebrow">Abilit&agrave;</div>
+        <div class="abilgrid" id="abilGrid"></div>
+        <div class="abilpp" id="abilPP"></div>
+        <button class="infobtn" id="abilInfoBtn" type="button" aria-describedby="abilHint"
+          aria-label="Informazioni sulle abilit&agrave;">i</button>
+        <div class="infopop" id="abilHint" role="tooltip" hidden></div>
+        <button class="gear" id="gearAbil" title="Abilit&agrave;" aria-label="Abilit&agrave;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
     </div>
 
     <div class="modal" id="modalName" hidden>
@@ -447,6 +457,40 @@
           <span class="cfmtxt">Riportare le scritte dei tiri salvezza com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
           <button class="btn-no" data-cancel="Ts">Annulla</button>
           <button class="btn-yes" data-yes="Ts">Azzera</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalAbil" hidden>
+      <div class="backdrop" data-close="abil"></div>
+      <div class="dialog centrata" id="dialogAbil">
+        <div class="dlghead">
+          <h2>Abilit&agrave;</h2>
+          <button class="dlgx" data-close="abil" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <div class="mech">
+          <p class="hint">Una prova di abilit&agrave; &egrave; 1d20 pi&ugrave; il modificatore della caratteristica, pi&ugrave; il bonus di competenza se sei competente &mdash; raddoppiato se hai la <b>Maestria</b>. Tocca un&rsquo;abilit&agrave; per girare tra Nessuna, Competenza e Maestria.</p>
+          <div class="abilconta" id="abilConta"></div>
+          <div class="abilsel" id="abilSel"></div>
+          <p class="abilnota">Per ora le competenze si scelgono a mano. Quando arriveranno background e specie potranno assegnarle da sole.</p>
+          </div>
+
+          <div class="este">
+          <div class="asplab">Aspetto delle scritte</div>
+          <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
+          <div class="antepsel" id="antsel_abil"></div>
+          <div class="comandi" id="com_abil"></div>
+          </div>
+        </div>
+        <div class="dlgbar" id="barAbil">
+          <button class="btn-reset" data-reset="Abil">Azzera</button>
+          <button class="btn-close" data-close="abil">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmAbil" hidden>
+          <span class="cfmtxt">Togliere tutte le competenze e riportare le scritte com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Abil">Annulla</button>
+          <button class="btn-yes" data-yes="Abil">Azzera</button>
         </div>
       </div>
     </div>

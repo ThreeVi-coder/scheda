@@ -177,6 +177,7 @@
   /* I tiri salvezza restano sulla loro riga ma non la riempiono: stanno a
      sinistra e tengono solo lo spazio che serve. */
   .tspanel{ flex:0 1 480px; }
+  .apanel{ flex:1 1 100%; }
 
   /* Scritte che seguono la larghezza del proprio riquadro.
      "cqi" vuol dire "per cento della larghezza del contenitore": il clamp
@@ -356,6 +357,59 @@
     border-bottom:1px solid var(--line); }
   .tscr:last-child{ border-bottom:0; }
   .tscr b{ color:var(--ink); font-weight:700; margin-right:4px; }
+
+  /* ============ PANNELLO ABILITA' ============ */
+  /* Diciotto righe sono tante: si raggruppano per caratteristica e le colonne
+     si adattano da sole allo spazio. Un punto = competenza, due = maestria.
+     La Percezione passiva sta in fondo, staccata da una riga, perche' non e'
+     un'abilita' da tirare e mescolarla alle altre confonderebbe. */
+  .apanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 68px 18px 22px; width:fit-content; max-width:100%;
+    display:flex; flex-direction:column;
+  }
+  .abilgrid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+    gap:2px 24px; margin-top:2px; }
+  .abcar{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    border-bottom:1px solid var(--line); padding-bottom:5px; margin:10px 0 5px; }
+  .abrow{ display:flex; align-items:baseline; gap:9px; padding:3px 0; }
+  .abseg{ flex:0 0 auto; width:16px; display:inline-flex; gap:2px; align-items:center; }
+  .abseg i{ width:6px; height:6px; border-radius:50%; background:var(--gold); display:block; }
+  .abseg i.vuoto{ background:transparent; border:1px solid var(--line); box-sizing:border-box; }
+  .abrow.lv2 .abseg i{ box-shadow:0 0 5px var(--gold); }
+  .abnome{ flex:1 1 auto; font-size:13px; color:var(--ink); }
+  .abval{ font-family:'Cinzel',Georgia,serif; font-size:17px; font-weight:700; color:var(--gold); }
+  /* Percezione passiva: non e' un'abilita' da tirare, quindi non sta nella
+     griglia. Sta in un riquadretto suo, che la stacca e insieme la fa notare:
+     una riga di separazione sottile si perdeva. */
+  .abilpp{ display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    margin-top:18px; padding:11px 16px; border:1px solid var(--line);
+    background:var(--panel2); border-radius:12px; align-self:flex-start; }
+  .ppet{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .ppval{ font-family:'Cinzel',Georgia,serif; font-size:34px; font-weight:700;
+    color:var(--ink); line-height:1; }
+
+  /* ===== finestra delle abilita': qui si scelgono le competenze ===== */
+  /* nota sotto l'elenco: classe sua, perche' .subhint ha un margine negativo
+     pensato per incastrarsi sotto una riga di comandi e qui si sovrapporrebbe */
+  .abilnota{ font-size:11.5px; color:var(--muted); line-height:1.5; margin:16px 0 0; }
+  .abilconta{ font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+  .abilconta b{ color:var(--ink); }
+  .abilsel{ display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:2px 20px; }
+  .ascar{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    border-bottom:1px solid var(--line); padding-bottom:5px; margin:12px 0 5px; }
+  .absel{ display:flex; align-items:baseline; gap:9px; width:100%; text-align:left;
+    border:1px solid transparent; background:transparent; border-radius:8px;
+    padding:6px 9px; cursor:pointer; font-family:var(--ui); color:var(--ink); }
+  .absel:hover{ border-color:var(--violet); }
+  .asnome{ flex:1 1 auto; font-size:13px; }
+  .asliv{ font-size:10px; color:var(--muted); letter-spacing:.04em; }
+  .ascalc{ font-family:ui-monospace,Consolas,monospace; font-size:11px; color:var(--muted); }
+  .ascalc b{ color:var(--gold); font-weight:700; }
+  .asval{ font-family:'Cinzel',Georgia,serif; font-size:16px; font-weight:700; width:40px; text-align:right; }
+  .absel.lv1{ border-color:rgba(224,177,94,.4); background:rgba(224,177,94,.07); }
+  .absel.lv2{ border-color:var(--gold); background:rgba(224,177,94,.15); }
+  .absel.lv1 .asliv, .absel.lv2 .asliv{ color:var(--gold); }
 
   /* ============ FINESTRA XP ============ */
   .xprow{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:14px; }
@@ -593,6 +647,8 @@
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }
     .tspanel{ min-width:0; width:100%; padding-right:56px; }
+    .apanel{ min-width:0; width:100%; padding-right:56px; }
+    .abilgrid, .abilsel{ grid-template-columns:1fr; }
     .tswrap{ width:clamp(190px, 88cqi, 260px); margin:0 auto; }
     /* sul telefono a destra non c'e' spazio: il fumetto torna dentro */
     .infopop{ left:auto; right:14px; bottom:44px; max-width:calc(100% - 36px); }

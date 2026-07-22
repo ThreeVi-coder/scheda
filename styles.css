@@ -315,9 +315,10 @@
     padding:16px 68px 18px 22px; width:fit-content; max-width:100%;
     display:flex; flex-direction:column; justify-content:center;
   }
-  .tsbody{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-top:4px; }
-  /* il favo cresce insieme al riquadro, entro un minimo e un massimo */
-  .tswrap{ flex:0 0 auto; width:clamp(190px, 40cqi, 360px); }
+  .tsbody{ display:flex; align-items:center; justify-content:center; margin-top:4px; }
+  /* Il favo prende quasi tutta la larghezza utile del riquadro: la spiegazione
+     non gli sta piu' accanto, si e' spostata nel tasto informazioni. */
+  .tswrap{ flex:0 1 auto; width:clamp(190px, 74cqi, 300px); }
   .tswrap svg{ display:block; width:100%; height:auto; overflow:visible; }
   .tshex{ fill:var(--panel2); stroke:var(--line); stroke-width:1.2; }
   .tssig{ font-family:var(--ui); font-size:9.5px; font-weight:700; letter-spacing:.1em; fill:var(--muted); }
@@ -330,9 +331,25 @@
   .tsdadohex{ fill:rgba(124,92,255,.07); stroke:rgba(167,139,250,.35); }
   .tsemb{ fill:none; stroke:var(--violet); stroke-width:1.3; stroke-linejoin:round;
     stroke-linecap:round; opacity:.7; }
-  .tshint{ flex:1 1 180px; min-width:150px; max-width:min(420px, 48cqi);
-    font-size:clamp(11px, 1.6cqi, 13.5px); color:var(--muted); line-height:1.6; }
-  .tshint b{ color:var(--ink); font-weight:700; }
+  /* ===== Tasto informazioni con fumetto =====
+     La "i" sta nell'angolo in basso a destra, di fianco alla rotellina come
+     stile. Il fumetto compare dopo mezzo secondo di sosta col mouse, e al
+     tocco su telefono, dove il passaggio del mouse non esiste. */
+  .infobtn{ position:absolute; right:14px; bottom:12px; width:24px; height:24px;
+    border-radius:50%; border:1px solid var(--line); background:rgba(32,31,46,.75);
+    color:var(--muted); font-family:'Cinzel',Georgia,serif; font-size:14px; font-weight:700;
+    font-style:italic; line-height:1; display:flex; align-items:center; justify-content:center;
+    cursor:help; padding:0; z-index:3; }
+  .infobtn:hover, .infobtn.on{ color:var(--violet); border-color:var(--violet); }
+  /* Il fumetto esce a destra del riquadro, dove c'e' spazio libero, cosi' non
+     copre gli esagoni. Su schermi stretti torna dentro, sopra la "i". */
+  .infopop{ position:absolute; left:calc(100% + 10px); bottom:10px; z-index:4;
+    width:max-content; max-width:270px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 13px; font-size:12px; color:var(--muted); line-height:1.55;
+    box-shadow:0 8px 22px rgba(0,0,0,.45); }
+  .infopop[hidden]{ display:none; }
+  .infopop b{ color:var(--ink); font-weight:700; }
   /* nella finestra: a cosa serve ogni tiro salvezza */
   .tscosa{ margin-top:18px; }
   .tscr{ font-size:12.5px; color:var(--muted); line-height:1.55; padding:7px 0;
@@ -576,11 +593,9 @@
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }
     .tspanel{ min-width:0; width:100%; padding-right:56px; }
-    .tsbody{ flex-direction:column; align-items:flex-start; gap:14px; }
-    .tswrap{ width:100%; max-width:210px; margin:0 auto; }
-    /* in colonna la base flex vale come ALTEZZA: va azzerata, altrimenti
-       riserva spazio vuoto sotto la didascalia */
-    .tshint{ flex:0 0 auto; max-width:none; }
+    .tswrap{ width:clamp(190px, 88cqi, 260px); margin:0 auto; }
+    /* sul telefono a destra non c'e' spazio: il fumetto torna dentro */
+    .infopop{ left:auto; right:14px; bottom:44px; max-width:calc(100% - 36px); }
     .prow{ gap:12px; }
     .lvnum{ font-size:38px; }
     .cn{ font-size:26px; }

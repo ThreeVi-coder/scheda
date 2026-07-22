@@ -1541,6 +1541,30 @@ document.getElementById("tsIni").addEventListener("change", function(){
   var v=this.value;
   if(state.classes.some(function(c){ return c.key===v; })){ state.classeIniziale=v; renderAll(); aggiornaSalva(); }
 });
+
+/* Tasto informazioni dei tiri salvezza. Col mouse il fumetto compare dopo
+   mezzo secondo di sosta, cosi' non lampeggia se ci si passa sopra per caso,
+   e sparisce appena ci si allontana. Col dito si apre e si chiude toccando,
+   perche' sul telefono il passaggio del mouse non esiste. */
+(function(){
+  var btn=document.getElementById("tsInfoBtn"), pop=document.getElementById("tsHint");
+  if(!btn || !pop) return;
+  var attesa=null;
+  function mostraInfo(){ clearTimeout(attesa); attesa=null; pop.hidden=false; btn.classList.add("on"); }
+  function nascondiInfo(){ clearTimeout(attesa); attesa=null; pop.hidden=true; btn.classList.remove("on"); }
+  btn.addEventListener("mouseenter", function(){ clearTimeout(attesa); attesa=setTimeout(mostraInfo, 500); });
+  btn.addEventListener("mouseleave", nascondiInfo);
+  btn.addEventListener("focus", mostraInfo);
+  btn.addEventListener("blur", nascondiInfo);
+  btn.addEventListener("click", function(e){
+    e.stopPropagation();
+    if(pop.hidden) mostraInfo(); else nascondiInfo();
+  });
+  // toccando altrove il fumetto si chiude
+  document.addEventListener("click", function(e){
+    if(!pop.hidden && !btn.contains(e.target) && !pop.contains(e.target)) nascondiInfo();
+  });
+})();
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
 window.addEventListener("resize", function(){
   apply();

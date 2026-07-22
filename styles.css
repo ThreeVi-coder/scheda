@@ -359,35 +359,40 @@
   .tscr b{ color:var(--ink); font-weight:700; margin-right:4px; }
 
   /* ============ PANNELLO ABILITA' ============ */
-  /* Diciotto righe sono tante: si raggruppano per caratteristica e le colonne
-     si adattano da sole allo spazio. Un punto = competenza, due = maestria.
-     La Percezione passiva sta in fondo, staccata da una riga, perche' non e'
-     un'abilita' da tirare e mescolarla alle altre confonderebbe. */
+  /* Un esagono-ancora a sinistra con la sigla di ogni caratteristica del suo
+     colore e la percezione passiva al centro; a destra i sei gruppi, ognuno
+     con l'intestazione dello stesso colore. Il colore lega le due parti, e
+     passando il mouse su una caratteristica vertice e gruppo si accendono. */
   .apanel{
     background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
     padding:16px 68px 18px 22px; width:fit-content; max-width:100%;
-    display:flex; flex-direction:column;
   }
-  .abilgrid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
-    gap:2px 24px; margin-top:2px; }
-  .abcar{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
-    border-bottom:1px solid var(--line); padding-bottom:5px; margin:10px 0 5px; }
-  .abrow{ display:flex; align-items:baseline; gap:9px; padding:3px 0; }
+  .abilrow{ display:flex; align-items:center; gap:24px; flex-wrap:wrap; margin-top:2px; }
+  .abilmap{ flex:0 0 auto; width:clamp(170px, 30cqi, 226px); }
+  .abilmap svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .abhex{ fill:none; stroke:#3b3a4e; stroke-width:1.5; }
+  .abdot{ transition:.15s; }
+  .absg{ font-family:var(--ui); font-size:11px; font-weight:700; letter-spacing:.06em; transition:.15s; }
+  .ppet{ font-family:var(--ui); font-size:10px; letter-spacing:.1em; text-transform:uppercase; fill:var(--muted); }
+  .ppval{ font-family:'Cinzel',Georgia,serif; font-size:30px; font-weight:700; fill:var(--ink); }
+
+  .abilgrid{ flex:1 1 320px; display:grid; grid-template-columns:repeat(auto-fit, minmax(178px, 1fr)); gap:6px 22px; }
+  .abgrp{ padding:5px 8px; border-radius:10px; border:1px solid transparent; transition:.15s; }
+  .abcar{ font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:4px; transition:.15s; }
+  .abrow{ display:flex; align-items:baseline; gap:9px; padding:2.5px 0; }
   .abseg{ flex:0 0 auto; width:16px; display:inline-flex; gap:2px; align-items:center; }
   .abseg i{ width:6px; height:6px; border-radius:50%; background:var(--gold); display:block; }
-  .abseg i.vuoto{ background:transparent; border:1px solid var(--line); box-sizing:border-box; }
+  .abseg i.vuoto{ background:transparent; border:1px solid #40415a; box-sizing:border-box; }
   .abrow.lv2 .abseg i{ box-shadow:0 0 5px var(--gold); }
   .abnome{ flex:1 1 auto; font-size:13px; color:var(--ink); }
-  .abval{ font-family:'Cinzel',Georgia,serif; font-size:17px; font-weight:700; color:var(--gold); }
-  /* Percezione passiva: non e' un'abilita' da tirare, quindi non sta nella
-     griglia. Sta in un riquadretto suo, che la stacca e insieme la fa notare:
-     una riga di separazione sottile si perdeva. */
-  .abilpp{ display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    margin-top:18px; padding:11px 16px; border:1px solid var(--line);
-    background:var(--panel2); border-radius:12px; align-self:flex-start; }
-  .ppet{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-  .ppval{ font-family:'Cinzel',Georgia,serif; font-size:34px; font-weight:700;
-    color:var(--ink); line-height:1; }
+  .abval{ font-family:'Cinzel',Georgia,serif; font-size:16px; font-weight:700; color:var(--gold); }
+  .abnes{ font-size:12px; font-style:italic; color:var(--muted); opacity:.5; padding:2px 0; }
+  /* luce su richiesta: il gruppo e il vertice della stessa caratteristica */
+  .abgrp.acceso{ border-color:var(--c); }
+  .abgrp.acceso .abcar{ filter:drop-shadow(0 0 6px var(--c)); }
+  .abvtx.acceso .absg{ font-weight:800; filter:drop-shadow(0 0 6px var(--c)); }
+  .abvtx.acceso .abdot{ filter:drop-shadow(0 0 6px var(--c)); }
 
   /* ===== finestra delle abilita': qui si scelgono le competenze ===== */
   /* nota sotto l'elenco: classe sua, perche' .subhint ha un margine negativo

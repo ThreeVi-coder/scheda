@@ -174,6 +174,12 @@ var CARATT=[
 ];
 var CAR_MIN=1, CAR_MAX=30;
 
+/* Un colore per ogni caratteristica: e' la firma grafica che tiene insieme
+   l'esagono e la griglia delle abilita' (e domani, le Caratteristiche). Base
+   fissa; l'oro resta libero perche' li' vuol dire "sei competente". */
+var CAR_COL={ for:"#e5686d", des:"#57c46a", cos:"#d68f5a", int:"#5c8dfa", sag:"#3fc8c4", car:"#a78bfa" };
+function colCar(k){ return CAR_COL[k] || "#9a97ad"; }
+
 /* Point buy: la tabella dei costi delle regole base. Salire costa poco fino
    a 13 e caro dopo, ed e' quello che scoraggia i personaggi con un 15 e
    cinque miserie. */
@@ -242,8 +248,8 @@ var ABILITA=[
   { k:"acrobazia",       nome:"Acrobazia",          car:"des" },
   { k:"furtivita",       nome:"Furtivit\u00E0",          car:"des" },
   { k:"rapidita",        nome:"Rapidit\u00E0 di Mano",   car:"des" },
-  { k:"arcani",          nome:"Arcani",             car:"int" },
-  { k:"indagini",        nome:"Indagini",           car:"int" },
+  { k:"arcani",          nome:"Arcano",             car:"int" },
+  { k:"indagini",        nome:"Indagare",           car:"int" },
   { k:"natura",          nome:"Natura",             car:"int" },
   { k:"religione",       nome:"Religione",          car:"int" },
   { k:"storia",          nome:"Storia",             car:"int" },
@@ -503,7 +509,6 @@ var TESTI=[
   { id:"siglaTs",   dove:"ts",    nome:"Sigla",                sel:".tssig",               font:"",       colore:"#9A97AD" },
   { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" },
   { id:"etAbil",    dove:"abil",  nome:"Etichetta",            sel:"#abilPanel .eyebrow",  font:"",       colore:"#9A97AD" },
-  { id:"carAbil",   dove:"abil",  nome:"Caratteristica",       sel:".abcar",               font:"",       colore:"#9A97AD" },
   { id:"nomeAbil",  dove:"abil",  nome:"Nome dell'abilit\u00E0",    sel:".abnome",              font:"",       colore:"#E8E6F0" },
   { id:"valAbil",   dove:"abil",  nome:"Valore",               sel:".abval",               font:"cinzel", colore:"#E0B15E" },
   { id:"etPP",      dove:"abil",  nome:"Etichetta passiva",    sel:".ppet",                font:"",       colore:"#9A97AD" },
@@ -1271,11 +1276,38 @@ function renderTsDialog(){
    maestria (due). La Percezione passiva sta in fondo, staccata da una riga:
    non e' un'abilita' da tirare, e' il numero che il master guarda quando tu
    non tiri affatto, e mescolarla alle altre confonderebbe. */
+/* Un esagono-ancora con la sigla di ogni caratteristica al suo vertice, del
+   colore della caratteristica, e la percezione passiva al centro. Accanto, la
+   griglia dei gruppi, ognuno con l'intestazione dello stesso colore: il colore
+   e' il filo che lega l'esagono alle abilita', senza una riga disegnata. */
+function abilVtx(i, f, CX, CY, R){ var a=(-90+i*60)*Math.PI/180, r=R*(f==null?1:f); return [CX+r*Math.cos(a), CY+r*Math.sin(a)]; }
 function renderAbil(){
+  var R=72, W=2*R+64, H=2*R+64, CX=W/2, CY=H/2;
+  var map=document.getElementById("abilMap");
+  if(map){
+    var hp=CARATT.map(function(c,i){ return abilVtx(i,1,CX,CY,R).map(function(n){return n.toFixed(1);}).join(","); }).join(" ");
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Abilit\u00E0 per caratteristica">';
+    s+='<polygon class="abhex" points="'+hp+'"/>';
+    CARATT.forEach(function(c,i){
+      var v=abilVtx(i,1,CX,CY,R), d=abilVtx(i,1,CX,CY,1), dir=[d[0]-CX,d[1]-CY];
+      var lx=v[0]+dir[0]*15, ly=v[1]+dir[1]*13;
+      var anc = Math.abs(dir[0])<0.2 ? "middle" : (dir[0]<0?"end":"start");
+      var col=colCar(c.k);
+      s+='<g class="abvtx" data-car="'+c.k+'" style="--c:'+col+'">'
+        +'<circle class="abdot" cx="'+v[0].toFixed(1)+'" cy="'+v[1].toFixed(1)+'" r="3.4" style="fill:'+col+'"/>'
+        +'<text class="absg" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="'+anc+'" style="fill:'+col+'">'+c.sigla+'</text>'
+        +'</g>';
+    });
+    s+='<text class="ppet" x="'+CX+'" y="'+(CY-9)+'" text-anchor="middle">Perc. passiva</text>';
+    s+='<text class="ppval" x="'+CX+'" y="'+(CY+20)+'" text-anchor="middle">'+percezionePassiva()+'</text>';
+    s+='</svg>';
+    map.innerHTML=s;
+  }
   var host=document.getElementById("abilGrid");
   if(host){
-    host.innerHTML=carConAbilita().map(function(c){
-      var righe=abilitaDi(c.k).map(function(a){
+    host.innerHTML=CARATT.map(function(c){
+      var col=colCar(c.k), lista=abilitaDi(c.k);
+      var righe = lista.length ? lista.map(function(a){
         var liv=livelloAbil(a.k);
         var seg = liv===0 ? '<i class="vuoto"></i>' : (liv===1 ? '<i></i>' : '<i></i><i></i>');
         return '<div class="abrow'+(liv?" lv"+liv:"")+'" data-abil="'+a.k+'">'
@@ -1283,19 +1315,17 @@ function renderAbil(){
           +'<span class="abnome">'+a.nome+'</span>'
           +'<span class="abval">'+segno(valoreAbil(a.k))+'</span>'
           +'</div>';
-      }).join("");
-      return '<div class="abgrp"><div class="abcar">'+c.nome+'</div>'+righe+'</div>';
+      }).join("") : '<div class="abnes">nessuna</div>';
+      return '<div class="abgrp" data-car="'+c.k+'" style="--c:'+col+'">'
+        +'<div class="abcar" style="color:'+col+'">'+c.nome+'</div>'+righe+'</div>';
     }).join("");
   }
-  var pp=document.getElementById("abilPP");
-  if(pp) pp.innerHTML='<span class="ppet">Percezione passiva</span>'
-    +'<span class="ppval">'+percezionePassiva()+'</span>';
-
   var hint=document.getElementById("abilHint");
   if(hint) hint.innerHTML='Una prova di abilit\u00E0 \u00E8 1d20 pi\u00F9 questo numero.'
     +'<br><b>Un punto</b> = Competenza, <b>due punti</b> = Maestria, che raddoppia il bonus.'
+    +'<br>Ogni caratteristica ha il suo colore, uguale nell\u2019esagono e nelle sue abilit\u00E0.'
     +'<br>La <b>Costituzione</b> non ha abilit\u00E0: \u00E8 cos\u00EC nel manuale, non manca niente.'
-    +'<br>La <b>percezione passiva</b> \u00E8 quanto noti senza bisogno di tirare.';
+    +'<br>Al centro, la <b>percezione passiva</b>: quanto noti senza bisogno di tirare.';
   applicaTesti();
 }
 
@@ -1318,7 +1348,7 @@ function renderAbilDialog(){
         +'<span class="asval">'+segno(valoreAbil(a.k))+'</span>'
         +'</button>';
     }).join("");
-    return '<div class="asgrp"><div class="ascar">'+c.nome+'</div>'+righe+'</div>';
+    return '<div class="asgrp"><div class="ascar" style="color:'+colCar(c.k)+'">'+c.nome+'</div>'+righe+'</div>';
   }).join("");
 }
 
@@ -1404,7 +1434,7 @@ var CAMPIONI={
   etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
   etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
   etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
-  etAbil:{t:"ABILIT\u00C0",cls:"apmid"}, carAbil:{t:"Destrezza",cls:"apmid"},
+  etAbil:{t:"ABILIT\u00C0",cls:"apmid"},
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"}
 };
@@ -1734,6 +1764,25 @@ function collegaInfo(idBtn, idPop){
 }
 collegaInfo("tsInfoBtn", "tsHint");
 collegaInfo("abilInfoBtn", "abilHint");
+
+/* Luce su richiesta: passando il mouse su una caratteristica - il suo vertice
+   nell'esagono o il suo gruppo di abilita' - si accendono insieme. Delega sul
+   riquadro, cosi' regge i ridisegni; e' solo un effetto, non tocca i dati. */
+(function(){
+  var pan=document.getElementById("abilPanel"); if(!pan) return;
+  var acceso=null;
+  function illumina(car){
+    if(acceso===car) return;
+    if(acceso) pan.querySelectorAll('[data-car="'+acceso+'"]').forEach(function(e){ e.classList.remove("acceso"); });
+    acceso=car;
+    if(car) pan.querySelectorAll('[data-car="'+car+'"]').forEach(function(e){ e.classList.add("acceso"); });
+  }
+  pan.addEventListener("mouseover", function(e){
+    var t=e.target.closest ? e.target.closest("[data-car]") : null;
+    illumina(t ? t.getAttribute("data-car") : null);
+  });
+  pan.addEventListener("mouseleave", function(){ illumina(null); });
+})();
 document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeAll(); });
 window.addEventListener("resize", function(){
   apply();

@@ -150,6 +150,8 @@ var state={
   statsEvid:true,   // illumina la stat piu' alta sul grafico
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
   classSymColor:"#a78bfa",   // colore di partenza dei simboli (seme per i nuovi)
+  tsCompColor:"#E0B15E",     // colore degli esagoni accesi dei tiri salvezza
+  tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
   nomiClasse:{},   // stile del nome, per ogni classe (chiave = classe)
   simboli:{},      // colore e neon del simbolo, per ogni classe
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
@@ -460,7 +462,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor","tsCompColor","tsDadoColor"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -486,6 +488,12 @@ function applicaDati(o){
   else state.statsColor="#7C5CFF";
   if(typeof o.classSymColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.classSymColor)) state.classSymColor=o.classSymColor;
   else state.classSymColor="#a78bfa";
+  // i due colori dei tiri salvezza: se la scheda e' vecchia o il valore e'
+  // scritto male, si torna a quelli di partenza invece di rompere il disegno
+  if(typeof o.tsCompColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.tsCompColor)) state.tsCompColor=o.tsCompColor;
+  else state.tsCompColor="#E0B15E";
+  if(typeof o.tsDadoColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.tsDadoColor)) state.tsDadoColor=o.tsDadoColor;
+  else state.tsDadoColor="#A78BFA";
 
   // le scritte si travasano una per una invece di copiare l'oggetto intero:
   // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
@@ -965,6 +973,11 @@ function doReset(which){
     azzeraTesti("prof");
   } else if(which==="Ts"){
     azzeraTesti("ts");
+    state.tsCompColor="#E0B15E";
+    state.tsDadoColor="#A78BFA";
+    tsFermo=true;
+    try{ tsCompPicker.setHex(state.tsCompColor); tsDadoPicker.setHex(state.tsDadoColor); }
+    finally{ tsFermo=false; }
   }
   cancelReset(which);
   renderAll();
@@ -1070,6 +1083,13 @@ function renderProfDialog(){
    alla classe armatura, che arriveranno piu' avanti.
    Il colore del numero resta in mano alla personalizzazione: a dire dove sei
    competente ci pensa l'esagono, che si accende. */
+/* Colori scelti dall'utente, con la rete di sicurezza se il valore manca o
+   e' scritto male: meglio il colore di partenza che un disegno rotto. */
+function coloreTsComp(){ return /^#[0-9a-fA-F]{6}$/.test(state.tsCompColor||"") ? state.tsCompColor : "#E0B15E"; }
+function coloreTsDado(){ return /^#[0-9a-fA-F]{6}$/.test(state.tsDadoColor||"") ? state.tsDadoColor : "#A78BFA"; }
+/* Lo stesso colore, ma trasparente: serve per i riempimenti e per l'alone. */
+function velo(hex,a){ var c=hexToRgb(hex); return "rgba("+c.r+","+c.g+","+c.b+","+a+")"; }
+
 var TS_R=35;                                   // raggio di ogni esagono
 function tsPoli(x,y,r){
   var p=[];
@@ -1082,16 +1102,22 @@ function renderTs(){
   var host=document.getElementById("tsGrid");
   if(host){
     var R=TS_R, D=Math.sqrt(3)*R, W=5*R, H=3*Math.sqrt(3)*R, CX=W/2, CY=H/2, out="";
+    // i due colori scelti dall'utente: l'esagono acceso e il dado al centro
+    var cComp=coloreTsComp(), cDado=coloreTsDado();
+    var stileDado='stroke:'+cDado+';';
+    var stileComp='fill:'+velo(cComp,.13)+';stroke:'+cComp
+      +';filter:drop-shadow(0 0 5px '+velo(cComp,.45)+');';
 
     // il dado al centro: l'esagono stesso e' la sagoma vista di piatto di un d20
-    out+='<g class="tsdado"><polygon class="tshex tsdadohex" points="'+tsPoli(CX,CY,R)+'"/>';
+    out+='<g class="tsdado"><polygon class="tshex tsdadohex" points="'+tsPoli(CX,CY,R)
+      +'" style="fill:'+velo(cDado,.07)+';stroke:'+velo(cDado,.35)+'"/>';
     var tri=[-90,30,150].map(function(g){ return tsPunto(g,R*0.46,CX,CY); });
-    out+='<polygon class="tsemb" points="'+tri.map(function(p){ return p[0].toFixed(1)+","+p[1].toFixed(1); }).join(" ")+'"/>';
+    out+='<polygon class="tsemb" style="'+stileDado+'" points="'+tri.map(function(p){ return p[0].toFixed(1)+","+p[1].toFixed(1); }).join(" ")+'"/>';
     [[-90,[240,300]],[30,[0,60]],[150,[120,180]]].forEach(function(par){
       var da=tsPunto(par[0],R*0.46,CX,CY);
       par[1].forEach(function(gv){
         var a=tsPunto(gv,R,CX,CY);
-        out+='<line class="tsemb" x1="'+da[0].toFixed(1)+'" y1="'+da[1].toFixed(1)
+        out+='<line class="tsemb" style="'+stileDado+'" x1="'+da[0].toFixed(1)+'" y1="'+da[1].toFixed(1)
           +'" x2="'+a[0].toFixed(1)+'" y2="'+a[1].toFixed(1)+'"/>';
       });
     });
@@ -1101,7 +1127,7 @@ function renderTs(){
     CARATT.forEach(function(c,idx){
       var p=tsPunto(-90+idx*60, D, CX, CY), comp=competenteTs(c.k);
       out+='<g class="tscell'+(comp?' comp':'')+'" data-tsk="'+c.k+'">'
-        +'<polygon class="tshex" points="'+tsPoli(p[0],p[1],R)+'"/>'
+        +'<polygon class="tshex" points="'+tsPoli(p[0],p[1],R)+'"'+(comp?' style="'+stileComp+'"':'')+'/>'
         +'<text class="tssig" x="'+p[0].toFixed(1)+'" y="'+(p[1]-10).toFixed(1)+'" text-anchor="middle">'+c.sigla+'</text>'
         +'<text class="tsval" x="'+p[0].toFixed(1)+'" y="'+(p[1]+14).toFixed(1)+'" text-anchor="middle">'+segno(valoreTs(c.k))+'</text>'
         +'</g>';
@@ -1112,7 +1138,7 @@ function renderTs(){
   if(hint){
     var k=classeTs();
     hint.innerHTML = k
-      ? '<b>Esagono dorato</b> = sei competente, bonus gi\u00E0 compreso.<br>Competenze da <b>'+esc(BY_KEY[k].name)+'</b>, la classe iniziale.'
+      ? '<b>Esagono acceso</b> = sei competente, bonus gi\u00E0 compreso.<br>Competenze da <b>'+esc(BY_KEY[k].name)+'</b>, la classe iniziale.'
       : 'Scegli una classe per le competenze: per ora c\u2019\u00E8 solo il modificatore.';
   }
   applicaTesti();
@@ -1379,6 +1405,13 @@ function sincronizzaExtra(dove){
     setActive("data-evid", state.statsEvid?"on":"off");
     if(typeof statsPicker!=="undefined" && statsPicker){ statsFermo=true; try{ statsPicker.setHex(state.statsColor); } finally{ statsFermo=false; } }
   }
+  if(dove==="ts"){
+    if(typeof tsCompPicker!=="undefined" && tsCompPicker){
+      tsFermo=true;
+      try{ tsCompPicker.setHex(coloreTsComp()); tsDadoPicker.setHex(coloreTsDado()); }
+      finally{ tsFermo=false; }
+    }
+  }
 }
 function sincronizzaSel(dove){ disegnaAntepSel(dove); costruisciComandi(dove); sincronizzaExtra(dove); }
 function sincronizzaClasse(){ sincronizzaSel("class"); }   // alias, la finestra Classe lo chiama ancora
@@ -1394,7 +1427,7 @@ function apertaAspetto(){
   return null;
 }
 (function(){
-  ["name","xp","class","stats","prof"].forEach(function(dove){
+  ["name","xp","class","stats","prof","ts"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -1570,6 +1603,11 @@ document.getElementById("unifVia").addEventListener("click", function(){ uniform
 var namePicker=makePicker(document.getElementById("namePicker"), state.nameColor, function(hex){ state.nameColor=hex; apply(); renderLevel(); renderCapSuggestions(); });
 var statsFermo=false;
 var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsColor, function(hex){ if(statsFermo) return; state.statsColor=hex; renderStats(); aggiornaSalva(); });
+/* I due colori dei tiri salvezza. Il "fermo" serve a non far scattare il
+   salvataggio quando siamo noi a rimettere il selettore sul valore giusto. */
+var tsFermo=false;
+var tsCompPicker=makePicker(document.getElementById("tsCompPicker"), state.tsCompColor, function(hex){ if(tsFermo) return; state.tsCompColor=hex; renderTs(); aggiornaSalva(); });
+var tsDadoPicker=makePicker(document.getElementById("tsDadoPicker"), state.tsDadoColor, function(hex){ if(tsFermo) return; state.tsDadoColor=hex; renderTs(); aggiornaSalva(); });
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });

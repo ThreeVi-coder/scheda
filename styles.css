@@ -160,17 +160,35 @@
   .header.neon .emgroup{ color:#fff; filter:drop-shadow(0 0 3px var(--name-color)) drop-shadow(0 0 7px var(--name-color)); }
 
   /* ============ RIGA PANNELLI ============ */
-  /* I riquadri non stanno piu' in colonna: fluiscono e vanno a capo da soli.
-     Sui grandi schermi i tre piccoli (Livello, Competenza, Classe) formano una
-     fascia in alto, e i due visivi (Caratteristiche e Tiri salvezza) si mettono
-     fianco a fianco sotto. Su schermi stretti tornano uno sotto l'altro. */
+  /* I riquadri fluiscono e vanno a capo da soli. In alto una fascia con i tre
+     piccoli (Livello, Competenza, Classe); sotto, a tutta larghezza, prima le
+     Caratteristiche e poi i Tiri salvezza. Su schermi stretti va tutto in
+     colonna da solo, senza bisogno di regole apposta.
+     Ogni riquadro e' un "contenitore": le scritte dentro si misurano su di lui
+     e non sulla finestra, cosi' si adattano quando cambia la sua larghezza. */
   .prow{ display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; }
-  .prow > div{ min-width:0; }
+  /* max-width:none serve a scavalcare il vecchio tetto di 640px delle
+     Caratteristiche, scritto piu' sotto nel foglio */
+  .prow > div{ min-width:0; max-width:none; container-type:inline-size; }
   .lpanel{ flex:2 1 250px; }
   .ppanel{ flex:1 1 150px; }
   .cpanel{ flex:2 1 250px; }
-  .spanel{ flex:5 1 380px; }
-  .tspanel{ flex:3 1 300px; }
+  .spanel{ flex:1 1 100%; max-width:none; }
+  .tspanel{ flex:1 1 100%; }
+
+  /* Scritte che seguono la larghezza del proprio riquadro.
+     "cqi" vuol dire "per cento della larghezza del contenitore": il clamp
+     tiene un minimo leggibile e un massimo per non farle diventare enormi.
+     Il prefisso .prow serve a vincere sulle misure fisse scritte piu' sotto
+     nel foglio e su quelle della versione telefono: qui comanda il riquadro. */
+  .prow .lvnum{ font-size:clamp(30px, 19cqi, 44px); }
+  .prow .profval{ font-size:clamp(30px, 46cqi, 44px); }
+  .prow .cn{ font-size:clamp(19px, 13cqi, 30px); }
+  .prow .ce{ width:clamp(26px, 17.5cqi, 40px); height:clamp(26px, 17.5cqi, 40px); }
+  .prow .cl{ font-size:clamp(13px, 7.5cqi, 17px); }
+  .prow .eyebrow{ font-size:clamp(10px, 4.8cqi, 11px); }
+  .prow .xptxt{ font-size:clamp(10.5px, 5cqi, 11.5px); }
+  .prow .lvmax{ font-size:clamp(10px, 4.8cqi, 11px); }
 
   /* ============ PANNELLO CLASSE ============ */
   .cpanel{
@@ -295,8 +313,9 @@
     padding:16px 68px 18px 22px; width:fit-content; max-width:100%;
     display:flex; flex-direction:column; justify-content:center;
   }
-  .tsbody{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-top:4px; }
-  .tswrap{ flex:0 0 auto; width:228px; }
+  .tsbody{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-top:4px; }
+  /* il favo cresce insieme al riquadro, entro un minimo e un massimo */
+  .tswrap{ flex:0 0 auto; width:clamp(190px, 40cqi, 360px); }
   .tswrap svg{ display:block; width:100%; height:auto; overflow:visible; }
   .tshex{ fill:var(--panel2); stroke:var(--line); stroke-width:1.2; }
   .tssig{ font-family:var(--ui); font-size:9.5px; font-weight:700; letter-spacing:.1em; fill:var(--muted); }
@@ -309,8 +328,8 @@
   .tsdadohex{ fill:rgba(124,92,255,.07); stroke:rgba(167,139,250,.35); }
   .tsemb{ fill:none; stroke:var(--violet); stroke-width:1.3; stroke-linejoin:round;
     stroke-linecap:round; opacity:.7; }
-  .tshint{ flex:1 1 170px; min-width:150px; max-width:225px;
-    font-size:11px; color:var(--muted); line-height:1.6; }
+  .tshint{ flex:1 1 180px; min-width:150px; max-width:min(420px, 48cqi);
+    font-size:clamp(11px, 1.6cqi, 13.5px); color:var(--muted); line-height:1.6; }
   .tshint b{ color:var(--ink); font-weight:700; }
   /* nella finestra: a cosa serve ogni tiro salvezza */
   .tscosa{ margin-top:18px; }

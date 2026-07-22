@@ -174,7 +174,9 @@
   .ppanel{ flex:1 1 150px; }
   .cpanel{ flex:2 1 250px; }
   .spanel{ flex:1 1 100%; max-width:none; }
-  .tspanel{ flex:1 1 100%; }
+  /* I tiri salvezza restano sulla loro riga ma non la riempiono: stanno a
+     sinistra e tengono solo lo spazio che serve. */
+  .tspanel{ flex:0 1 480px; }
 
   /* Scritte che seguono la larghezza del proprio riquadro.
      "cqi" vuol dire "per cento della larghezza del contenitore": il clamp

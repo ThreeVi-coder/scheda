@@ -146,6 +146,7 @@ var state={
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
+  abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
   xp:0,
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
@@ -178,7 +179,14 @@ var CAR_MIN=1, CAR_MAX=30;
    l'esagono e la griglia delle abilita' (e domani, le Caratteristiche). Base
    fissa; l'oro resta libero perche' li' vuol dire "sei competente". */
 var CAR_COL={ for:"#e5686d", des:"#57c46a", cos:"#d68f5a", int:"#5c8dfa", sag:"#3fc8c4", car:"#a78bfa" };
-function colCar(k){ return CAR_COL[k] || "#9a97ad"; }
+/* Il colore di una caratteristica: quello scelto dall'utente se c'e' ed e'
+   valido, altrimenti la base. Le sigle nell'esagono e le intestazioni dei
+   gruppi lo leggono da qui, cosi' restano sempre legate. */
+function colCar(k){
+  var m = (typeof state!=="undefined" && state.abilCarColore) ? state.abilCarColore : null;
+  var c = m && m[k];
+  return /^#[0-9a-fA-F]{6}$/.test(c||"") ? c : (CAR_COL[k] || "#9a97ad");
+}
 
 /* Point buy: la tabella dei costi delle regole base. Salire costa poco fino
    a 13 e caro dopo, ed e' quello che scoraggia i personaggi con un 15 e
@@ -499,7 +507,6 @@ var TESTI=[
   { id:"numPE",     dove:"xp",    nome:"Numeri dei PE",        sel:"#xpTxt b",             font:"",       colore:"#E8E6F0" },
   { id:"etClasse",  dove:"class", nome:"Etichetta",            sel:"#classPanel .eyebrow", font:"",       colore:"#9A97AD" },
   { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" },
-  { id:"etCar",     dove:"stats", nome:"Etichetta",            sel:"#statsPanel .eyebrow",   font:"",       colore:"#9A97AD" },
   { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".slsig, .scrow .ss, .hexsig", font:"", colore:"#9A97AD" },
   { id:"valCar",    dove:"stats", nome:"Valore",               sel:".slval, .scrow .sv, .hexval", font:"cinzel", colore:"#E8E6F0" },
   { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
@@ -508,7 +515,6 @@ var TESTI=[
   { id:"etTs",      dove:"ts",    nome:"Etichetta",            sel:"#tsPanel .eyebrow",    font:"",       colore:"#9A97AD" },
   { id:"siglaTs",   dove:"ts",    nome:"Sigla",                sel:".tssig",               font:"",       colore:"#9A97AD" },
   { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" },
-  { id:"etAbil",    dove:"abil",  nome:"Etichetta",            sel:"#abilPanel .eyebrow",  font:"",       colore:"#9A97AD" },
   { id:"nomeAbil",  dove:"abil",  nome:"Nome dell'abilit\u00E0",    sel:".abnome",              font:"",       colore:"#E8E6F0" },
   { id:"valAbil",   dove:"abil",  nome:"Valore",               sel:".abval",               font:"cinzel", colore:"#E0B15E" },
   { id:"etPP",      dove:"abil",  nome:"Etichetta passiva",    sel:".ppet",                font:"",       colore:"#9A97AD" },
@@ -544,7 +550,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor","tsCompColor","tsDadoColor"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor","tsCompColor","tsDadoColor","abilCarColore"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -599,6 +605,15 @@ function applicaDati(o){
     ABILITA.forEach(function(a){
       var v=o.abilita[a.k];
       if(v===1 || v===2) state.abilita[a.k]=v;
+    });
+  }
+  // colore scelto per ogni caratteristica: solo esadecimali validi, il resto
+  // torna alla base. Una scheda vecchia non ce l'ha: parte tutta dalla base.
+  state.abilCarColore={};
+  if(o.abilCarColore && typeof o.abilCarColore==="object"){
+    CARATT.forEach(function(c){
+      var v=o.abilCarColore[c.k];
+      if(/^#[0-9a-fA-F]{6}$/.test(v||"")) state.abilCarColore[c.k]=v;
     });
   }
 
@@ -721,9 +736,12 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearStats","gearProf","gearTs","gearAbil"].forEach(function(id){
+  ["gearXp","gearClass","gearCore","gearProf","gearTs"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
+  // la "i" delle abilita' non si mostra a chi guarda soltanto
+  var info=document.getElementById("abilInfoBtn");
+  if(info) info.hidden = soloLettura || vistaCore!=="abil";
   var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
 }
 
@@ -1073,7 +1091,13 @@ function doReset(which){
     finally{ tsFermo=false; }
   } else if(which==="Abil"){
     state.abilita={};      // via tutte le competenze scelte
+    state.abilCarColore={}; // colori delle caratteristiche di nuovo alla base
     azzeraTesti("abil");
+    if(typeof abilCarPicker!=="undefined" && abilCarPicker){
+      abilFermo=true;
+      try{ abilCarPicker.setHex(colCar(document.getElementById("abilCarSel").value||"for")); }
+      finally{ abilFermo=false; }
+    }
   }
   cancelReset(which);
   renderAll();
@@ -1431,10 +1455,9 @@ var ASP_CONT={
 var CAMPIONI={
   etNome:{t:"ETICHETTA",cls:"apmid"},
   etLivello:{t:"LIVELLO",cls:"apmid"}, numLv:{t:"7",cls:"apbig"}, txtPE:{t:"prossimo livello",cls:"apsmall"}, numPE:{t:"2.500",cls:"apmid"},
-  etCar:{t:"CARATTERISTICHE",cls:"apmid"}, siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
+  siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
   etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
   etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
-  etAbil:{t:"ABILIT\u00C0",cls:"apmid"},
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"}
 };
@@ -1593,6 +1616,13 @@ function sincronizzaExtra(dove){
       finally{ tsFermo=false; }
     }
   }
+  if(dove==="abil"){
+    if(typeof abilCarPicker!=="undefined" && abilCarPicker){
+      var sel=document.getElementById("abilCarSel");
+      abilFermo=true;
+      try{ abilCarPicker.setHex(colCar((sel&&sel.value)||"for")); } finally{ abilFermo=false; }
+    }
+  }
 }
 function sincronizzaSel(dove){ disegnaAntepSel(dove); costruisciComandi(dove); sincronizzaExtra(dove); }
 function sincronizzaClasse(){ sincronizzaSel("class"); }   // alias, la finestra Classe lo chiama ancora
@@ -1719,7 +1749,30 @@ document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
 document.getElementById("gearTs").addEventListener("click", openTs);
-document.getElementById("gearAbil").addEventListener("click", openAbil);
+
+/* Caratteristiche e Abilita' stanno nello stesso riquadro, come Scheda e
+   Controllo: l'interruttore in alto cambia la faccia mostrata. Non si salva,
+   e' solo quale vista stai guardando. La rotellina apre la finestra della
+   vista attiva, e la "i" compare solo sulle Abilita'. */
+var vistaCore="stats";
+function mostraVista(v){
+  vistaCore = (v==="abil") ? "abil" : "stats";
+  var vs=document.getElementById("viewStats"), va=document.getElementById("viewAbil");
+  if(vs) vs.hidden = vistaCore!=="stats";
+  if(va) va.hidden = vistaCore!=="abil";
+  var ts=document.getElementById("tabStats"), ta=document.getElementById("tabAbil");
+  if(ts) ts.classList.toggle("on", vistaCore==="stats");
+  if(ta) ta.classList.toggle("on", vistaCore==="abil");
+  var info=document.getElementById("abilInfoBtn");
+  if(info) info.hidden = (vistaCore!=="abil") || soloLettura;
+  var pop=document.getElementById("abilHint"); if(pop && vistaCore!=="abil") pop.hidden=true;
+}
+document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats"); });
+document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil"); });
+document.getElementById("gearCore").addEventListener("click", function(){
+  if(vistaCore==="abil") openAbil(); else openStats();
+});
+mostraVista("stats");   // si parte dalle Caratteristiche
 
 /* Le abilita' si scelgono qui: un clic gira fra Nessuna, Competenza e
    Maestria. Ridisegno tutto perche' il numero cambia anche in scheda, e la
@@ -1769,7 +1822,7 @@ collegaInfo("abilInfoBtn", "abilHint");
    nell'esagono o il suo gruppo di abilita' - si accendono insieme. Delega sul
    riquadro, cosi' regge i ridisegni; e' solo un effetto, non tocca i dati. */
 (function(){
-  var pan=document.getElementById("abilPanel"); if(!pan) return;
+  var pan=document.getElementById("corePanel"); if(!pan) return;
   var acceso=null;
   function illumina(car){
     if(acceso===car) return;
@@ -1850,6 +1903,27 @@ var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsCo
 var tsFermo=false;
 var tsCompPicker=makePicker(document.getElementById("tsCompPicker"), state.tsCompColor, function(hex){ if(tsFermo) return; state.tsCompColor=hex; renderTs(); aggiornaSalva(); });
 var tsDadoPicker=makePicker(document.getElementById("tsDadoPicker"), state.tsDadoColor, function(hex){ if(tsFermo) return; state.tsDadoColor=hex; renderTs(); aggiornaSalva(); });
+
+/* Colore delle caratteristiche: il menu' a tendina sceglie quale, la tavolozza
+   le da' il colore. Esagono e gruppo si aggiornano insieme perche' leggono da
+   colCar. Il "fermo" evita di accendere il Salva quando siamo noi a rimettere
+   la tavolozza sul valore giusto scegliendo dal menu'. */
+var abilFermo=false;
+(function(){
+  var sel=document.getElementById("abilCarSel");
+  if(sel){
+    sel.innerHTML=CARATT.map(function(c){ return '<option value="'+c.k+'">'+c.nome+'</option>'; }).join("");
+    sel.addEventListener("change", function(){
+      abilFermo=true;
+      try{ abilCarPicker.setHex(colCar(this.value)); } finally{ abilFermo=false; }
+    });
+  }
+})();
+var abilCarPicker=makePicker(document.getElementById("abilCarPicker"), colCar("for"), function(hex){
+  if(abilFermo) return;
+  var k=(document.getElementById("abilCarSel")||{}).value || "for";
+  state.abilCarColore[k]=hex; renderAbil(); aggiornaSalva();
+});
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });
@@ -2390,7 +2464,6 @@ document.getElementById("tabControllo").addEventListener("click", function(){ mo
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
-document.getElementById("gearStats").addEventListener("click", openStats);
 
 document.getElementById("cercaPg").addEventListener("input", function(e){
   cerca=e.target.value; disegnaPersonaggi();

@@ -394,6 +394,18 @@
   .abvtx.acceso .absg{ font-weight:800; filter:drop-shadow(0 0 6px var(--c)); }
   .abvtx.acceso .abdot{ filter:drop-shadow(0 0 6px var(--c)); }
 
+  /* ============ RIQUADRO UNITO: Caratteristiche | Abilità ============ */
+  /* Le due sezioni stanno nello stesso riquadro, come Scheda e Controllo:
+     l'interruttore in alto cambia la faccia mostrata. */
+  .corepanel{ padding-top:14px; }
+  .coretabs{ display:inline-flex; gap:2px; background:var(--panel2); border:1px solid var(--line);
+    border-radius:11px; padding:3px; margin-bottom:14px; }
+  .ctab{ border:0; background:transparent; color:var(--muted); font-family:var(--ui);
+    font-size:13px; font-weight:600; padding:6px 15px; border-radius:8px; cursor:pointer; }
+  .ctab:hover{ color:var(--ink); }
+  .ctab.on{ background:linear-gradient(150deg,var(--violet-2),#5b45c9); color:#fff; }
+  .coreview[hidden]{ display:none; }
+
   /* ===== finestra delle abilita': qui si scelgono le competenze ===== */
   /* nota sotto l'elenco: classe sua, perche' .subhint ha un margine negativo
      pensato per incastrarsi sotto una riga di comandi e qui si sovrapporrebbe */

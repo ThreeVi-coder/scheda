@@ -92,10 +92,23 @@
         <button class="gear" id="gearClass" title="Scegli la classe" aria-label="Scegli la classe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
-      <div class="spanel" id="statsPanel">
-        <div class="eyebrow">Caratteristiche</div>
-        <div class="stats" id="statsLine"></div>
-        <button class="gear" id="gearStats" title="Caratteristiche" aria-label="Caratteristiche"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      <div class="spanel corepanel" id="corePanel">
+        <div class="coretabs" role="tablist">
+          <button class="ctab on" id="tabStats" type="button" role="tab">Caratteristiche</button>
+          <button class="ctab" id="tabAbil" type="button" role="tab">Abilit&agrave;</button>
+        </div>
+        <div class="coreview" id="viewStats">
+          <div class="stats" id="statsLine"></div>
+        </div>
+        <div class="coreview" id="viewAbil" hidden>
+          <div class="abilrow">
+            <div class="abilmap" id="abilMap"></div>
+            <div class="abilgrid" id="abilGrid"></div>
+          </div>
+        </div>
+        <button class="infobtn" id="abilInfoBtn" type="button" aria-describedby="abilHint" aria-label="Informazioni sulle abilit&agrave;">i</button>
+        <div class="infopop" id="abilHint" role="tooltip" hidden></div>
+        <button class="gear" id="gearCore" title="Personalizza" aria-label="Personalizza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
       <div class="tspanel" id="tsPanel">
@@ -109,17 +122,6 @@
         <button class="gear" id="gearTs" title="Tiri salvezza" aria-label="Tiri salvezza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
-      <div class="apanel" id="abilPanel">
-        <div class="eyebrow">Abilit&agrave;</div>
-        <div class="abilrow">
-          <div class="abilmap" id="abilMap"></div>
-          <div class="abilgrid" id="abilGrid"></div>
-        </div>
-        <button class="infobtn" id="abilInfoBtn" type="button" aria-describedby="abilHint"
-          aria-label="Informazioni sulle abilit&agrave;">i</button>
-        <div class="infopop" id="abilHint" role="tooltip" hidden></div>
-        <button class="gear" id="gearAbil" title="Abilit&agrave;" aria-label="Abilit&agrave;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
-      </div>
     </div>
 
     <div class="modal" id="modalName" hidden>
@@ -479,6 +481,13 @@
           </div>
 
           <div class="este">
+          <div class="row">
+            <span class="rowlab">Colore caratt.</span>
+            <select id="abilCarSel"></select>
+            <div id="abilCarPicker" class="picker"></div>
+          </div>
+          <p class="hintsel">Scegli una caratteristica e dalle il colore che vuoi: cambia nell&rsquo;esagono e nel suo gruppo di abilit&agrave;.</p>
+
           <div class="asplab">Aspetto delle scritte</div>
           <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
           <div class="antepsel" id="antsel_abil"></div>

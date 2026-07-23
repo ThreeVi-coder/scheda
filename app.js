@@ -329,6 +329,7 @@ function statsWarn(t){
 
 function cambiaPb(k, verso){
   var v=state.stats.base[k], n=v+verso;
+  if(!isFinite(n)) return;   // rete di sicurezza: mai scrivere un valore non numerico
   if(n<PB_MIN || n>PB_MAX) return;
   if(verso>0 && (pbCosto(n)-pbCosto(v))>pbLiberi()) return;
   state.stats.base[k]=n;
@@ -1893,7 +1894,11 @@ elEmblem.addEventListener("change", function(e){ state.emblemMode=e.target.value
 document.getElementById("size").addEventListener("input", function(e){ state.size=parseInt(e.target.value,10); apply(); });
 
 document.addEventListener("click", function(e){
-  var pb=e.target.closest("[data-car]");
+  // Solo i veri pulsanti del point-buy (hanno data-car E data-verso). Senza il
+  // secondo attributo qui finivano anche i nomi e i vertici della vista
+  // Abilita' (data-car per l'effetto luce): cliccarli mandava un "verso" NaN
+  // dentro cambiaPb e azzerava la caratteristica a NaN.
+  var pb=e.target.closest("[data-car][data-verso]");
   if(pb && !pb.disabled){ statAtt=pb.getAttribute("data-car"); cambiaPb(pb.getAttribute("data-car"), parseInt(pb.getAttribute("data-verso"),10)); return; }
   var pk=e.target.closest("[data-pick]");
   if(pk){ statAtt=pk.getAttribute("data-pick"); renderStatsDialog(); return; }

@@ -217,13 +217,18 @@
      Niente pallini sul poligono: solo la forma. */
   .statsline{ width:100%; }
   .statsline svg{ width:100%; height:auto; display:block; overflow:visible; }
-  .slhex{ fill:rgba(124,92,255,.16); stroke:var(--violet); stroke-width:2.5; stroke-linejoin:round; }
+  /* Il contenitore vero ha class="stats": qui si mette il tetto alla larghezza
+     del grafico, cosi' non si dilata a tutto il riquadro e resta vicino, per
+     dimensione, alla vista Abilita'. */
+  .stats{ width:100%; }
+  .stats svg{ display:block; width:100%; max-width:540px; height:auto; margin:0 auto; overflow:visible; }
+  .slhex{ fill:rgba(124,92,255,.16); stroke:var(--violet); stroke-width:1.8; stroke-linejoin:round; }
   .slgrid{ fill:none; stroke:var(--line); stroke-width:1; }
-  .slwire{ fill:none; stroke:var(--line); stroke-width:1.2; }
+  .slwire{ fill:none; stroke:var(--line); stroke-width:1; }
   .slwire.att{ stroke:var(--violet); stroke-width:1.6; }
-  .slsig{ font-family:var(--ui); font-size:13px; font-weight:700; letter-spacing:.08em; fill:var(--muted); }
-  .slval{ font-family:'Cinzel',Georgia,serif; font-size:26px; font-weight:700; fill:var(--ink); }
-  .slmod{ font-family:ui-monospace,Consolas,monospace; font-size:13px; font-weight:700; fill:var(--gold); }
+  .slsig{ font-family:var(--ui); font-size:12px; font-weight:700; letter-spacing:.08em; fill:var(--muted); }
+  .slval{ font-family:'Cinzel',Georgia,serif; font-size:21px; font-weight:700; fill:var(--ink); }
+  .slmod{ font-family:ui-monospace,Consolas,monospace; font-size:12px; font-weight:700; fill:var(--gold); }
   /* ripiego su telefono: esagono sopra, stat in colonna sotto */
   .stcol{ display:none; }
   .scrow{ display:flex; align-items:baseline; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); }
@@ -405,6 +410,27 @@
   .ctab:hover{ color:var(--ink); }
   .ctab.on{ background:linear-gradient(150deg,var(--violet-2),#5b45c9); color:#fff; }
   .coreview[hidden]{ display:none; }
+
+  /* --- Transizione fra le due viste ---
+     Chi se ne va si ritira verso il centro e svanisce; chi arriva compare
+     dal centro. Per le Abilita' i gruppi scendono a cascata ("a tendina").
+     Le classi .esce/.entra le mette e le toglie mostraVista(). */
+  .coreview{ transform-origin:center center; }
+  .coreview.esce{ opacity:0; transform:scale(.72);
+    transition:opacity .2s ease, transform .2s ease; }
+  #viewStats.entra{ animation:coreEntra .34s ease both; }        /* il ragno cresce dal centro */
+  #viewAbil.entra{ animation:coreFade .3s ease both; }           /* il contenitore appare */
+  #viewAbil.entra .abilmap{ animation:coreEntra .32s ease both; }/* l'esagono si forma */
+  #viewAbil.entra .abgrp{ animation:coreCascata .3s ease both; } /* i gruppi scendono */
+  #viewAbil.entra .abgrp:nth-child(1){ animation-delay:.02s; }
+  #viewAbil.entra .abgrp:nth-child(2){ animation-delay:.06s; }
+  #viewAbil.entra .abgrp:nth-child(3){ animation-delay:.10s; }
+  #viewAbil.entra .abgrp:nth-child(4){ animation-delay:.14s; }
+  #viewAbil.entra .abgrp:nth-child(5){ animation-delay:.18s; }
+  #viewAbil.entra .abgrp:nth-child(6){ animation-delay:.22s; }
+  @keyframes coreEntra{ from{ opacity:0; transform:scale(.8); } to{ opacity:1; transform:scale(1); } }
+  @keyframes coreFade{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes coreCascata{ from{ opacity:0; transform:translateY(-10px); } to{ opacity:1; transform:translateY(0); } }
 
   /* ===== finestra delle abilita': qui si scelgono le competenze ===== */
   /* nota sotto l'elenco: classe sua, perche' .subhint ha un margine negativo

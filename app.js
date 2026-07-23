@@ -1755,20 +1755,57 @@ document.getElementById("gearTs").addEventListener("click", openTs);
    e' solo quale vista stai guardando. La rotellina apre la finestra della
    vista attiva, e la "i" compare solo sulle Abilita'. */
 var vistaCore="stats";
-function mostraVista(v){
-  vistaCore = (v==="abil") ? "abil" : "stats";
+var animandoCore=false;   // un cambio di vista alla volta, non si accavallano
+/* Cambia la faccia del riquadro unito. Con animato=true fa la transizione
+   (la vista attuale si ritira, la nuova entra a cascata); senza, cambio secco
+   per l'avvio, le ricariche e chi ha "riduci animazioni" acceso. */
+function mostraVista(v, animato){
+  var nuova = (v==="abil") ? "abil" : "stats";
   var vs=document.getElementById("viewStats"), va=document.getElementById("viewAbil");
-  if(vs) vs.hidden = vistaCore!=="stats";
-  if(va) va.hidden = vistaCore!=="abil";
-  var ts=document.getElementById("tabStats"), ta=document.getElementById("tabAbil");
-  if(ts) ts.classList.toggle("on", vistaCore==="stats");
-  if(ta) ta.classList.toggle("on", vistaCore==="abil");
-  var info=document.getElementById("abilInfoBtn");
-  if(info) info.hidden = (vistaCore!=="abil") || soloLettura;
-  var pop=document.getElementById("abilHint"); if(pop && vistaCore!=="abil") pop.hidden=true;
+  var entrante = nuova==="abil" ? va : vs;
+  var uscente  = nuova==="abil" ? vs : va;
+
+  function contorno(){
+    var ts=document.getElementById("tabStats"), ta=document.getElementById("tabAbil");
+    if(ts) ts.classList.toggle("on", nuova==="stats");
+    if(ta) ta.classList.toggle("on", nuova==="abil");
+    var info=document.getElementById("abilInfoBtn");
+    if(info) info.hidden = (nuova!=="abil") || soloLettura;
+    var pop=document.getElementById("abilHint"); if(pop && nuova!=="abil") pop.hidden=true;
+  }
+
+  // Cambio secco solo all'avvio o se la vista e' gia' quella: l'animazione,
+  // per scelta, parte sempre (anche con "riduci animazioni" di sistema).
+  if(!animato || vistaCore===nuova){
+    vistaCore=nuova;
+    if(vs){ vs.hidden = nuova!=="stats"; vs.classList.remove("esce","entra"); }
+    if(va){ va.hidden = nuova!=="abil"; va.classList.remove("esce","entra"); }
+    contorno();
+    return;
+  }
+  if(animandoCore) return;
+  animandoCore=true;
+  vistaCore=nuova;
+  contorno();
+
+  // 1) la vista attuale si ritira verso il centro
+  uscente.classList.remove("entra");
+  uscente.classList.add("esce");
+  setTimeout(function(){
+    uscente.hidden=true;
+    uscente.classList.remove("esce");
+    // 2) la nuova entra dal centro (e, se Abilita', i gruppi a cascata)
+    entrante.hidden=false;
+    void entrante.offsetWidth;   // forzo il ridisegno cosi' l'animazione riparte
+    entrante.classList.add("entra");
+    setTimeout(function(){
+      entrante.classList.remove("entra");
+      animandoCore=false;
+    }, 360);
+  }, 200);
 }
-document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats"); });
-document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil"); });
+document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats", true); });
+document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil", true); });
 document.getElementById("gearCore").addEventListener("click", function(){
   if(vistaCore==="abil") openAbil(); else openStats();
 });

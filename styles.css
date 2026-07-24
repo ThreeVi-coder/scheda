@@ -420,6 +420,7 @@
     transition:opacity .2s ease, transform .2s ease; }
   #viewStats.entra{ animation:coreEntra .34s ease both; }        /* il ragno cresce dal centro */
   #viewAbil.entra{ animation:coreFade .3s ease both; }           /* il contenitore appare */
+  #viewTs.entra{ animation:coreEntra .32s ease both; }           /* il favo compare (dissolvenza) */
   #viewAbil.entra .abilmap{ animation:coreEntra .32s ease both; }/* l'esagono si forma */
   #viewAbil.entra .abgrp{ animation:coreCascata .3s ease both; } /* i gruppi scendono */
   #viewAbil.entra .abgrp:nth-child(1){ animation-delay:.02s; }

@@ -514,7 +514,6 @@ var TESTI=[
   { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
   { id:"etProf",    dove:"prof",  nome:"Etichetta",            sel:"#profPanel .eyebrow",  font:"",       colore:"#9A97AD" },
   { id:"valProf",   dove:"prof",  nome:"Bonus",                sel:"#profVal",             font:"cinzel", colore:"#E0B15E" },
-  { id:"etTs",      dove:"ts",    nome:"Etichetta",            sel:"#tsPanel .eyebrow",    font:"",       colore:"#9A97AD" },
   { id:"siglaTs",   dove:"ts",    nome:"Sigla",                sel:".tssig",               font:"",       colore:"#9A97AD" },
   { id:"valTs",     dove:"ts",    nome:"Valore",               sel:".tsval",               font:"cinzel", colore:"#E8E6F0" },
   { id:"nomeAbil",  dove:"abil",  nome:"Nome dell'abilit\u00E0",    sel:".abnome",              font:"",       colore:"#E8E6F0" },
@@ -739,12 +738,15 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearCore","gearProf","gearTs"].forEach(function(id){
+  ["gearXp","gearClass","gearCore","gearProf"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
-  // la "i" delle abilita' non si mostra a chi guarda soltanto
-  var info=document.getElementById("abilInfoBtn");
-  if(info) info.hidden = soloLettura || vistaCore!=="abil";
+  // le "i" (abilita' / tiri salvezza) si mostrano solo sulla vista attiva e non
+  // a chi guarda soltanto
+  var ia=document.getElementById("abilInfoBtn");
+  if(ia) ia.hidden = soloLettura || vistaCore!=="abil";
+  var it=document.getElementById("tsInfoBtn");
+  if(it) it.hidden = soloLettura || vistaCore!=="ts";
   var b=document.getElementById("btnEste"); if(b) b.hidden = soloLettura;
 }
 
@@ -1460,7 +1462,7 @@ var CAMPIONI={
   etLivello:{t:"LIVELLO",cls:"apmid"}, numLv:{t:"7",cls:"apbig"}, txtPE:{t:"prossimo livello",cls:"apsmall"}, numPE:{t:"2.500",cls:"apmid"},
   siglaCar:{t:"FOR",cls:"apmid"}, valCar:{t:"15",cls:"apbig"}, modiCar:{t:"+2",cls:"apmid"},
   etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
-  etTs:{t:"TIRI SALVEZZA",cls:"apmid"}, siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
+  siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"}
 };
@@ -1752,7 +1754,8 @@ document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
-document.getElementById("gearTs").addEventListener("click", openTs);
+// I Tiri salvezza ora sono la terza linguetta: la loro rotellina e' quella
+// unica del riquadro (gearCore), che apre openTs quando la vista attiva e' TS.
 
 /* Caratteristiche e Abilita' stanno nello stesso riquadro, come Scheda e
    Controllo: l'interruttore in alto cambia la faccia mostrata. Non si salva,
@@ -2029,96 +2032,99 @@ function morphRitornoVersoStats(vs, va, fine){
    posizioni/opacita' nuove: era la causa sia del lampo del grafico sia delle
    abilita' che restavano invisibili) e ripulisce gli stili inline usati dai
    morph. Da chiamare all'inizio di ogni cambio di vista. */
+var VISTE=["stats","abil","ts"];
+var VISTA_EL={ stats:"viewStats", abil:"viewAbil", ts:"viewTs" };
+function elVista(k){ return document.getElementById(VISTA_EL[k]); }
+
 function azzeraTransizione(){
-  ["viewStats","viewAbil"].forEach(function(id){
-    var el=document.getElementById(id);
+  VISTE.forEach(function(k){
+    var el=elVista(k);
     if(el && el.getAnimations) el.getAnimations({subtree:true}).forEach(function(a){ try{ a.cancel(); }catch(e){} });
   });
-  var slEl=document.getElementById("statsLine"), vsEl=document.getElementById("viewStats"), mapEl=document.getElementById("abilMap");
+  var slEl=document.getElementById("statsLine"), vsEl=elVista("stats"), mapEl=document.getElementById("abilMap"), vtEl=elVista("ts");
   if(slEl){ slEl.style.transform=""; slEl.style.transformOrigin=""; slEl.style.opacity=""; slEl.style.transition=""; }
   if(vsEl){ vsEl.style.position=""; vsEl.style.top=""; vsEl.style.left=""; vsEl.style.width=""; vsEl.style.margin=""; vsEl.style.zIndex=""; vsEl.style.opacity=""; vsEl.style.transition=""; }
   if(mapEl){ mapEl.style.opacity=""; mapEl.style.transition=""; }
+  if(vtEl){ vtEl.style.opacity=""; vtEl.style.transition=""; vtEl.style.transform=""; }
   document.querySelectorAll("#abilGrid .abgrp").forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
-  // Ridisegno pulito di entrambe le viste: qualunque residuo di una transizione
-  // interrotta (ragno smontato, abilita' invisibili) sparisce, perche' si
-  // riparte sempre dal disegno intero.
+  // Ridisegno pulito delle tre viste: qualunque residuo di una transizione
+  // interrotta sparisce, perche' si riparte sempre dal disegno intero.
   if(typeof renderStats==="function") renderStats();
   if(typeof renderAbil==="function") renderAbil();
+  if(typeof renderTs==="function") renderTs();
 }
 
-/* Cambia la faccia del riquadro unito. Con animato=true fa la transizione
-   (la vista attuale si ritira, la nuova entra a cascata); senza, cambio secco
-   per l'avvio, le ricariche e chi ha "riduci animazioni" acceso. */
+/* Cambia la faccia del riquadro unito (Caratteristiche | Abilita' | Tiri
+   salvezza). Con animato=true fa la transizione; senza, cambio secco per
+   l'avvio e le ricariche. Il morph "a smontaggio" vale solo tra Caratteristiche
+   e Abilita'; ogni passaggio che coinvolge i Tiri salvezza usa la dissolvenza
+   (il morph dei TS arrivera' nel blocco successivo). */
 function mostraVista(v, animato){
-  var nuova = (v==="abil") ? "abil" : "stats";
-  var vs=document.getElementById("viewStats"), va=document.getElementById("viewAbil");
-  var entrante = nuova==="abil" ? va : vs;
-  var uscente  = nuova==="abil" ? vs : va;
+  var nuova = (v==="abil"||v==="ts") ? v : "stats";
+  var vs=elVista("stats"), va=elVista("abil");   // servono ai morph
+  var vecchia = vistaCore;
 
   function contorno(){
-    var ts=document.getElementById("tabStats"), ta=document.getElementById("tabAbil");
-    if(ts) ts.classList.toggle("on", nuova==="stats");
-    if(ta) ta.classList.toggle("on", nuova==="abil");
-    var info=document.getElementById("abilInfoBtn");
-    if(info) info.hidden = (nuova!=="abil") || soloLettura;
-    var pop=document.getElementById("abilHint"); if(pop && nuova!=="abil") pop.hidden=true;
+    var tab={ stats:"tabStats", abil:"tabAbil", ts:"tabTs" };
+    VISTE.forEach(function(k){ var t=document.getElementById(tab[k]); if(t) t.classList.toggle("on", k===nuova); });
+    var ia=document.getElementById("abilInfoBtn"); if(ia) ia.hidden = (nuova!=="abil") || soloLettura;
+    var it=document.getElementById("tsInfoBtn");   if(it) it.hidden = (nuova!=="ts")   || soloLettura;
+    var pa=document.getElementById("abilHint"); if(pa && nuova!=="abil") pa.hidden=true;
+    var pt=document.getElementById("tsHint");   if(pt && nuova!=="ts")   pt.hidden=true;
   }
 
-  // Cambio "secco": mostra subito la vista, senza animazione. In via difensiva
-  // ripristina i gruppi delle abilita' se un morph precedente li avesse lasciati
-  // invisibili (era il bug del toggle rapido: restavano opacita' 0).
+  function mostraSolo(k){
+    VISTE.forEach(function(x){ var el=elVista(x); if(el){ el.hidden = x!==k; el.classList.remove("esce","entra"); } });
+  }
+
   function secco(){
-    azzeraTransizione();   // annulla animazioni appese e pulisce gli stili inline
+    azzeraTransizione();   // annulla animazioni appese e ridisegna pulito
     vistaCore=nuova;
-    if(vs){ vs.hidden = nuova!=="stats"; vs.classList.remove("esce","entra"); }
-    if(va){ va.hidden = nuova!=="abil"; va.classList.remove("esce","entra"); }
+    mostraSolo(nuova);
     contorno();
   }
 
   // Avvio, ricariche, chiamate interne: sempre istantaneo.
   if(!animato){ secco(); return; }
-  // Durante un'animazione ogni clic sulle linguette viene ignorato: niente
-  // scorciatoie a meta' transizione (era la causa delle abilita' invisibili).
+  // Durante un'animazione ogni clic sulle linguette viene ignorato.
   if(animandoCore) return;
   // Gia' su quella vista: mostrala e basta.
   if(vistaCore===nuova){ secco(); return; }
 
   animandoCore=true;
   vistaCore=nuova;
-  azzeraTransizione();   // parto da uno stato pulito: niente residui della transizione precedente
+  azzeraTransizione();   // parto da uno stato pulito
   contorno();
 
-  // Se l'utente ha scelto la dissolvenza, transizione semplice in entrambi i
-  // versi: la vista attuale si ritira, la nuova entra (a cascata per Abilita').
-  if(state.transizione==="dissolvenza"){
-    uscente.classList.remove("entra");
-    uscente.classList.add("esce");
+  // Il morph "a smontaggio" c'e' solo tra Caratteristiche e Abilita'.
+  var morphAbilStats = state.transizione==="morph" &&
+    ((vecchia==="stats" && nuova==="abil") || (vecchia==="abil" && nuova==="stats"));
+
+  if(!morphAbilStats){
+    // Dissolvenza generica: la vista attuale si ritira, la nuova entra.
+    var usc=elVista(vecchia), ent=elVista(nuova);
+    if(usc){ usc.classList.remove("entra"); usc.classList.add("esce"); }
     setTimeout(function(){
-      uscente.hidden=true; uscente.classList.remove("esce");
-      entrante.hidden=false; void entrante.offsetWidth; entrante.classList.add("entra");
-      setTimeout(function(){ entrante.classList.remove("entra"); animandoCore=false; }, 360);
+      VISTE.forEach(function(x){ if(x!==nuova){ var el=elVista(x); if(el){ el.hidden=true; el.classList.remove("esce","entra"); } } });
+      if(ent){ ent.hidden=false; void ent.offsetWidth; ent.classList.add("entra"); }
+      setTimeout(function(){ if(ent) ent.classList.remove("entra"); animandoCore=false; }, 360);
     }, 200);
     return;
   }
 
-  // Caratteristiche -> Abilita': la transizione "morph". Prima il ragno si
-  // smonta (tappa 1), poi l'esagono scivola a sinistra e si aggancia alla vera
-  // vista Abilita' (tappa 2).
   if(nuova==="abil"){
     morphSmontaRagno(function(){
       morphScivolaVersoAbil(vs, va, function(){ animandoCore=false; });
     });
     return;
   }
-
-  // Abilita' -> Caratteristiche: il morph al contrario (le abilita' si
-  // ritirano, l'esagono torna al centro e il ragno si ri-assembla).
   morphRitornoVersoStats(vs, va, function(){ animandoCore=false; });
 }
 document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats", true); });
 document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil", true); });
+document.getElementById("tabTs").addEventListener("click", function(){ mostraVista("ts", true); });
 document.getElementById("gearCore").addEventListener("click", function(){
-  if(vistaCore==="abil") openAbil(); else openStats();
+  if(vistaCore==="abil") openAbil(); else if(vistaCore==="ts") openTs(); else openStats();
 });
 mostraVista("stats");   // si parte dalle Caratteristiche
 

@@ -1841,12 +1841,13 @@ function morphScivolaVersoAbil(vs, va, fine){
   vs.style.width=oW+"px"; vs.style.margin="0"; vs.style.zIndex="2";
 
   // 2) porto in flusso la vera vista Abilita', con esagono invisibile (niente
-  //    doppione) e i gruppi pronti a comparire.
-  va.hidden=false;
+  //    doppione) e i gruppi pronti a comparire. Metto le opacita' a 0 PRIMA di
+  //    mostrarla, cosi' esagono e gruppi non lampeggiano per un frame.
   var mapEl=document.getElementById("abilMap");
   var grps=Array.prototype.slice.call(document.querySelectorAll("#abilGrid .abgrp"));
   if(mapEl) mapEl.style.opacity="0";
   grps.forEach(function(g){ g.style.opacity="0"; });
+  va.hidden=false;
 
   var anims=[];
   // 3) misuro esagono di partenza (ragno) e di arrivo (Abilita') e faccio
@@ -1877,15 +1878,12 @@ function morphScivolaVersoAbil(vs, va, fine){
     if(mapEl){ mapEl.style.transition="opacity .24s ease"; mapEl.style.opacity="1"; }
     if(slEl){ slEl.style.transition="opacity .24s ease"; slEl.style.opacity="0"; }
     setTimeout(function(){
-      anims.forEach(function(a){ try{ a.cancel(); }catch(e){} });   // tolgo il "forwards" o resta appiccicato
-      vs.hidden=true;
-      vs.style.position=""; vs.style.top=""; vs.style.left=""; vs.style.width=""; vs.style.margin=""; vs.style.zIndex="";
-      if(slEl){ slEl.style.transition=""; slEl.style.opacity=""; slEl.style.transform=""; slEl.style.transformOrigin=""; }
-      if(mapEl){ mapEl.style.transition=""; mapEl.style.opacity=""; }
-      grps.forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
-      renderStats();   // ricostruisco il ragno intatto (nascosto) per la volta dopo
+      // reset totale: annulla ogni animazione, pulisce gli inline e ridisegna
+      // entrambe le viste da zero, cosi' non resta mai nulla di appeso.
+      azzeraTransizione();
+      vs.hidden=true; va.hidden=false;
       fine();
-    }, 200);
+    }, 280);
   }, 430);
 }
 
@@ -1979,7 +1977,9 @@ function morphRitornoVersoStats(vs, va, fine){
 
   // 3) preparo lo stage Caratteristiche: swap sincrono (nessun frame dipinto)
   //    per ridisegnarlo e misurarne la posizione naturale, poi lo congelo sopra
-  //    l'esagono di Abilita', invisibile.
+  //    l'esagono di Abilita', invisibile. Opacita' a 0 PRIMA di mostrarlo, cosi'
+  //    il ragno pieno non puo' lampeggiare per un frame.
+  vs.style.opacity="0";
   va.hidden=true; vs.hidden=false;
   renderStats();
   var oT=vs.offsetTop, oL=vs.offsetLeft, oW=vs.offsetWidth;
@@ -2015,14 +2015,35 @@ function morphRitornoVersoStats(vs, va, fine){
       slide.addEventListener("finish", function(){ slEl.style.transform=""; slEl.style.transformOrigin=""; });
     }
     montatore.anima(function(){
-      vs.style.position=""; vs.style.top=""; vs.style.left=""; vs.style.width=""; vs.style.margin=""; vs.style.zIndex=""; vs.style.opacity=""; vs.style.transition="";
-      slEl.style.transform=""; slEl.style.transformOrigin="";
-      va.hidden=true;
-      if(mapEl){ mapEl.style.transition=""; mapEl.style.opacity=""; }
-      grps.forEach(function(g){ try{ g.getAnimations().forEach(function(a){ a.cancel(); }); }catch(e){} g.style.opacity=""; g.style.transform=""; });
+      // reset totale (come nell'andata): niente residui appesi.
+      azzeraTransizione();
+      vs.hidden=false; va.hidden=true;
       fine();
     });
   }, 170);
+}
+
+/* Azzera ogni residuo di una transizione precedente: annulla le animazioni
+   ancora "appese" (la Web Animations API con fill:"forwards" tiene attaccato lo
+   stato finale finche' non la si annulla, e quello poteva sovrascrivere le
+   posizioni/opacita' nuove: era la causa sia del lampo del grafico sia delle
+   abilita' che restavano invisibili) e ripulisce gli stili inline usati dai
+   morph. Da chiamare all'inizio di ogni cambio di vista. */
+function azzeraTransizione(){
+  ["viewStats","viewAbil"].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && el.getAnimations) el.getAnimations({subtree:true}).forEach(function(a){ try{ a.cancel(); }catch(e){} });
+  });
+  var slEl=document.getElementById("statsLine"), vsEl=document.getElementById("viewStats"), mapEl=document.getElementById("abilMap");
+  if(slEl){ slEl.style.transform=""; slEl.style.transformOrigin=""; slEl.style.opacity=""; slEl.style.transition=""; }
+  if(vsEl){ vsEl.style.position=""; vsEl.style.top=""; vsEl.style.left=""; vsEl.style.width=""; vsEl.style.margin=""; vsEl.style.zIndex=""; vsEl.style.opacity=""; vsEl.style.transition=""; }
+  if(mapEl){ mapEl.style.opacity=""; mapEl.style.transition=""; }
+  document.querySelectorAll("#abilGrid .abgrp").forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
+  // Ridisegno pulito di entrambe le viste: qualunque residuo di una transizione
+  // interrotta (ragno smontato, abilita' invisibili) sparisce, perche' si
+  // riparte sempre dal disegno intero.
+  if(typeof renderStats==="function") renderStats();
+  if(typeof renderAbil==="function") renderAbil();
 }
 
 /* Cambia la faccia del riquadro unito. Con animato=true fa la transizione
@@ -2047,10 +2068,10 @@ function mostraVista(v, animato){
   // ripristina i gruppi delle abilita' se un morph precedente li avesse lasciati
   // invisibili (era il bug del toggle rapido: restavano opacita' 0).
   function secco(){
+    azzeraTransizione();   // annulla animazioni appese e pulisce gli stili inline
     vistaCore=nuova;
     if(vs){ vs.hidden = nuova!=="stats"; vs.classList.remove("esce","entra"); }
     if(va){ va.hidden = nuova!=="abil"; va.classList.remove("esce","entra"); }
-    document.querySelectorAll("#abilGrid .abgrp").forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
     contorno();
   }
 
@@ -2064,6 +2085,7 @@ function mostraVista(v, animato){
 
   animandoCore=true;
   vistaCore=nuova;
+  azzeraTransizione();   // parto da uno stato pulito: niente residui della transizione precedente
   contorno();
 
   // Se l'utente ha scelto la dissolvenza, transizione semplice in entrambi i

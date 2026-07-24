@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <div class="wrap">
@@ -357,6 +357,12 @@
             <button class="opt" data-evid="off">Non evidenziare</button>
           </div>
           <p class="subhint">La linea della caratteristica pi\u00F9 alta si accende del colore del grafico, e cambia da sola quando cambia la pi\u00F9 alta.</p>
+          <div class="row">
+            <span class="rowlab">Transizione</span>
+            <button class="opt" data-transiz="morph">Morph</button>
+            <button class="opt" data-transiz="dissolvenza">Dissolvenza</button>
+          </div>
+          <p class="subhint">Come si passa tra Caratteristiche e Abilit&agrave;: <b>Morph</b> smonta e ricompone l&rsquo;esagono; <b>Dissolvenza</b> &egrave; un cambio morbido pi&ugrave; sobrio.</p>
           <div class="asplab">Aspetto delle scritte</div>
           <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
           <div class="antepsel" id="antsel_stats"></div>
@@ -575,6 +581,6 @@
 
   </div>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

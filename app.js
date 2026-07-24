@@ -151,6 +151,7 @@ var state={
   xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E",
   statsEvid:true,   // illumina la stat piu' alta sul grafico
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
+  transizione:"morph",    // come si passa tra Caratteristiche e Abilita': "morph" | "dissolvenza"
   classSymColor:"#a78bfa",   // colore di partenza dei simboli (seme per i nuovi)
   tsCompColor:"#E0B15E",     // colore degli esagoni accesi dei tiri salvezza
   tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
@@ -551,7 +552,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","classSymColor","tsCompColor","tsDadoColor","abilCarColore"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -573,6 +574,7 @@ function applicaDati(o){
     });
   }
   state.statsEvid = (o.statsEvid!==false);   // acceso di default
+  if(state.transizione!=="dissolvenza") state.transizione="morph";   // solo valori validi, default morph
   if(typeof o.statsColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.statsColor)) state.statsColor=o.statsColor;
   else state.statsColor="#7C5CFF";
   if(typeof o.classSymColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.classSymColor)) state.classSymColor=o.classSymColor;
@@ -1608,6 +1610,7 @@ function costruisciComandi(dove){
 function sincronizzaExtra(dove){
   if(dove==="stats"){
     setActive("data-evid", state.statsEvid?"on":"off");
+    setActive("data-transiz", state.transizione);
     if(typeof statsPicker!=="undefined" && statsPicker){ statsFermo=true; try{ statsPicker.setHex(state.statsColor); } finally{ statsFermo=false; } }
   }
   if(dove==="ts"){
@@ -1757,6 +1760,271 @@ document.getElementById("gearTs").addEventListener("click", openTs);
    vista attiva, e la "i" compare solo sulle Abilita'. */
 var vistaCore="stats";
 var animandoCore=false;   // un cambio di vista alla volta, non si accavallano
+
+/* MORPH (transizione "smontaggio") — tappa 1.
+   Il ragno delle Caratteristiche si smonta: gli esagoni interni e il poligono
+   svaniscono in sequenza, le linee si ritirano, i numeri spariscono e le sigle
+   viaggiano fino ai vertici dell'esagono (dove stanno nelle Abilita'). Alla
+   fine resta il solo esagono esterno con le sei sigle ai vertici, poi chiama
+   fine(). Usa la Web Animations API: tempi e ritardi controllati, niente
+   librerie. */
+function morphSmontaRagno(fine){
+  var svg=document.querySelector("#statsLine svg");
+  if(!svg){ fine(); return; }
+  var NS="http://www.w3.org/2000/svg";
+  var q=function(s){ return Array.prototype.slice.call(svg.querySelectorAll(s)); };
+  var grids=q(".slgrid");             // [esterno (f=1), medio, interno]
+  var hexChar=svg.querySelector(".slhex");
+  var wires=q(".slwire");
+  var vals=q(".slval").concat(q(".slmod"));
+  var sigs=q(".slsig");
+  var E="ease", EIO="ease-in-out";
+  // offset delle sigle fuori dal vertice, preso da Abilita' (15 su R=72) e
+  // scalato al raggio del ragno (84): stessa posizione relativa.
+  var OFF=15*84/72, R_DOT=3.4*84/72;
+
+  // 1) esagoni interni + poligono del personaggio svaniscono in sequenza rapida
+  if(grids[2]) grids[2].animate([{opacity:1},{opacity:0}], {duration:180, delay:0,  fill:"forwards", easing:E});
+  if(grids[1]) grids[1].animate([{opacity:1},{opacity:0}], {duration:180, delay:95, fill:"forwards", easing:E});
+  if(hexChar)  hexChar.animate([{opacity:1},{opacity:0}],  {duration:240, delay:48, fill:"forwards", easing:E});
+
+  // 2) le linee di richiamo si ritirano indietro (dal numero verso il vertice)
+  wires.forEach(function(w,i){
+    var L; try{ L=w.getTotalLength(); }catch(e){ L=600; }
+    w.style.strokeDasharray=L;
+    w.animate([{strokeDashoffset:0},{strokeDashoffset:L}], {duration:310, delay:72+i*10, fill:"forwards", easing:E});
+  });
+
+  // 3) i numeri (valore e modificatore) svaniscono
+  vals.forEach(function(t){ t.animate([{opacity:1},{opacity:0}], {duration:170, delay:85, fill:"forwards", easing:E}); });
+
+  // 4) le sigle viaggiano dai lati fino appena fuori dal vertice, centrate come
+  //    in Abilita', e si tingono del colore della caratteristica arrivando.
+  sigs.forEach(function(t,idx){
+    var v=slVertice(idx,1), ang=(-90+idx*60)*Math.PI/180;
+    var tx=v[0]+Math.cos(ang)*OFF, ty=v[1]+Math.sin(ang)*OFF;
+    var bb=t.getBBox(), cx0=bb.x+bb.width/2, cy0=bb.y+bb.height/2;   // centro visivo attuale
+    t.animate([{transform:"translate(0px,0px)"},
+               {transform:"translate("+(tx-cx0).toFixed(1)+"px,"+(ty-cy0).toFixed(1)+"px)", fill:colCar(CARATT[idx].k)}],
+              {duration:400, delay:180, fill:"forwards", easing:EIO});
+  });
+
+  // 5) i pallini colorati compaiono sui vertici (come nell'esagono Abilita')
+  var dg=document.createElementNS(NS,"g");
+  CARATT.forEach(function(c,idx){
+    var v=slVertice(idx,1);
+    var dot=document.createElementNS(NS,"circle");
+    dot.setAttribute("cx", v[0].toFixed(1)); dot.setAttribute("cy", v[1].toFixed(1));
+    dot.setAttribute("r", R_DOT.toFixed(1)); dot.setAttribute("fill", colCar(c.k));
+    dot.style.opacity="0";
+    dg.appendChild(dot);
+    dot.animate([{opacity:0},{opacity:1}], {duration:260, delay:230, fill:"forwards", easing:E});
+  });
+  svg.appendChild(dg);
+
+  setTimeout(fine, 640);
+}
+
+/* MORPH — tappa 2: l'esagono nudo scivola a sinistra e si rimpicciolisce fino a
+   sovrapporsi a quello di Abilita', le abilita' entrano a cascata, e in chiusura
+   un cross-fade passa dal morph alla vera vista Abilita' (che porta pallini,
+   sigle e percezione passiva definitivi: atterraggio al pixel). */
+function morphScivolaVersoAbil(vs, va, fine){
+  var slEl=document.getElementById("statsLine");
+  var svg=slEl?slEl.querySelector("svg"):null;
+  var outerHex=svg?svg.querySelector(".slgrid"):null;   // esagono esterno (f=1), quello rimasto
+
+  // 1) congelo la vista Caratteristiche in posizione assoluta: cosi' portare in
+  //    scena Abilita' non la fa saltare, e posso farla scivolare sopra.
+  var oT=vs.offsetTop, oL=vs.offsetLeft, oW=vs.offsetWidth;
+  vs.style.position="absolute"; vs.style.top=oT+"px"; vs.style.left=oL+"px";
+  vs.style.width=oW+"px"; vs.style.margin="0"; vs.style.zIndex="2";
+
+  // 2) porto in flusso la vera vista Abilita', con esagono invisibile (niente
+  //    doppione) e i gruppi pronti a comparire.
+  va.hidden=false;
+  var mapEl=document.getElementById("abilMap");
+  var grps=Array.prototype.slice.call(document.querySelectorAll("#abilGrid .abgrp"));
+  if(mapEl) mapEl.style.opacity="0";
+  grps.forEach(function(g){ g.style.opacity="0"; });
+
+  var anims=[];
+  // 3) misuro esagono di partenza (ragno) e di arrivo (Abilita') e faccio
+  //    scivolare+scalare tutto il disegno cosi' i due esagoni coincidono.
+  var sr=outerHex?outerHex.getBoundingClientRect():null;
+  var abHex=mapEl?mapEl.querySelector(".abhex"):null;
+  var tr=abHex?abHex.getBoundingClientRect():null;
+  if(slEl && sr && tr && sr.width){
+    var s=tr.width/sr.width;
+    var scx=sr.left+sr.width/2, scy=sr.top+sr.height/2;
+    var tcx=tr.left+tr.width/2, tcy=tr.top+tr.height/2;
+    var slr=slEl.getBoundingClientRect();
+    slEl.style.transformOrigin=(scx-slr.left).toFixed(1)+"px "+(scy-slr.top).toFixed(1)+"px";
+    anims.push(slEl.animate([
+      {transform:"translate(0px,0px) scale(1)"},
+      {transform:"translate("+(tcx-scx).toFixed(1)+"px,"+(tcy-scy).toFixed(1)+"px) scale("+s.toFixed(3)+")"}
+    ], {duration:440, fill:"forwards", easing:"ease-in-out"}));
+  }
+
+  // 4) i gruppi delle abilita' compaiono a cascata mentre l'esagono scivola
+  grps.forEach(function(g,i){
+    anims.push(g.animate([{opacity:0, transform:"translateY(-10px)"},{opacity:1, transform:"translateY(0px)"}],
+      {duration:300, delay:170+i*45, fill:"forwards", easing:"ease"}));
+  });
+
+  // 5) chiusura: cross-fade dal ragno-morph all'esagono vero di Abilita'
+  setTimeout(function(){
+    if(mapEl){ mapEl.style.transition="opacity .24s ease"; mapEl.style.opacity="1"; }
+    if(slEl){ slEl.style.transition="opacity .24s ease"; slEl.style.opacity="0"; }
+    setTimeout(function(){
+      anims.forEach(function(a){ try{ a.cancel(); }catch(e){} });   // tolgo il "forwards" o resta appiccicato
+      vs.hidden=true;
+      vs.style.position=""; vs.style.top=""; vs.style.left=""; vs.style.width=""; vs.style.margin=""; vs.style.zIndex="";
+      if(slEl){ slEl.style.transition=""; slEl.style.opacity=""; slEl.style.transform=""; slEl.style.transformOrigin=""; }
+      if(mapEl){ mapEl.style.transition=""; mapEl.style.opacity=""; }
+      grps.forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
+      renderStats();   // ricostruisco il ragno intatto (nascosto) per la volta dopo
+      fine();
+    }, 200);
+  }, 430);
+}
+
+/* MORPH — ri-assemblaggio del ragno (usato nel ritorno). Presuppone lo
+   #statsLine appena ridisegnato (ragno intero); lo porta prima allo stato
+   "smontato" statico e restituisce un oggetto con .anima(fine) che lo anima
+   all'indietro fino al ragno intero (anelli, linee, numeri, sigle che
+   rientrano ai lati, pallini che svaniscono). */
+function morphMontaRagno(){
+  var svg=document.querySelector("#statsLine svg");
+  if(!svg) return { anima:function(f){ f(); } };
+  var NS="http://www.w3.org/2000/svg";
+  var q=function(s){ return Array.prototype.slice.call(svg.querySelectorAll(s)); };
+  var grids=q(".slgrid"), hexChar=svg.querySelector(".slhex");
+  var wires=q(".slwire"), vals=q(".slval").concat(q(".slmod")), sigs=q(".slsig");
+  var E="ease", EIO="ease-in-out";
+  var OFF=15*84/72, R_DOT=3.4*84/72;
+
+  // --- stato "smontato" statico (punto di partenza del ritorno) ---
+  if(grids[1]) grids[1].style.opacity="0";
+  if(grids[2]) grids[2].style.opacity="0";
+  if(hexChar) hexChar.style.opacity="0";
+  vals.forEach(function(t){ t.style.opacity="0"; });
+  var wireLen=[];
+  wires.forEach(function(w,i){ var L; try{L=w.getTotalLength();}catch(e){L=600;} wireLen[i]=L; w.style.strokeDasharray=L; w.style.strokeDashoffset=L; });
+  var sigInfo=[];
+  sigs.forEach(function(t,idx){
+    var v=slVertice(idx,1), ang=(-90+idx*60)*Math.PI/180;
+    var tx=v[0]+Math.cos(ang)*OFF, ty=v[1]+Math.sin(ang)*OFF;
+    var bb=t.getBBox(), cx0=bb.x+bb.width/2, cy0=bb.y+bb.height/2;
+    var inf={ dx:(tx-cx0), dy:(ty-cy0), natFill:getComputedStyle(t).fill };
+    sigInfo[idx]=inf;
+    t.style.transform="translate("+inf.dx.toFixed(1)+"px,"+inf.dy.toFixed(1)+"px)";
+    t.style.fill=colCar(CARATT[idx].k);
+  });
+  var dg=document.createElementNS(NS,"g"), dots=[];
+  CARATT.forEach(function(c,idx){
+    var v=slVertice(idx,1), dot=document.createElementNS(NS,"circle");
+    dot.setAttribute("cx",v[0].toFixed(1)); dot.setAttribute("cy",v[1].toFixed(1));
+    dot.setAttribute("r",R_DOT.toFixed(1)); dot.setAttribute("fill",colCar(c.k));
+    dg.appendChild(dot); dots.push(dot);
+  });
+  svg.appendChild(dg);
+  void svg.getBoundingClientRect();   // applico lo stato statico prima di animare
+
+  return { anima:function(fine){
+    // sigle rientrano ai lati e riprendono il colore neutro di partenza
+    sigs.forEach(function(t,idx){
+      var inf=sigInfo[idx];
+      var a=t.animate([{transform:"translate("+inf.dx.toFixed(1)+"px,"+inf.dy.toFixed(1)+"px)", fill:colCar(CARATT[idx].k)},
+                       {transform:"translate(0px,0px)", fill:inf.natFill}], {duration:440, delay:150, fill:"forwards", easing:EIO});
+      a.addEventListener("finish", function(){ t.style.transform=""; t.style.fill=""; });
+    });
+    // pallini svaniscono
+    dots.forEach(function(d){ d.animate([{opacity:1},{opacity:0}], {duration:240, delay:70, fill:"forwards", easing:E}); });
+    // le linee si riallungano verso le stat
+    wires.forEach(function(w,i){
+      var a=w.animate([{strokeDashoffset:wireLen[i]},{strokeDashoffset:0}], {duration:400, delay:270, fill:"forwards", easing:E});
+      a.addEventListener("finish", function(){ w.style.strokeDasharray=""; w.style.strokeDashoffset=""; });
+    });
+    // numeri ricompaiono
+    vals.forEach(function(t){ var a=t.animate([{opacity:0},{opacity:1}], {duration:220, delay:380, fill:"forwards", easing:E}); a.addEventListener("finish", function(){ t.style.opacity=""; }); });
+    // esagoni interni + poligono ricompaiono
+    [[grids[2],0],[grids[1],95],[hexChar,70]].forEach(function(p){
+      if(!p[0]) return;
+      var a=p[0].animate([{opacity:0},{opacity:1}], {duration:240, delay:430+p[1], fill:"forwards", easing:E});
+      a.addEventListener("finish", function(){ p[0].style.opacity=""; });
+    });
+    setTimeout(function(){ if(dg.parentNode) dg.parentNode.removeChild(dg); fine(); }, 860);
+  }};
+}
+
+/* MORPH — ritorno Abilita' -> Caratteristiche (speculare all'andata): le
+   abilita' si ritirano, l'esagono di Abilita' scivola al centro e cresce, e il
+   ragno si ri-assembla sopra. Parte da un cross-fade dall'esagono vero allo
+   stage Caratteristiche (in stato smontato) sovrapposto. */
+function morphRitornoVersoStats(vs, va, fine){
+  var slEl=document.getElementById("statsLine");
+  var mapEl=document.getElementById("abilMap");
+  var grps=Array.prototype.slice.call(document.querySelectorAll("#abilGrid .abgrp"));
+
+  // 1) le abilita' si ritirano
+  grps.forEach(function(g,i){
+    g.animate([{opacity:1,transform:"translateY(0px)"},{opacity:0,transform:"translateY(10px)"}],
+      {duration:220, delay:i*28, fill:"forwards", easing:"ease"});
+  });
+
+  // 2) misuro l'esagono di Abilita' (sorgente)
+  var abHex=mapEl?mapEl.querySelector(".abhex"):null;
+  var srcR=abHex?abHex.getBoundingClientRect():null;
+
+  // 3) preparo lo stage Caratteristiche: swap sincrono (nessun frame dipinto)
+  //    per ridisegnarlo e misurarne la posizione naturale, poi lo congelo sopra
+  //    l'esagono di Abilita', invisibile.
+  va.hidden=true; vs.hidden=false;
+  renderStats();
+  var oT=vs.offsetTop, oL=vs.offsetLeft, oW=vs.offsetWidth;
+  var oh=document.querySelector("#statsLine svg .slgrid");
+  var natHex=oh?oh.getBoundingClientRect():null;
+  var slNat=slEl.getBoundingClientRect();
+  va.hidden=false;
+  vs.style.position="absolute"; vs.style.top=oT+"px"; vs.style.left=oL+"px"; vs.style.width=oW+"px"; vs.style.margin="0"; vs.style.zIndex="2"; vs.style.opacity="0";
+  var initialT="";
+  if(natHex && srcR && natHex.width){
+    var s=srcR.width/natHex.width;
+    var ncx=natHex.left+natHex.width/2, ncy=natHex.top+natHex.height/2;
+    var scx=srcR.left+srcR.width/2, scy=srcR.top+srcR.height/2;
+    slEl.style.transformOrigin=(ncx-slNat.left).toFixed(1)+"px "+(ncy-slNat.top).toFixed(1)+"px";
+    initialT="translate("+(scx-ncx).toFixed(1)+"px,"+(scy-ncy).toFixed(1)+"px) scale("+s.toFixed(3)+")";
+    slEl.style.transform=initialT;
+  }
+
+  // 4) stato smontato statico dello stage, pronto per il montaggio
+  var montatore=morphMontaRagno();
+  void slEl.getBoundingClientRect();
+
+  // 5) cross-fade: l'esagono vero di Abilita' esce, lo stage entra
+  vs.style.transition="opacity .24s ease"; vs.style.opacity="1";
+  if(mapEl){ mapEl.style.transition="opacity .24s ease"; mapEl.style.opacity="0"; }
+
+  // 6) dopo il cross-fade: scivola al centro (transform->identita') e ri-assembla
+  setTimeout(function(){
+    vs.style.transition="";
+    if(initialT){
+      var slide=slEl.animate([{transform:initialT},{transform:"translate(0px,0px) scale(1)"}],
+        {duration:440, fill:"forwards", easing:"ease-in-out"});
+      slide.addEventListener("finish", function(){ slEl.style.transform=""; slEl.style.transformOrigin=""; });
+    }
+    montatore.anima(function(){
+      vs.style.position=""; vs.style.top=""; vs.style.left=""; vs.style.width=""; vs.style.margin=""; vs.style.zIndex=""; vs.style.opacity=""; vs.style.transition="";
+      slEl.style.transform=""; slEl.style.transformOrigin="";
+      va.hidden=true;
+      if(mapEl){ mapEl.style.transition=""; mapEl.style.opacity=""; }
+      grps.forEach(function(g){ try{ g.getAnimations().forEach(function(a){ a.cancel(); }); }catch(e){} g.style.opacity=""; g.style.transform=""; });
+      fine();
+    });
+  }, 170);
+}
+
 /* Cambia la faccia del riquadro unito. Con animato=true fa la transizione
    (la vista attuale si ritira, la nuova entra a cascata); senza, cambio secco
    per l'avvio, le ricariche e chi ha "riduci animazioni" acceso. */
@@ -1775,35 +2043,55 @@ function mostraVista(v, animato){
     var pop=document.getElementById("abilHint"); if(pop && nuova!=="abil") pop.hidden=true;
   }
 
-  // Cambio secco solo all'avvio o se la vista e' gia' quella: l'animazione,
-  // per scelta, parte sempre (anche con "riduci animazioni" di sistema).
-  if(!animato || vistaCore===nuova){
+  // Cambio "secco": mostra subito la vista, senza animazione. In via difensiva
+  // ripristina i gruppi delle abilita' se un morph precedente li avesse lasciati
+  // invisibili (era il bug del toggle rapido: restavano opacita' 0).
+  function secco(){
     vistaCore=nuova;
     if(vs){ vs.hidden = nuova!=="stats"; vs.classList.remove("esce","entra"); }
     if(va){ va.hidden = nuova!=="abil"; va.classList.remove("esce","entra"); }
+    document.querySelectorAll("#abilGrid .abgrp").forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
     contorno();
-    return;
   }
+
+  // Avvio, ricariche, chiamate interne: sempre istantaneo.
+  if(!animato){ secco(); return; }
+  // Durante un'animazione ogni clic sulle linguette viene ignorato: niente
+  // scorciatoie a meta' transizione (era la causa delle abilita' invisibili).
   if(animandoCore) return;
+  // Gia' su quella vista: mostrala e basta.
+  if(vistaCore===nuova){ secco(); return; }
+
   animandoCore=true;
   vistaCore=nuova;
   contorno();
 
-  // 1) la vista attuale si ritira verso il centro
-  uscente.classList.remove("entra");
-  uscente.classList.add("esce");
-  setTimeout(function(){
-    uscente.hidden=true;
-    uscente.classList.remove("esce");
-    // 2) la nuova entra dal centro (e, se Abilita', i gruppi a cascata)
-    entrante.hidden=false;
-    void entrante.offsetWidth;   // forzo il ridisegno cosi' l'animazione riparte
-    entrante.classList.add("entra");
+  // Se l'utente ha scelto la dissolvenza, transizione semplice in entrambi i
+  // versi: la vista attuale si ritira, la nuova entra (a cascata per Abilita').
+  if(state.transizione==="dissolvenza"){
+    uscente.classList.remove("entra");
+    uscente.classList.add("esce");
     setTimeout(function(){
-      entrante.classList.remove("entra");
-      animandoCore=false;
-    }, 360);
-  }, 200);
+      uscente.hidden=true; uscente.classList.remove("esce");
+      entrante.hidden=false; void entrante.offsetWidth; entrante.classList.add("entra");
+      setTimeout(function(){ entrante.classList.remove("entra"); animandoCore=false; }, 360);
+    }, 200);
+    return;
+  }
+
+  // Caratteristiche -> Abilita': la transizione "morph". Prima il ragno si
+  // smonta (tappa 1), poi l'esagono scivola a sinistra e si aggancia alla vera
+  // vista Abilita' (tappa 2).
+  if(nuova==="abil"){
+    morphSmontaRagno(function(){
+      morphScivolaVersoAbil(vs, va, function(){ animandoCore=false; });
+    });
+    return;
+  }
+
+  // Abilita' -> Caratteristiche: il morph al contrario (le abilita' si
+  // ritirano, l'esagono torna al centro e il ragno si ri-assembla).
+  morphRitornoVersoStats(vs, va, function(){ animandoCore=false; });
 }
 document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats", true); });
 document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil", true); });
@@ -1904,6 +2192,8 @@ document.addEventListener("click", function(e){
   if(pk){ statAtt=pk.getAttribute("data-pick"); renderStatsDialog(); return; }
   var ev=e.target.closest("[data-evid]");
   if(ev){ state.statsEvid=(ev.getAttribute("data-evid")==="on"); renderStats(); sincronizzaExtra("stats"); aggiornaSalva(); return; }
+  var trz=e.target.closest("[data-transiz]");
+  if(trz){ state.transizione=(trz.getAttribute("data-transiz")==="dissolvenza")?"dissolvenza":"morph"; setActive("data-transiz", state.transizione); aggiornaSalva(); return; }
   var r=e.target.closest("[data-reset]"); if(r){ askReset(r.getAttribute("data-reset")); return; }
   var no=e.target.closest("[data-cancel]"); if(no){ cancelReset(no.getAttribute("data-cancel")); return; }
   var yes=e.target.closest("[data-yes]"); if(yes){ doReset(yes.getAttribute("data-yes")); return; }

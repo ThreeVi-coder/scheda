@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
   <div class="wrap">
@@ -58,6 +58,11 @@
       <button id="tabControllo">Controllo</button>
     </div>
 
+    <div id="hpBanner" aria-hidden="true">
+      <div class="hpb-band"><div class="hpb-word">MORTO</div></div>
+      <button class="hpb-revive" id="hpRevive" type="button">Riporta in vita</button>
+    </div>
+
     <div id="paneScheda">
 
     <div class="header" id="header">
@@ -90,6 +95,32 @@
         <div class="eyebrow">Classe</div>
         <div class="cline" id="classLine"></div>
         <button class="gear" id="gearClass" title="Scegli la classe" aria-label="Scegli la classe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
+
+      <div class="hpanel" id="hpPanel">
+        <div class="hpmain">
+          <div class="eyebrow">Punti ferita</div>
+          <div class="hptop">
+            <span class="hpcur" id="hpCur">&mdash;</span><span class="hpslash">/</span><span class="hpmax" id="hpMax">&mdash;</span>
+            <span class="hptemp" id="hpTemp" hidden>+0 <i>tmp</i></span>
+          </div>
+          <div class="hpbar"><div class="hpfill" id="hpFill" style="width:0%"></div></div>
+          <div class="hprow">
+            <input class="hpin" type="number" id="hpAmt" min="1" step="1" inputmode="numeric" placeholder="0" aria-label="Quantit&agrave;" />
+            <button class="hpbtn dmg" id="hpDmg" type="button">Danno</button>
+            <button class="hpbtn heal" id="hpHeal" type="button">Cura</button>
+          </div>
+          <div class="hphint" id="hpHint" hidden></div>
+        </div>
+        <div class="hpaside">
+          <div class="hptabs" role="tablist">
+            <button class="hptab" id="hpTabTemp" type="button" role="tab" data-hpview="temp">Temporanei</button>
+            <button class="hptab on" id="hpTabDadi" type="button" role="tab" data-hpview="dadi">Dadi vita</button>
+            <button class="hptab" id="hpTabMorte" type="button" role="tab" data-hpview="morte">Tiri morte</button>
+          </div>
+          <div class="hpsub" id="hpSub"></div>
+        </div>
+        <button class="gear" id="gearHp" title="Massimo e riposo" aria-label="Massimo e riposo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
       <div class="spanel corepanel" id="corePanel">
@@ -414,6 +445,41 @@
       </div>
     </div>
 
+    <div class="modal" id="modalHp" hidden>
+      <div class="backdrop" data-close="hp"></div>
+      <div class="dialog centrata" id="dialogHp">
+        <div class="dlghead">
+          <h2>Punti ferita</h2>
+          <button class="dlgx" data-close="hp" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <div class="mech" id="hpDlgBody"></div>
+
+          <div class="este">
+            <div class="asplab">Colori della barra</div>
+            <p class="subhint">La barra usa questi colori secondo la vita: pieno di norma, oro sotto un quarto (25%), rosso sotto un decimo (10%). Sotto quelle soglie anche il numero dei punti attuali prende l&rsquo;oro e il rosso, per avvertire.</p>
+            <div class="row top"><span class="rowlab">Piena</span><div id="hpPienoPicker" class="picker"></div></div>
+            <div class="row top"><span class="rowlab">Ferito (25%)</span><div id="hpFeritoPicker" class="picker"></div></div>
+            <div class="row top"><span class="rowlab">Critico (10%)</span><div id="hpCriticoPicker" class="picker"></div></div>
+
+            <div class="asplab">Aspetto delle scritte</div>
+            <p class="hintsel">Tocca la scritta che vuoi cambiare. Il colore del numero dei punti attuali, quando la vita &egrave; piena, lo decidi qui.</p>
+            <div class="antepsel" id="antsel_hp"></div>
+            <div class="comandi" id="com_hp"></div>
+          </div>
+        </div>
+        <div class="dlgbar" id="barHp">
+          <button class="btn-reset" data-reset="Hp">Azzera</button>
+          <button class="btn-close" data-close="hp">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmHp" hidden>
+          <span class="cfmtxt">Riportare colori e scritte dei punti ferita com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Hp">Annulla</button>
+          <button class="btn-yes" data-yes="Hp">Azzera</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalTs" hidden>
       <div class="backdrop" data-close="ts"></div>
       <div class="dialog centrata" id="dialogTs">
@@ -578,6 +644,6 @@
 
   </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

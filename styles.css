@@ -173,6 +173,7 @@
   .lpanel{ flex:2 1 250px; }
   .ppanel{ flex:1 1 150px; }
   .cpanel{ flex:2 1 250px; }
+  .hpanel{ flex:1 1 100%; max-width:none; }
   .spanel{ flex:1 1 100%; max-width:none; }
   /* I tiri salvezza restano sulla loro riga ma non la riempiono: stanno a
      sinistra e tengono solo lo spazio che serve. */
@@ -186,6 +187,8 @@
      nel foglio e su quelle della versione telefono: qui comanda il riquadro. */
   .prow .lvnum{ font-size:clamp(30px, 19cqi, 44px); }
   .prow .profval{ font-size:clamp(30px, 46cqi, 44px); }
+  .prow .hpcur{ font-size:clamp(30px, 17cqi, 44px); }
+  .prow .hpmax{ font-size:clamp(19px, 10cqi, 26px); }
   .prow .cn{ font-size:clamp(19px, 13cqi, 30px); }
   .prow .ce{ width:clamp(26px, 17.5cqi, 40px); height:clamp(26px, 17.5cqi, 40px); }
   .prow .cl{ font-size:clamp(13px, 7.5cqi, 17px); }
@@ -310,6 +313,122 @@
     display:flex; flex-direction:column; justify-content:center;
   }
   .profval{ font-family:'Cinzel',Georgia,serif; font-size:44px; font-weight:700; color:var(--gold); line-height:1; margin-top:2px; }
+
+  /* ============ PANNELLO PUNTI FERITA ============ */
+  /* Una fascia a tutta larghezza tra i tre piccoli e le Caratteristiche. A
+     sinistra il nucleo sempre in vista (attuali/massimo, barra, Danno/Cura), a
+     destra tre linguette (Temporanei|Dadi vita|Tiri morte) che cambiano la
+     vista dentro il riquadro. Su schermi stretti le due colonne si impilano. */
+  .hpanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 68px 16px 22px; max-width:100%;
+    display:flex; align-items:stretch; gap:22px; flex-wrap:wrap;
+  }
+  .hpmain{ flex:1 1 240px; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+  .hpaside{ flex:1 1 260px; min-width:0; display:flex; flex-direction:column; gap:10px;
+    padding-left:22px; border-left:1px solid var(--line); }
+  .hptop{ display:flex; align-items:baseline; gap:5px; line-height:1; flex-wrap:wrap; }
+  .hpcur{ font-family:'Cinzel',Georgia,serif; font-size:44px; font-weight:700; color:var(--gold); }
+  .hpslash{ font-size:22px; color:var(--muted); }
+  .hpmax{ font-family:'Cinzel',Georgia,serif; font-size:26px; font-weight:700; color:var(--muted); }
+  .hptemp{ margin-left:8px; font-size:13px; font-weight:600; color:var(--violet); align-self:center;
+    border:1px solid rgba(124,92,255,.5); background:rgba(124,92,255,.12); border-radius:99px; padding:2px 9px; }
+  .hptemp i{ font-style:normal; opacity:.7; font-size:11px; }
+  .hpbar{ width:100%; min-width:170px; height:8px; background:var(--panel2); border:1px solid var(--line);
+    border-radius:99px; overflow:hidden; margin:11px 0 12px; }
+  /* il colore lo mette dipingiSaluteHp (inline), qui solo un verde di base per il
+     primo istante prima che il JS dipinga */
+  .hpfill{ height:100%; background:#57c46a; border-radius:99px; transition:width .25s, background .25s; }
+  .hprow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .hpin{ background:var(--panel2); border:1px solid var(--line); color:var(--ink); border-radius:9px;
+    padding:8px 10px; font-family:ui-monospace,Consolas,monospace; font-size:15px; width:72px; text-align:right; }
+  .hpin:focus{ border-color:var(--violet); outline:none; }
+  .hpbtn{ border:1px solid var(--line); background:var(--panel2); color:var(--ink); border-radius:9px;
+    padding:8px 14px; font-size:13px; cursor:pointer; font-family:var(--ui); transition:.12s; }
+  .hpbtn.dmg:hover:not(:disabled){ border-color:var(--danger); color:var(--danger); }
+  .hpbtn.heal:hover:not(:disabled){ border-color:#57c46a; color:#57c46a; }
+  .hpbtn:disabled, .hpin:disabled{ opacity:.5; cursor:default; }
+  .hphint{ font-size:11.5px; color:var(--gold); margin-top:9px; line-height:1.4; }
+
+  /* le linguette del riquadro PF, sorelle di quelle di Caratteristiche */
+  .hptabs{ display:flex; gap:4px; }
+  .hptab{ flex:1 1 0; min-width:0; border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:9px; padding:7px 6px; font-family:var(--ui); font-size:12px; cursor:pointer; transition:.12s;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hptab:hover{ color:var(--ink); border-color:var(--violet); }
+  .hptab.on{ color:#fff; border-color:transparent; background:linear-gradient(150deg,var(--violet-2),#5b45c9); font-weight:600; }
+  .hptab.urge:not(.on){ color:var(--danger); border-color:rgba(229,104,109,.55); }
+  .hpsub{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; }
+  .hpsublab{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+  .hpsubrow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .hpsubnote{ font-size:11px; color:var(--muted); line-height:1.45; margin-top:9px; }
+  .hplink{ border:0; background:none; color:var(--violet); font-family:var(--ui); font-size:11px;
+    cursor:pointer; padding:0; text-decoration:underline; }
+  .hplink:hover{ color:var(--gold); }
+
+  /* tiri salvezza contro la morte: tre pallini pieni/vuoti per parte */
+  .hpdeath{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .hpdeath .dlab{ font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); width:74px; }
+  .hpdeath .dlab.succ{ color:#57c46a; }
+  .hpdeath .dlab.fail{ color:var(--danger); }
+  .dpips{ display:inline-flex; gap:5px; }
+  .dpip{ width:16px; height:16px; border-radius:50%; border:1.6px solid var(--line);
+    background:transparent; cursor:pointer; padding:0; transition:.12s; }
+  .dpip:disabled{ cursor:default; }
+  .dpip.succ:hover:not(:disabled), .dpip.succ.on{ border-color:#57c46a; }
+  .dpip.succ.on{ background:#57c46a; }
+  .dpip.fail:hover:not(:disabled), .dpip.fail.on{ border-color:var(--danger); }
+  .dpip.fail.on{ background:var(--danger); }
+
+  /* dadi vita, nella finestra */
+  .subval{ font-size:12px; color:var(--muted); }
+  .subval b{ color:var(--ink); font-family:ui-monospace,Consolas,monospace; }
+  .dvlist{ display:flex; flex-direction:column; gap:8px; margin:2px 0 8px; }
+  .dvrow{ display:flex; align-items:center; gap:10px; }
+  .dvname{ font-family:'Cinzel',Georgia,serif; font-size:16px; color:var(--ink); width:64px; }
+  .dvbtn{ width:30px; height:30px; border:1px solid var(--line); background:var(--panel2); color:var(--ink);
+    border-radius:8px; font-size:17px; line-height:1; cursor:pointer; }
+  .dvbtn:hover:not(:disabled){ border-color:var(--violet); color:var(--violet); }
+  .dvbtn:disabled{ opacity:.4; cursor:default; }
+  .dvcount{ font-size:14px; color:var(--muted); min-width:52px; }
+  .dvcount b{ color:var(--ink); font-family:ui-monospace,Consolas,monospace; font-size:16px; }
+  /* quando il riquadro si stringe, le due colonne si impilano: il filo di
+     separazione passa da sinistra a sopra. */
+  @container (max-width: 560px){
+    .hpaside{ border-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:14px; }
+  }
+
+  /* ============ MORTE E STATI A TERRA ============ */
+  /* La scheda sbiadisce dolcemente man mano che cali; il colore lo mette il JS
+     (filter inline), qui solo la transizione morbida. */
+  #header, .prow{ transition:filter .6s ease; }
+  /* stati nel riquadro PF */
+  .hpstato{ font-size:12px; line-height:1.4; margin-bottom:9px; }
+  .hpstato.morto{ color:var(--danger); font-weight:600; }
+  .hpstato.stabile{ color:#57c46a; }
+  .hpanel.morto .hpslash, .hpanel.morto .hpmax, .hpanel.morto .hptemp{ display:none; }
+  .hpanel.morto .hpcur{ font-size:40px; color:#8a8894; }
+
+  /* Banner "MORTO" stile Elden Ring: una fascia scura al centro dello schermo
+     con la scritta serif, sopra la scheda ridotta in cenere. Vive fuori dal
+     filtro, quindi resta a colori. */
+  #hpBanner{ position:fixed; inset:0; z-index:80; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:22px; pointer-events:none;
+    opacity:0; visibility:hidden; transition:opacity .9s ease, visibility .9s ease; }
+  #hpBanner.on{ opacity:1; visibility:visible; }
+  .hpb-band{ width:100%; padding:32px 0; text-align:center;
+    background:linear-gradient(90deg, transparent, rgba(6,5,9,.85) 16%, rgba(6,5,9,.85) 84%, transparent);
+    border-top:1px solid rgba(224,177,94,.45); border-bottom:1px solid rgba(224,177,94,.45);
+    box-shadow:0 0 70px rgba(0,0,0,.75); transform:scale(1.14); transition:transform 1.2s ease; }
+  #hpBanner.on .hpb-band{ transform:scale(1); }
+  .hpb-word{ font-family:'Cinzel',Georgia,serif; font-weight:700; letter-spacing:.16em;
+    font-size:clamp(46px, 12vw, 118px); color:#c0302c;
+    text-shadow:0 2px 28px rgba(192,48,44,.5), 0 0 2px rgba(0,0,0,.9); }
+  .hpb-revive{ pointer-events:auto; border:1px solid rgba(224,177,94,.6); background:rgba(20,18,26,.88);
+    color:var(--gold); font-family:var(--ui); font-size:14px; padding:11px 22px; border-radius:11px;
+    cursor:pointer; transition:.15s; }
+  .hpb-revive:hover{ border-color:var(--gold); background:rgba(224,177,94,.14); }
+  .hpb-revive:disabled{ opacity:.45; cursor:default; }
 
   /* ============ PANNELLO TIRI SALVEZZA ============ */
   /* Un favo: sei esagoni attorno a un d20. Le posizioni sono le stesse del
@@ -690,6 +809,7 @@
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }
+    .hpanel{ min-width:0; width:100%; padding-right:56px; }
     .tspanel{ min-width:0; width:100%; padding-right:56px; }
     .apanel{ min-width:0; width:100%; padding-right:56px; }
     .abilgrid, .abilsel{ grid-template-columns:1fr; }

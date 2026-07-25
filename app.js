@@ -157,6 +157,14 @@ var state={
   tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
   nomiClasse:{},   // stile del nome, per ogni classe (chiave = classe)
   simboli:{},      // colore e neon del simbolo, per ogni classe
+  pfAttuali:null,   // punti ferita attuali (null = pieni, non ancora toccati)
+  pfTemp:0,         // punti ferita temporanei (riserva che si consuma per prima)
+  pfScostamento:0,  // ritocco a mano del massimo: max = media calcolata + scostamento
+  dvSpesi:{},       // dadi vita spesi, per taglia del dado: {"8":n, "10":n, ...}
+  morteS:0, morteF:0,   // tiri salvezza contro la morte: successi / fallimenti (0..3)
+  hpColorPieno:"#57C46A",   // barra e numero PF: colore quando la vita e' piena
+  hpColorFerito:"#E0B15E",  // colore sotto un quarto della vita (25%)
+  hpColorCritico:"#E5686D", // colore sotto un decimo della vita (10%) o a 0
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -519,7 +527,11 @@ var TESTI=[
   { id:"nomeAbil",  dove:"abil",  nome:"Nome dell'abilit\u00E0",    sel:".abnome",              font:"",       colore:"#E8E6F0" },
   { id:"valAbil",   dove:"abil",  nome:"Valore",               sel:".abval",               font:"cinzel", colore:"#E0B15E" },
   { id:"etPP",      dove:"abil",  nome:"Etichetta passiva",    sel:".ppet",                font:"",       colore:"#9A97AD" },
-  { id:"valPP",     dove:"abil",  nome:"Valore passivo",       sel:".ppval",               font:"cinzel", colore:"#E8E6F0" }
+  { id:"valPP",     dove:"abil",  nome:"Valore passivo",       sel:".ppval",               font:"cinzel", colore:"#E8E6F0" },
+  { id:"etPf",      dove:"hp",    nome:"Etichetta",            sel:"#hpPanel .eyebrow",     font:"",       colore:"#9A97AD" },
+  { id:"numPf",     dove:"hp",    nome:"Punti attuali",        sel:"#hpCur",                font:"cinzel", colore:"#57C46A" },
+  { id:"maxPf",     dove:"hp",    nome:"Massimo",              sel:"#hpMax",                font:"cinzel", colore:"#9A97AD" },
+  { id:"tempPf",    dove:"hp",    nome:"Temporanei",           sel:"#hpTemp",               font:"",       colore:"#A78BFA" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -542,6 +554,7 @@ var DEF_NAME={ font:"cinzel", size:40, align:"left", bold:true, italic:false, un
   smallcaps:false, neon:false, dropcap:false, upper:false, label:true,
   nameColor:"#E8E6F0", capColor:"#E0B15E", emblemMode:"auto" };
 var DEF_XP={ xpStyle:"grad", xpColor1:"#7C5CFF", xpColor2:"#E0B15E" };
+var DEF_HP={ hpColorPieno:"#57C46A", hpColorFerito:"#E0B15E", hpColorCritico:"#E5686D" };
 
 state.testi = testiDiPartenza();
 state.stats = statsDiPartenza();
@@ -551,7 +564,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -584,6 +597,11 @@ function applicaDati(o){
   else state.tsCompColor="#E0B15E";
   if(typeof o.tsDadoColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.tsDadoColor)) state.tsDadoColor=o.tsDadoColor;
   else state.tsDadoColor="#A78BFA";
+  // i tre colori "salute" della barra dei punti ferita: se mancano o sono
+  // scritti male, tornano ai valori standard (verde / oro / rosso).
+  ["hpColorPieno","hpColorFerito","hpColorCritico"].forEach(function(k){
+    state[k] = (typeof o[k]==="string" && /^#[0-9a-fA-F]{6}$/.test(o[k])) ? o[k] : DEF_HP[k];
+  });
 
   // le scritte si travasano una per una invece di copiare l'oggetto intero:
   // una scheda vecchia non ce l'ha, una nuova potrebbe averne di piu'
@@ -654,6 +672,19 @@ function applicaDati(o){
   });
   sel.class=null;
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
+
+  // Punti ferita: attuali, temporanei, ritocco del massimo, dadi vita spesi e
+  // tiri contro la morte. Il massimo non si salva (si ricalcola dai dadi vita).
+  state.pfScostamento = (typeof o.pfScostamento==="number" && isFinite(o.pfScostamento)) ? Math.round(o.pfScostamento) : 0;
+  state.pfAttuali = (typeof o.pfAttuali==="number" && isFinite(o.pfAttuali)) ? Math.round(o.pfAttuali) : null;
+  state.pfTemp = (typeof o.pfTemp==="number" && isFinite(o.pfTemp) && o.pfTemp>0) ? Math.round(o.pfTemp) : 0;
+  state.dvSpesi = {};
+  if(o.dvSpesi && typeof o.dvSpesi==="object"){
+    [6,8,10,12].forEach(function(d){ var v=o.dvSpesi[d]; if(typeof v==="number" && isFinite(v) && v>0) state.dvSpesi[d]=Math.round(v); });
+  }
+  state.morteS = (typeof o.morteS==="number" && o.morteS>0) ? Math.min(3, Math.round(o.morteS)) : 0;
+  state.morteF = (typeof o.morteF==="number" && o.morteF>0) ? Math.min(3, Math.round(o.morteF)) : 0;
+
   elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
 /* Impacchetta lo stato per il database */
@@ -663,6 +694,8 @@ function datiDaSalvare(){
   o.abilita=abilitaDaSalvare();
   o.testi=state.testi; o.stats=state.stats;
   o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
+  o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
+  o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
   return o;
 }
 
@@ -848,6 +881,124 @@ function totalLevel(){ return levelFromXP(state.xp); }
 function assignedLevels(){ return state.classes.reduce(function(s,c){ return s+c.level; },0); }
 function freeLevels(){ return totalLevel()-assignedLevels(); }
 function has(key){ return state.classes.some(function(c){ return c.key===key; }); }
+
+/* ================= PUNTI FERITA =================
+   Il massimo nasce dai dadi vita delle classi + Costituzione, col metodo "media"
+   del manuale: il PRIMO livello (della classe iniziale) prende il dado pieno,
+   ogni altro livello la media del suo dado; ogni livello vale almeno 1. E' solo
+   un suggerimento: il giocatore puo' ritoccarlo a mano, e si salva soltanto lo
+   scostamento dal calcolo (cosi' segue comunque i cambi di livello e Costituzione).
+   Il massimo NON si salva (si ricalcola); si salvano attuali, temporanei, dadi
+   vita spesi e i tiri contro la morte. */
+function avgDado(d){ return Math.floor(d/2)+1; }   // d6->4, d8->5, d10->6, d12->7
+
+function pfMedia(){
+  if(!state.classes.length) return 0;
+  var conMod=modCar("cos"), iniz=classeTs(), tot=0, primoFatto=false;
+  state.classes.forEach(function(c){
+    var die=(BY_KEY[c.key] && BY_KEY[c.key].die) || 8;
+    for(var i=0;i<c.level;i++){
+      var pieno = (!primoFatto && c.key===iniz);   // il primissimo livello della classe iniziale
+      if(pieno) primoFatto=true;
+      tot += Math.max(1, (pieno?die:avgDado(die)) + conMod);   // mai meno di 1 per livello
+    }
+  });
+  return tot;
+}
+function pfMax(){ return state.classes.length ? Math.max(1, pfMedia()+(state.pfScostamento||0)) : 0; }
+/* Attuali validi e dentro i limiti; se mai impostati, la scheda parte piena. */
+function pfAttualiVal(){
+  var m=pfMax(), v=state.pfAttuali;
+  if(typeof v!=="number" || !isFinite(v)) return m;
+  return Math.max(0, Math.min(m, Math.round(v)));
+}
+function pfTempVal(){ var v=state.pfTemp; return (typeof v==="number"&&isFinite(v)&&v>0)?Math.round(v):0; }
+
+/* I dadi vita, raggruppati per taglia (classi diverse con lo stesso dado si
+   sommano). Ogni voce: taglia del dado, totale (= livelli con quel dado) e spesi. */
+function dadiVitaPool(){
+  var per={};
+  state.classes.forEach(function(c){
+    var die=(BY_KEY[c.key] && BY_KEY[c.key].die) || 8;
+    per[die]=(per[die]||0)+c.level;
+  });
+  return Object.keys(per).map(Number).sort(function(a,b){ return a-b; }).map(function(d){
+    var tot=per[d], sp=Math.max(0, Math.min(tot, Math.round((state.dvSpesi&&state.dvSpesi[d])||0)));
+    return { die:d, tot:tot, spesi:sp, liberi:tot-sp };
+  });
+}
+/* La "salute": pieno finche' stai sopra un quarto della vita, ferito sotto il
+   25%, critico sotto il 10% (e a 0). Da qui nascono il colore della barra e
+   quello del numero dei punti attuali quando cala. */
+function saluteHp(){
+  if(!state.classes.length) return "pieno";
+  var max=pfMax(), cur=pfAttualiVal();
+  if(cur<=0) return "critico";
+  if(max<=0) return "pieno";
+  var r=cur/max;
+  if(r<=0.10) return "critico";
+  if(r<=0.25) return "ferito";
+  return "pieno";
+}
+function coloreSaluteHp(st){
+  var k = st==="critico" ? "hpColorCritico" : (st==="ferito" ? "hpColorFerito" : "hpColorPieno");
+  return /^#[0-9a-fA-F]{6}$/.test(state[k]||"") ? state[k] : DEF_HP[k];
+}
+/* Dipinge la barra e, quando la vita cala, tinge il numero dei punti attuali di
+   oro/rosso per avvertire (a vita piena resta il suo colore, deciso dalle
+   scritte). Va chiamata come ultimo tocco, dopo applicaTesti. */
+function dipingiSaluteHp(){
+  var fill=document.getElementById("hpFill"), cur=document.getElementById("hpCur");
+  if(!fill) return;
+  var noCl=!state.classes.length, st=saluteHp(), col=coloreSaluteHp(st);
+  fill.style.background = noCl ? "" : col;
+  if(cur && !noCl && st!=="pieno"){ cur.style.color=col; cur.style.fill=col; }
+}
+
+/* Lo stato mortale del personaggio, dai tiri contro la morte quando sei a 0:
+   "morente" (stai tirando), "stabile" (tre successi), "morto" (tre fallimenti).
+   Sopra 0 sei "vivo". */
+function statoMortale(){
+  if(!state.classes.length || pfAttualiVal()>0) return "vivo";
+  if((state.morteF||0)>=3) return "morto";
+  if((state.morteS||0)>=3) return "stabile";
+  return "morente";
+}
+/* Quanto la scheda e' sbiadita: 0 colori pieni, 1 grigio cenere. A 0 PF una
+   leggera velatura; ogni fallimento spegne di piu', ogni successo ridA colore.
+   La cenere piena (1) e' riservata alla morte vera. */
+function progressoMorte(){
+  var st=statoMortale();
+  if(st==="morto") return 1;
+  if(st==="stabile" || st==="vivo") return 0;
+  var g = 0.15 + 0.28*(state.morteF||0) - 0.13*(state.morteS||0);
+  return Math.max(0, Math.min(0.92, g));
+}
+/* Sbiadisce la scheda (header + riquadri), accende il banner "MORTO" e mette il
+   teschio negli HP. I modali e il banner restano fuori dal filtro, cosi' non si
+   incasinano e il banner resta a colori sopra la cenere. */
+function aggiornaMortalita(){
+  var st=statoMortale(), g=progressoMorte();
+  var filtro = g>0 ? "grayscale("+g.toFixed(3)+") brightness("+(1-0.22*g).toFixed(3)+")" : "";
+  var head=document.getElementById("header"), prow=document.querySelector("#paneScheda .prow");
+  if(head) head.style.filter=filtro;
+  if(prow) prow.style.filter=filtro;
+  var banner=document.getElementById("hpBanner");
+  if(banner) banner.classList.toggle("on", st==="morto");
+  var hp=document.getElementById("hpPanel");
+  if(hp){ hp.classList.toggle("morto", st==="morto"); hp.classList.toggle("stabile", st==="stabile"); }
+  var cur=document.getElementById("hpCur");
+  if(cur && st==="morto") cur.textContent="☠";   // teschio al posto del numero
+  var rev=document.getElementById("hpRevive"); if(rev) rev.disabled=soloLettura;
+}
+/* Riporta in vita: un punto ferita e tiri contro la morte azzerati (l'esito di
+   una magia come Rincuorare). La scheda torna a colori da sola. */
+function rianima(){
+  if(soloLettura || !state.classes.length) return;
+  state.pfAttuali=1; state.morteS=0; state.morteF=0;
+  vistaHp="dadi";
+  renderAll(); aggiornaSalva();
+}
 
 function emblemKeys(){
   if(state.emblemMode==="auto") return state.classes.map(function(c){ return c.key; });
@@ -1102,6 +1253,14 @@ function doReset(which){
       abilFermo=true;
       try{ abilCarPicker.setHex(colCar(document.getElementById("abilCarSel").value||"for")); }
       finally{ abilFermo=false; }
+    }
+  } else if(which==="Hp"){
+    azzeraTesti("hp");     // solo l'aspetto: numeri, temporanei e dadi vita restano
+    for(var h in DEF_HP){ state[h]=DEF_HP[h]; }
+    if(typeof hpPienoPicker!=="undefined" && hpPienoPicker){
+      hpFermo=true;
+      try{ hpPienoPicker.setHex(state.hpColorPieno); hpFeritoPicker.setHex(state.hpColorFerito); hpCriticoPicker.setHex(state.hpColorCritico); }
+      finally{ hpFermo=false; }
     }
   }
   cancelReset(which);
@@ -1454,7 +1613,8 @@ var ASP_CONT={
   stats:{ ant:"antsel_stats", com:"com_stats" },
   prof: { ant:"antsel_prof",  com:"com_prof" },
   ts:   { ant:"antsel_ts",    com:"com_ts" },
-  abil: { ant:"antsel_abil",  com:"com_abil" }
+  abil: { ant:"antsel_abil",  com:"com_abil" },
+  hp:   { ant:"antsel_hp",    com:"com_hp" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
@@ -1464,7 +1624,8 @@ var CAMPIONI={
   etProf:{t:"COMPETENZA",cls:"apmid"}, valProf:{t:"+3",cls:"apbig"},
   siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
-  etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"}
+  etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"},
+  etPf:{t:"PUNTI FERITA",cls:"apsmall"}, numPf:{t:"27",cls:"apbig"}, maxPf:{t:"31",cls:"apmid"}, tempPf:{t:"+5",cls:"apmid"}
 };
 
 function targetValido(dove,key){
@@ -1629,6 +1790,13 @@ function sincronizzaExtra(dove){
       try{ abilCarPicker.setHex(colCar((sel&&sel.value)||"for")); } finally{ abilFermo=false; }
     }
   }
+  if(dove==="hp"){
+    if(typeof hpPienoPicker!=="undefined" && hpPienoPicker){
+      hpFermo=true;
+      try{ hpPienoPicker.setHex(state.hpColorPieno); hpFeritoPicker.setHex(state.hpColorFerito); hpCriticoPicker.setHex(state.hpColorCritico); }
+      finally{ hpFermo=false; }
+    }
+  }
 }
 function sincronizzaSel(dove){ disegnaAntepSel(dove); costruisciComandi(dove); sincronizzaExtra(dove); }
 function sincronizzaClasse(){ sincronizzaSel("class"); }   // alias, la finestra Classe lo chiama ancora
@@ -1642,10 +1810,11 @@ function apertaAspetto(){
   if(typeof modalProf!=="undefined" && modalProf && !modalProf.hidden) return "prof";
   var mt=document.getElementById("modalTs"); if(mt && !mt.hidden) return "ts";
   var ma=document.getElementById("modalAbil"); if(ma && !ma.hidden) return "abil";
+  var mh=document.getElementById("modalHp"); if(mh && !mh.hidden) return "hp";
   return null;
 }
 (function(){
-  ["name","xp","class","stats","prof","ts","abil"].forEach(function(dove){
+  ["name","xp","class","stats","prof","ts","abil","hp"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -1683,10 +1852,13 @@ function applicaTesti(){
       }
     }
   });
+  dipingiSaluteHp();     // barra e numero PF secondo la salute
+  aggiornaMortalita();   // e la sbiadita/il banner/il teschio se sei a terra
 }
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
-  renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog(); apply(); setHub(null);
+  renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
+  renderHp(); renderHpDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
 
 FONT_GROUPS.forEach(function(g){
@@ -1745,10 +1917,12 @@ function openXp(){ modalXp.hidden=false; renderXpDialog(); if(personalizza) sinc
 function openProf(){ modalProf.hidden=false; renderProfDialog(); if(personalizza) sincronizzaSel("prof"); }
 function openTs(){ document.getElementById("modalTs").hidden=false; renderTsDialog(); if(personalizza) sincronizzaSel("ts"); }
 function openAbil(){ document.getElementById("modalAbil").hidden=false; renderAbilDialog(); if(personalizza) sincronizzaSel("abil"); }
+function openHp(){ document.getElementById("modalHp").hidden=false; renderHpDialog(); if(personalizza) sincronizzaSel("hp"); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; modalProf.hidden=true;
   document.getElementById("modalStats").hidden=true;
   document.getElementById("modalTs").hidden=true;
   document.getElementById("modalAbil").hidden=true;
+  var mh=document.getElementById("modalHp"); if(mh) mh.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
@@ -1763,6 +1937,7 @@ document.getElementById("gearProf").addEventListener("click", openProf);
    vista attiva, e la "i" compare solo sulle Abilita'. */
 var vistaCore="stats";
 var animandoCore=false;   // un cambio di vista alla volta, non si accavallano
+var vistaHp="dadi";       // linguetta attiva nel riquadro Punti ferita (non si salva): "temp"|"dadi"|"morte"
 
 /* MORPH (transizione "smontaggio") — tappa 1.
    Il ragno delle Caratteristiche si smonta: gli esagoni interni e il poligono
@@ -2667,6 +2842,10 @@ var abilCarPicker=makePicker(document.getElementById("abilCarPicker"), colCar("f
 var capPicker=makePicker(document.getElementById("capPicker"), state.capColor, function(hex){ state.capColor=hex; apply(); });
 var xpPicker1=makePicker(document.getElementById("xpPicker1"), state.xpColor1, function(hex){ state.xpColor1=hex; renderLevel(); });
 var xpPicker2=makePicker(document.getElementById("xpPicker2"), state.xpColor2, function(hex){ state.xpColor2=hex; renderLevel(); });
+var hpFermo=false;
+var hpPienoPicker=makePicker(document.getElementById("hpPienoPicker"), state.hpColorPieno, function(hex){ if(hpFermo) return; state.hpColorPieno=hex; dipingiSaluteHp(); aggiornaSalva(); });
+var hpFeritoPicker=makePicker(document.getElementById("hpFeritoPicker"), state.hpColorFerito, function(hex){ if(hpFermo) return; state.hpColorFerito=hex; dipingiSaluteHp(); aggiornaSalva(); });
+var hpCriticoPicker=makePicker(document.getElementById("hpCriticoPicker"), state.hpColorCritico, function(hex){ if(hpFermo) return; state.hpColorCritico=hex; dipingiSaluteHp(); aggiornaSalva(); });
 buildWheel();
 
 /* Riallinea tutti i comandi allo stato appena caricato */
@@ -3319,4 +3498,192 @@ function avvia(){
     console.error(e);
   });
 }
+
+/* ================= PUNTI FERITA — disegno e comandi =================
+   Il riquadro sta sopra Caratteristiche. A sinistra, sempre in vista,
+   attuali/massimo, la barra e i pulsanti Danno/Cura (le cose più usate). A
+   destra tre linguette che cambiano la vista dentro il riquadro (come
+   Caratteristiche|Abilità): Temporanei, Dadi vita, Tiri morte; a 0 punti salta
+   da sola su Tiri morte. La rotella tiene solo la roba "interna": il ritocco del
+   massimo e il riposo lungo. Tutto passa da renderAll + aggiornaSalva. */
+function pipsMorteTipo(tipo){
+  var n = tipo==="s" ? (state.morteS||0) : (state.morteF||0), cls=tipo==="s"?"succ":"fail", out="";
+  for(var i=0;i<3;i++){
+    out+='<button class="dpip '+cls+(i<n?' on':'')+'" type="button" data-death="'+tipo+'" data-i="'+i+'"'
+       + (soloLettura?' disabled':'')+' aria-label="'+(tipo==="s"?"Successo":"Fallimento")+' '+(i+1)+'"></button>';
+  }
+  return out;
+}
+
+function leggiAmt(){ var el=document.getElementById("hpAmt"); var n=Math.abs(parseInt(el&&el.value,10)); return (isFinite(n)&&n>0)?n:0; }
+function dopoModificaPf(){ var el=document.getElementById("hpAmt"); if(el) el.value=""; renderAll(); aggiornaSalva(); }
+function applicaDanno(n){
+  if(!n) return;
+  var t=pfTempVal(), tolt=Math.min(t,n);
+  if(tolt) state.pfTemp=t-tolt;                       // il danno mangia prima i temporanei
+  state.pfAttuali=Math.max(0, pfAttualiVal()-(n-tolt));
+  if(state.pfAttuali===0) vistaHp="morte";            // a terra: mostra subito i tiri contro la morte
+  dopoModificaPf();
+}
+function applicaCura(n){
+  if(!n) return;
+  state.pfAttuali=Math.min(pfMax(), pfAttualiVal()+n);
+  if(state.pfAttuali>0){ state.morteS=0; state.morteF=0; }   // sopra 0 sei stabile: i tiri si azzerano
+  dopoModificaPf();
+}
+function impostaMax(v){
+  if(!isFinite(v)) { renderHpDialog(); return; }
+  state.pfScostamento = Math.max(1,Math.round(v)) - pfMedia();   // si salva solo la differenza dal calcolo
+  if(typeof state.pfAttuali==="number" && state.pfAttuali>pfMax()) state.pfAttuali=pfMax();
+  renderAll(); aggiornaSalva();
+}
+function setMorte(tipo,i){
+  var key = tipo==="s" ? "morteS" : "morteF", cur=state[key]||0;
+  state[key] = (cur===i+1) ? i : i+1;    // clic sull'ultimo pieno lo svuota
+  renderAll(); aggiornaSalva();
+}
+function spendiDado(die){
+  var p=dadiVitaPool().filter(function(x){ return x.die===die; })[0];
+  if(!p || p.liberi<=0) return;
+  state.dvSpesi[die]=Math.round(state.dvSpesi[die]||0)+1;
+  renderAll(); aggiornaSalva();
+}
+function recuperaDado(die){
+  var sp=Math.round((state.dvSpesi&&state.dvSpesi[die])||0);
+  if(sp<=0) return;
+  if(sp-1<=0) delete state.dvSpesi[die]; else state.dvSpesi[die]=sp-1;
+  renderAll(); aggiornaSalva();
+}
+/* Riposo lungo (dal manuale): punti al massimo, via i temporanei e i tiri
+   contro la morte, e si recupera metà dei dadi vita totali (minimo 1), a
+   partire dai dadi più grossi. */
+function riposoLungo(){
+  if(!state.classes.length) return;
+  state.pfAttuali=pfMax(); state.pfTemp=0; state.morteS=0; state.morteF=0;
+  var pool=dadiVitaPool(), tot=pool.reduce(function(s,p){ return s+p.tot; },0);
+  var recup=Math.max(1, Math.floor(tot/2));
+  pool.slice().sort(function(a,b){ return b.die-a.die; }).forEach(function(p){
+    if(recup<=0) return;
+    var giu=Math.min(recup, p.spesi);
+    if(giu>0){ var n=p.spesi-giu; if(n<=0) delete state.dvSpesi[p.die]; else state.dvSpesi[p.die]=n; recup-=giu; }
+  });
+  renderAll(); aggiornaSalva();
+}
+function mostraVistaHp(v){ if(v==="temp"||v==="dadi"||v==="morte"){ vistaHp=v; renderHp(); } }
+
+/* Le tre sotto-viste del riquadro (dentro #hpSub). */
+function subTemp(){
+  var ro=soloLettura?" disabled":"";
+  return '<div class="hpsublab">Temporanei</div>'
+    +'<div class="hpsubrow"><input class="hpin" type="number" id="hpTempIn" min="0" step="1" value="'+pfTempVal()+'"'+ro+' aria-label="Punti ferita temporanei" />'
+    +'<button class="hpbtn" type="button" data-hptemp="zero"'+ro+'>Azzera</button></div>'
+    +'<div class="hpsubnote">Riserva a parte: si consuma prima dei punti veri e non si cura. Non si somma: si tiene la più alta.</div>';
+}
+function subDadi(){
+  var h='<div class="hpsublab">Dadi vita</div><div class="dvlist">';
+  dadiVitaPool().forEach(function(p){
+    h+='<div class="dvrow"><span class="dvname">'+p.tot+'d'+p.die+'</span>'
+      +'<button class="dvbtn" type="button" data-dv="spend" data-die="'+p.die+'"'+((soloLettura||p.liberi<=0)?' disabled':'')+' aria-label="Spendi un d'+p.die+'">−</button>'
+      +'<span class="dvcount"><b>'+p.liberi+'</b> / '+p.tot+'</span>'
+      +'<button class="dvbtn" type="button" data-dv="recover" data-die="'+p.die+'"'+((soloLettura||p.spesi<=0)?' disabled':'')+' aria-label="Recupera un d'+p.die+'">+</button></div>';
+  });
+  h+='</div><div class="hpsubnote">Spendine con un riposo breve per curarti (poi applichi la cura col pulsante Cura), recuperali col riposo lungo.</div>';
+  return h;
+}
+function subMorte(){
+  var ro=soloLettura?" disabled":"", st=statoMortale(), testa="";
+  if(st==="morto") testa='<div class="hpstato morto">☠ Il personaggio è morto.'+(soloLettura?'':' <button class="hplink" type="button" data-hprianima>Riporta in vita</button>')+'</div>';
+  else if(st==="stabile") testa='<div class="hpstato stabile">Stabile: privo di sensi ma fuori pericolo. Ti riprendi con una cura o un riposo.</div>';
+  return '<div class="hpsublab">Tiri contro la morte</div>'
+    + testa
+    +'<div class="hpdeath"><span class="dlab succ">Successi</span><span class="dpips">'+pipsMorteTipo("s")+'</span></div>'
+    +'<div class="hpdeath"><span class="dlab fail">Fallimenti</span><span class="dpips">'+pipsMorteTipo("f")+'</span></div>'
+    +'<div class="hpsubnote">Si tirano a 0 punti: tre successi e sei stabile, tre fallimenti e muori. Curarti sopra 0 li azzera.'
+    +((state.morteS||state.morteF)?' <button class="hplink" type="button" data-hpreset="morte"'+ro+'>Azzera</button>':'')+'</div>';
+}
+
+function renderHp(){
+  var host=document.getElementById("hpPanel"); if(!host) return;
+  var noCl=!state.classes.length, max=pfMax(), cur=pfAttualiVal(), temp=pfTempVal();
+  var g=function(id){ return document.getElementById(id); };
+  var elCur=g("hpCur"), elMax=g("hpMax"), elTemp=g("hpTemp"), elFill=g("hpFill"),
+      elHint=g("hpHint"), elAmt=g("hpAmt"), elDmg=g("hpDmg"), elHeal=g("hpHeal"), elSub=g("hpSub");
+  if(elCur) elCur.textContent = noCl?"—":cur;
+  if(elMax) elMax.textContent = noCl?"—":max;
+  if(elTemp){ elTemp.hidden = temp<=0; elTemp.innerHTML = "+"+temp+' <i>tmp</i>'; }
+  if(elFill) elFill.style.width = (max>0? Math.round(cur/max*100):0)+"%";
+  // il colore di barra e numero lo mette dipingiSaluteHp (in coda ad applicaTesti)
+  var bloc = noCl || soloLettura;
+  [elAmt,elDmg,elHeal].forEach(function(e){ if(e) e.disabled=bloc; });
+  if(elHint){ elHint.hidden=!noCl; if(noCl) elHint.textContent="Scegli una classe: i punti ferita nascono dai suoi dadi vita."; }
+
+  // linguette: attiva quella giusta; "Tiri morte" si segnala quando sei a 0
+  var giu = !noCl && cur===0;
+  host.querySelectorAll("[data-hpview]").forEach(function(t){
+    var v=t.getAttribute("data-hpview");
+    t.classList.toggle("on", v===vistaHp);
+    t.classList.toggle("urge", v==="morte" && giu);
+  });
+  if(elSub){
+    if(noCl) elSub.innerHTML="";
+    else if(vistaHp==="temp") elSub.innerHTML=subTemp();
+    else if(vistaHp==="morte") elSub.innerHTML=subMorte();
+    else elSub.innerHTML=subDadi();
+  }
+}
+
+function renderHpDialog(){
+  var host=document.getElementById("hpDlgBody"); if(!host) return;
+  if(!state.classes.length){
+    host.innerHTML='<p class="hint">Per i punti ferita serve almeno una classe: il massimo nasce dai suoi dadi vita e dalla Costituzione. Aggiungi una classe nel riquadro Classe, poi torna qui.</p>';
+    return;
+  }
+  var media=pfMedia(), max=pfMax(), scost=state.pfScostamento||0, ro=soloLettura?" disabled":"", h="";
+  h+='<p class="hint">Il massimo dei punti ferita nasce dai dadi vita delle tue classi più la Costituzione (metodo “media” del manuale: il primo livello prende il dado pieno). Puoi ritoccarlo a mano: si salva solo la differenza dal calcolo, così segue comunque i cambi di livello e Costituzione.</p>';
+  h+='<div class="row"><span class="rowlab">Massimo</span>'
+    +'<input class="hpin" type="number" id="hpMaxIn" min="1" step="1" value="'+max+'"'+ro+' />'
+    +'<span class="subval">calcolato: <b>'+media+'</b>'+(scost?(' · ritocco '+(scost>0?'+':'')+scost):'')+'</span>'
+    +(scost?('<button class="opt" data-hpreset="max"'+ro+'>Torna al calcolato</button>'):'')
+    +'</div>';
+  h+='<div class="asplab">Riposo lungo</div>';
+  h+='<p class="subhint">Rimette i punti ferita al massimo, azzera i temporanei e i tiri contro la morte e recupera metà dei dadi vita, come da manuale.</p>';
+  h+='<div class="row"><button class="opt" data-hprest="lungo"'+ro+'>Fai un riposo lungo</button></div>';
+  host.innerHTML=h;
+}
+
+document.getElementById("gearHp").addEventListener("click", openHp);
+document.getElementById("hpRevive").addEventListener("click", rianima);
+document.getElementById("hpPanel").addEventListener("click", function(e){
+  var tv=e.target.closest("[data-hpview]");
+  if(tv){ mostraVistaHp(tv.getAttribute("data-hpview")); return; }   // le linguette funzionano anche in sola lettura
+  if(soloLettura) return;
+  var dp=e.target.closest("[data-death]");
+  if(dp){ setMorte(dp.getAttribute("data-death"), parseInt(dp.getAttribute("data-i"),10)); return; }
+  var dv=e.target.closest("[data-dv]");
+  if(dv){ var die=parseInt(dv.getAttribute("data-die"),10); if(dv.getAttribute("data-dv")==="spend") spendiDado(die); else recuperaDado(die); return; }
+  if(e.target.closest("[data-hprianima]")){ rianima(); return; }
+  var mz=e.target.closest("[data-hpreset]");
+  if(mz && mz.getAttribute("data-hpreset")==="morte"){ state.morteS=0; state.morteF=0; renderAll(); aggiornaSalva(); return; }
+  var tz=e.target.closest("[data-hptemp]");
+  if(tz){ state.pfTemp=0; renderAll(); aggiornaSalva(); return; }
+  if(e.target.id==="hpDmg"){ applicaDanno(leggiAmt()); return; }
+  if(e.target.id==="hpHeal"){ applicaCura(leggiAmt()); return; }
+});
+document.getElementById("hpPanel").addEventListener("change", function(e){
+  if(soloLettura) return;
+  if(e.target.id==="hpTempIn"){ var v=parseInt(e.target.value,10); state.pfTemp=(isFinite(v)&&v>0)?v:0; renderAll(); aggiornaSalva(); }
+});
+document.getElementById("modalHp").addEventListener("click", function(e){
+  if(e.target.closest("[data-close]")){ closeAll(); return; }
+  if(soloLettura) return;
+  var rs=e.target.closest("[data-hpreset]");
+  if(rs && rs.getAttribute("data-hpreset")==="max"){ state.pfScostamento=0; if(typeof state.pfAttuali==="number"&&state.pfAttuali>pfMax()) state.pfAttuali=pfMax(); renderAll(); aggiornaSalva(); return; }
+  var rl=e.target.closest("[data-hprest]");
+  if(rl){ riposoLungo(); return; }
+});
+document.getElementById("modalHp").addEventListener("change", function(e){
+  if(soloLettura) return;
+  if(e.target.id==="hpMaxIn"){ impostaMax(parseInt(e.target.value,10)); }
+});
+
 avvia();

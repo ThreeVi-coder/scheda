@@ -2118,6 +2118,296 @@ function morphAbilVersoTs(va, vt, fine){
   }, 280);
 }
 
+/* MORPH — Tiri salvezza -> Abilita'. L'inverso del favo che sboccia: prima il
+   favo si RICHIUDE (il dado al centro svanisce, i sei esagoni collassano verso
+   il centro rimpicciolendo, in ordine inverso all'apertura). Poi un esagono
+   "clone" ASSOLUTO dentro il riquadro (scrolla con la pagina, non tocca mai
+   l'esagono vero) parte piccolo e ruotato al centro del favo e CRESCE ruotando
+   all'indietro fino a combaciare con l'esagono di Abilita', dove rientrano
+   sigle, puntini, passiva e i sei gruppi. Linee sottili con non-scaling-stroke. */
+function morphTsVersoAbil(vt, va, fine){
+  var pan=document.getElementById("corePanel");
+  var mapEl=document.getElementById("abilMap");            // bersaglio (Abilita')
+  var abHex=mapEl?mapEl.querySelector(".abhex"):null;
+  var vsEl=document.getElementById("viewStats");
+  var favo=document.querySelector("#tsGrid svg");          // sorgente (favo)
+  var centrale=favo?favo.querySelector(".tsdadohex"):null;
+  var dadoParti=favo?Array.prototype.slice.call(favo.querySelectorAll(".tsemb")):[];
+  var celle=favo?Array.prototype.slice.call(favo.querySelectorAll(".tscell")):[];
+  var grps=Array.prototype.slice.call(document.querySelectorAll("#abilGrid .abgrp"));
+
+  // 1) il favo si richiude: il dado (tratti + centrale) svanisce, i sei esagoni
+  //    collassano verso il centro rimpicciolendo, in ordine inverso all'apertura.
+  dadoParti.forEach(function(e){ e.animate([{opacity:1},{opacity:0}],{duration:180,fill:"forwards",easing:"ease-in"}); });
+  if(centrale) centrale.animate([{opacity:1},{opacity:0}],{duration:200,fill:"forwards",easing:"ease-in"});
+  celle.forEach(function(c){ c.style.transformBox="fill-box"; c.style.transformOrigin="center"; });
+  celle.forEach(function(c,i){ c.animate([{opacity:1,transform:"scale(1)"},{opacity:0,transform:"scale(.35)"}],{duration:240,delay:(celle.length-1-i)*40,fill:"forwards",easing:"ease-in"}); });
+
+  // 2) misuro (relative al riquadro): centro del favo (sorgente, dove parte il
+  //    clone piccolo), poi con uno swap sincrono l'esagono di Abilita' (bersaglio,
+  //    dove arriva a grandezza piena). Preservo lo scroll: lo swap accorcia o
+  //    allunga un attimo la pagina e il browser lo sposterebbe.
+  var syScroll=window.scrollY, sxScroll=window.scrollX;
+  var panR=pan.getBoundingClientRect();
+  var tr=centrale?centrale.getBoundingClientRect():null;   // sorgente (favo)
+  vt.hidden=true; va.hidden=false;
+  var panR2=pan.getBoundingClientRect();
+  var sr=abHex?abHex.getBoundingClientRect():null;          // bersaglio (esagono)
+  var mapR=mapEl.getBoundingClientRect();
+  vt.hidden=false; va.hidden=true;
+  window.scrollTo(sxScroll, syScroll);
+
+  if(!sr || !tr || !sr.width){   // misura fallita: ripiego sulla dissolvenza
+    azzeraTransizione(); va.hidden=false; vt.hidden=true; if(vsEl) vsEl.hidden=true; setTimeout(fine,10); return;
+  }
+
+  var tx=(tr.left-panR.left)+tr.width/2, ty=(tr.top-panR.top)+tr.height/2;               // centro sorgente (favo)
+  var scx=(mapR.left-panR2.left)+mapR.width/2, scy=(mapR.top-panR2.top)+mapR.height/2;   // centro bersaglio (esagono)
+
+  // Clone ASSOLUTO dell'esagono di Abilita', posato nella sua posizione naturale
+  // (identita'), ma con un transform iniziale che lo porta piccolo e ruotato al
+  // centro del favo. Clono la SVG vera e le tolgo sigle/puntini/passiva: resta
+  // solo l'esagono, identico a quello reale.
+  var clone=document.createElement("div");
+  clone.setAttribute("data-morphclone","1");
+  clone.style.cssText="position:absolute;left:"+(mapR.left-panR2.left).toFixed(1)+"px;top:"+(mapR.top-panR2.top).toFixed(1)+"px;width:"+mapR.width.toFixed(1)+"px;height:"+mapR.height.toFixed(1)+"px;overflow:visible;z-index:5;pointer-events:none;transform-origin:center;";
+  var cloneSvg=mapEl.querySelector("svg").cloneNode(true);
+  cloneSvg.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.parentNode.removeChild(e); });
+  cloneSvg.querySelectorAll(".abhex").forEach(function(h){ h.setAttribute("vector-effect","non-scaling-stroke"); });  // linee sottili anche da piccolo
+  cloneSvg.style.width="100%"; cloneSvg.style.height="100%"; cloneSvg.style.display="block"; cloneSvg.style.overflow="visible";
+  clone.appendChild(cloneSvg);
+  var s=tr.width/sr.width, dx=tx-scx, dy=ty-scy;
+  var initT="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")";
+  clone.style.transform=initT;   // parte piccolo e ruotato al centro del favo
+  pan.appendChild(clone);
+
+  // 3) dopo che il favo si e' richiuso, passo alla vista Abilita' (esagono vero e
+  //    scritte nascosti: li rivelo io) e faccio crescere il clone all'indietro.
+  //    Preservo lo scroll cosi' il riquadro resta ancorato dov'e'.
+  setTimeout(function(){
+    var sy2=window.scrollY, sx2=window.scrollX;
+    va.hidden=false; vt.hidden=true; if(vsEl) vsEl.hidden=true;
+    if(abHex) abHex.style.opacity="0";
+    mapEl.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.style.opacity="0"; });
+    grps.forEach(function(g){ g.style.opacity="0"; });
+    window.scrollTo(sx2, sy2);
+
+    var slide=clone.animate([
+      {transform:initT},
+      {transform:"translate(0px,0px) rotate(0deg) scale(1)"}
+    ], {duration:640, fill:"forwards", easing:"ease-in-out"});
+
+    // sigle/puntini/passiva e i sei gruppi rientrano in modo da posarsi INSIEME
+    // al clone che arriva (niente cascata lunga): cosi' non resta il tempo morto
+    // in cui l'esagono e' gia' fermo ma la vista non e' ancora a posto.
+    mapEl.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.animate([{opacity:0},{opacity:1}],{duration:200,delay:340,fill:"forwards",easing:"ease"}); });
+    grps.forEach(function(g,i){ g.animate([{opacity:0,transform:"translateY(-14px)"},{opacity:1,transform:"translateY(0px)"}],{duration:240,delay:380+i*28,fill:"forwards",easing:"ease-out"}); });
+
+    // appena il clone e' arrivato a grandezza piena, rivelo l'esagono VERO (che
+    // gli sta esattamente sotto, identico) e tolgo subito il clone: il passaggio
+    // e' invisibile e non c'e' piu' lo scatto del ridisegno tardivo.
+    slide.addEventListener("finish", function(){
+      if(abHex) abHex.style.opacity="";
+      if(clone.parentNode) clone.parentNode.removeChild(clone);
+    });
+
+    setTimeout(function(){
+      if(clone.parentNode) clone.parentNode.removeChild(clone);   // sicurezza, se "finish" non fosse scattato
+      azzeraTransizione();   // a cose gia' ferme: pulisce i residui senza spostare nulla
+      va.hidden=false; vt.hidden=true; if(vsEl) vsEl.hidden=true;
+      fine();
+    }, 780);
+  }, 300);
+}
+
+/* MORPH — Caratteristiche -> Tiri salvezza (seconda tappa; la prima e' lo
+   smontaggio del ragno, gia' fatto da morphSmontaRagno). L'esagono esterno del
+   ragno diventa un clone volante e, mentre le sigle e i pallini rimasti
+   svaniscono, rimpicciolisce ruotando fino al centro, dove sboccia il favo.
+   Stesse regole del favo che sboccia: clone ASSOLUTO dentro il riquadro, mai
+   fixed, linee sottili con non-scaling-stroke, scroll preservato. */
+function morphStatsVersoTs(vs, vt, fine){
+  var NS="http://www.w3.org/2000/svg";
+  var pan=document.getElementById("corePanel");
+  var slEl=document.getElementById("statsLine");
+  var svg=slEl?slEl.querySelector("svg"):null;
+  var outerHex=svg?svg.querySelector(".slgrid"):null;   // esagono esterno rimasto dopo lo smontaggio
+  var favo=document.querySelector("#tsGrid svg");
+  var centrale=favo?favo.querySelector(".tsdadohex"):null;
+  var dadoParti=favo?Array.prototype.slice.call(favo.querySelectorAll(".tsemb")):[];
+  var celle=favo?Array.prototype.slice.call(favo.querySelectorAll(".tscell")):[];
+
+  // 1) misuro (relative al riquadro): esagono esterno del ragno (sorgente) e
+  //    centrale del favo (bersaglio). Swap sincrono, scroll preservato: lo swap
+  //    accorcia/allunga un attimo la pagina e il browser la sposterebbe.
+  var syScroll=window.scrollY, sxScroll=window.scrollX;
+  var panR=pan.getBoundingClientRect();
+  var sr=outerHex?outerHex.getBoundingClientRect():null;
+  var svgR=svg?svg.getBoundingClientRect():null;
+  vs.hidden=true; vt.hidden=false;
+  var panR2=pan.getBoundingClientRect();
+  var tr=centrale?centrale.getBoundingClientRect():null;
+  vs.hidden=false; vt.hidden=true;
+  window.scrollTo(sxScroll, syScroll);
+
+  // favo "chiuso": lo faro' sbocciare io
+  if(centrale) centrale.style.opacity="0";
+  dadoParti.forEach(function(e){ e.style.opacity="0"; });
+  celle.forEach(function(c){ c.style.opacity="0"; c.style.transformBox="fill-box"; c.style.transformOrigin="center"; });
+
+  if(!sr || !tr || !sr.width || !svgR){   // misura fallita: ripiego sulla dissolvenza
+    azzeraTransizione(); vt.hidden=false; vs.hidden=true; setTimeout(fine,10); return;
+  }
+
+  // Clone ASSOLUTO: SVG nuova con la stessa viewBox del ragno, dentro il solo
+  // esagono esterno (cosi' e' identico per forma/posizione). Il div e' grande
+  // come tutta la SVG del ragno, cosi' l'esagono ci cade nel punto giusto.
+  var clone=document.createElement("div");
+  clone.setAttribute("data-morphclone","1");
+  clone.style.cssText="position:absolute;left:"+(svgR.left-panR.left).toFixed(1)+"px;top:"+(svgR.top-panR.top).toFixed(1)+"px;width:"+svgR.width.toFixed(1)+"px;height:"+svgR.height.toFixed(1)+"px;overflow:visible;z-index:5;pointer-events:none;";
+  var cloneSvg=document.createElementNS(NS,"svg");
+  cloneSvg.setAttribute("viewBox", svg.getAttribute("viewBox"));
+  cloneSvg.style.width="100%"; cloneSvg.style.height="100%"; cloneSvg.style.display="block"; cloneSvg.style.overflow="visible";
+  var hx=outerHex.cloneNode(true);
+  hx.setAttribute("vector-effect","non-scaling-stroke");   // linea sottile anche da piccolo
+  cloneSvg.appendChild(hx); clone.appendChild(cloneSvg); pan.appendChild(clone);
+
+  // il pivot di scala/rotazione e' il CENTRO dell'esagono (non della SVG, che e'
+  // larga per far posto alle scritte laterali).
+  var hcxDiv=(sr.left-svgR.left)+sr.width/2, hcyDiv=(sr.top-svgR.top)+sr.height/2;
+  clone.style.transformOrigin=hcxDiv.toFixed(1)+"px "+hcyDiv.toFixed(1)+"px";
+  var hcx=(sr.left-panR.left)+sr.width/2, hcy=(sr.top-panR.top)+sr.height/2;          // centro esagono
+  var tx=(tr.left-panR2.left)+tr.width/2, ty=(tr.top-panR2.top)+tr.height/2;          // centro favo
+  var s=tr.width/sr.width, dx=tx-hcx, dy=ty-hcy;
+
+  // le sigle e i pallini rimasti dallo smontaggio svaniscono (l'esagono resta,
+  // e' il clone). Sfumo l'intera SVG del ragno: l'esagono vero sotto sparisce
+  // ma il clone lo rimpiazza, quindi non si nota.
+  svg.animate([{opacity:1},{opacity:0}], {duration:200, fill:"forwards", easing:"ease"});
+
+  // 2) dopo la dissolvenza: passo ai TS, il clone rimpicciolisce ruotando fino al
+  //    centro e il favo sboccia. Scroll preservato: il riquadro resta ancorato.
+  setTimeout(function(){
+    var sy2=window.scrollY, sx2=window.scrollX;
+    vs.hidden=true; vt.hidden=false;
+    window.scrollTo(sx2, sy2);
+    clone.animate([
+      {transform:"translate(0px,0px) rotate(0deg) scale(1)"},
+      {transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")"}
+    ], {duration:680, fill:"forwards", easing:"ease-in-out"});
+
+    // i sei esagoni sbocciano in orario (portano sigle+valori), poi il dado
+    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:340+i*70,fill:"forwards",easing:"ease"}); });
+    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:640,fill:"forwards",easing:"ease"});
+    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:820+i*35,fill:"forwards",easing:"ease"}); });
+
+    setTimeout(function(){
+      if(clone.parentNode) clone.parentNode.removeChild(clone);
+      azzeraTransizione();
+      vt.hidden=false; vs.hidden=true;
+      fine();
+    }, 1220);
+  }, 260);
+}
+
+/* MORPH — Tiri salvezza -> Caratteristiche (l'inverso dell'andata). Il favo si
+   richiude (il dado svanisce, i sei esagoni collassano verso il centro), poi
+   l'esagono esterno del ragno cresce dal centro del favo ruotando all'indietro
+   fino alla sua posizione, e infine il ragno si ri-assembla (morphMontaRagno,
+   lo stesso del ritorno da Abilita'). Clone ASSOLUTO, mai fixed, scroll salvo. */
+function morphTsVersoStats(vt, vs, fine){
+  var NS="http://www.w3.org/2000/svg";
+  var pan=document.getElementById("corePanel");
+  var slEl=document.getElementById("statsLine");
+  var favo=document.querySelector("#tsGrid svg");
+  var centrale=favo?favo.querySelector(".tsdadohex"):null;
+  var dadoParti=favo?Array.prototype.slice.call(favo.querySelectorAll(".tsemb")):[];
+  var celle=favo?Array.prototype.slice.call(favo.querySelectorAll(".tscell")):[];
+
+  // 1) il favo si richiude: il dado svanisce, i sei esagoni collassano verso il
+  //    centro rimpicciolendo, in ordine inverso all'apertura.
+  dadoParti.forEach(function(e){ e.animate([{opacity:1},{opacity:0}],{duration:180,fill:"forwards",easing:"ease-in"}); });
+  if(centrale) centrale.animate([{opacity:1},{opacity:0}],{duration:200,fill:"forwards",easing:"ease-in"});
+  celle.forEach(function(c){ c.style.transformBox="fill-box"; c.style.transformOrigin="center"; });
+  celle.forEach(function(c,i){ c.animate([{opacity:1,transform:"scale(1)"},{opacity:0,transform:"scale(.35)"}],{duration:240,delay:(celle.length-1-i)*40,fill:"forwards",easing:"ease-in"}); });
+
+  // 2) misuro (relative al riquadro): centro del favo (sorgente) e l'esagono
+  //    esterno del ragno (bersaglio) via swap sincrono. Scroll preservato.
+  var syScroll=window.scrollY, sxScroll=window.scrollX;
+  var panR=pan.getBoundingClientRect();
+  var tr=centrale?centrale.getBoundingClientRect():null;   // sorgente (favo)
+  vt.hidden=true; vs.hidden=false;
+  var svg=slEl?slEl.querySelector("svg"):null;
+  var outerHex=svg?svg.querySelector(".slgrid"):null;
+  var panR2=pan.getBoundingClientRect();
+  var sr=outerHex?outerHex.getBoundingClientRect():null;   // bersaglio (esagono esterno)
+  var svgR=svg?svg.getBoundingClientRect():null;
+  vt.hidden=false; vs.hidden=true;
+  window.scrollTo(sxScroll, syScroll);
+
+  if(!sr || !tr || !sr.width || !svgR){   // misura fallita: ripiego sulla dissolvenza
+    azzeraTransizione(); vs.hidden=false; vt.hidden=true; setTimeout(fine,10); return;
+  }
+
+  // Clone ASSOLUTO del solo esagono esterno, posato nella posizione naturale del
+  // ragno (identita'), con transform iniziale che lo porta piccolo e ruotato al
+  // centro del favo. Cresce ruotando all'indietro fino a combaciare.
+  var clone=document.createElement("div");
+  clone.setAttribute("data-morphclone","1");
+  clone.style.cssText="position:absolute;left:"+(svgR.left-panR2.left).toFixed(1)+"px;top:"+(svgR.top-panR2.top).toFixed(1)+"px;width:"+svgR.width.toFixed(1)+"px;height:"+svgR.height.toFixed(1)+"px;overflow:visible;z-index:5;pointer-events:none;";
+  var cloneSvg=document.createElementNS(NS,"svg");
+  cloneSvg.setAttribute("viewBox", svg.getAttribute("viewBox"));
+  cloneSvg.style.width="100%"; cloneSvg.style.height="100%"; cloneSvg.style.display="block"; cloneSvg.style.overflow="visible";
+  var hx=outerHex.cloneNode(true);
+  hx.setAttribute("vector-effect","non-scaling-stroke");
+  cloneSvg.appendChild(hx); clone.appendChild(cloneSvg); pan.appendChild(clone);
+
+  var hcxDiv=(sr.left-svgR.left)+sr.width/2, hcyDiv=(sr.top-svgR.top)+sr.height/2;
+  clone.style.transformOrigin=hcxDiv.toFixed(1)+"px "+hcyDiv.toFixed(1)+"px";
+  var hcx=(sr.left-panR2.left)+sr.width/2, hcy=(sr.top-panR2.top)+sr.height/2;   // centro esagono (arrivo)
+  var tx=(tr.left-panR.left)+tr.width/2, ty=(tr.top-panR.top)+tr.height/2;       // centro favo (partenza)
+  var s=tr.width/sr.width, dx=tx-hcx, dy=ty-hcy;
+  var initT="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")";
+  clone.style.transform=initT;   // parte piccolo e ruotato al centro del favo
+
+  // 3) dopo che il favo si e' richiuso: passo alle Caratteristiche, preparo il
+  //    ragno in stato SMONTATO ma invisibile (si vede solo il clone che cresce),
+  //    poi appena il clone arriva rivelo lo stage smontato e ri-assemblo.
+  var avviato=false;
+  function riassembla(){
+    if(avviato) return; avviato=true;
+    if(clone.parentNode) clone.parentNode.removeChild(clone);
+    svg.style.transition=""; svg.style.opacity="";
+    montatore.anima(function(){
+      azzeraTransizione();
+      vs.hidden=false; vt.hidden=true;
+      fine();
+    });
+  }
+  var montatore;
+  setTimeout(function(){
+    var sy2=window.scrollY, sx2=window.scrollX;
+    vt.hidden=true; vs.hidden=false;
+    window.scrollTo(sx2, sy2);
+    svg.style.opacity="0";              // nascondo lo stage: durante la crescita si vede solo il clone
+    montatore=morphMontaRagno();        // stato smontato statico pronto (esagono + sigle ai vertici + pallini)
+    void svg.getBoundingClientRect();
+
+    var grow=clone.animate([
+      {transform:initT},
+      {transform:"translate(0px,0px) rotate(0deg) scale(1)"}
+    ], {duration:640, fill:"forwards", easing:"ease-in-out"});
+
+    // arrivato l'esagono: lo stage smontato appare (identico, dov'e' il clone),
+    // poi tolgo il clone e parte il ri-assemblaggio del ragno.
+    grow.addEventListener("finish", function(){
+      svg.style.transition="opacity .18s ease"; svg.style.opacity="1";
+      setTimeout(riassembla, 180);
+    });
+    setTimeout(function(){ svg.style.opacity="1"; riassembla(); }, 1000);   // sicurezza se "finish" non scatta
+  }, 300);
+}
+
 /* Azzera ogni residuo di una transizione precedente: annulla le animazioni
    ancora "appese" (la Web Animations API con fill:"forwards" tiene attaccato lo
    stato finale finche' non la si annulla, e quello poteva sovrascrivere le
@@ -2196,6 +2486,9 @@ function mostraVista(v, animato){
     if(vecchia==="stats" && nuova==="abil"){ morphSmontaRagno(function(){ morphScivolaVersoAbil(vs, va, fine0); }); return; }
     if(vecchia==="abil" && nuova==="stats"){ morphRitornoVersoStats(vs, va, fine0); return; }
     if(vecchia==="abil" && nuova==="ts"){ morphAbilVersoTs(va, elVista("ts"), fine0); return; }
+    if(vecchia==="ts" && nuova==="abil"){ morphTsVersoAbil(elVista("ts"), va, fine0); return; }
+    if(vecchia==="stats" && nuova==="ts"){ morphSmontaRagno(function(){ morphStatsVersoTs(vs, elVista("ts"), fine0); }); return; }
+    if(vecchia==="ts" && nuova==="stats"){ morphTsVersoStats(elVista("ts"), vs, fine0); return; }
   }
 
   // Dissolvenza generica: la vista attuale si ritira, la nuova entra.

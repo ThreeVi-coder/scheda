@@ -2026,6 +2026,98 @@ function morphRitornoVersoStats(vs, va, fine){
   }, 170);
 }
 
+/* MORPH — Abilita' -> Tiri salvezza. Prima le scritte si ritirano verso l'alto
+   (a tendina) e spariscono, restando il solo esagono sottile. Poi un esagono
+   "clone" ASSOLUTO dentro il riquadro (scrolla con la pagina, immune ai reflow,
+   e non tocca mai l'esagono vero) rimpicciolisce ruotando fino al centro, dove
+   sboccia il favo. Le linee restano sottili anche mentre rimpicciolisce. */
+function morphAbilVersoTs(va, vt, fine){
+  var NS="http://www.w3.org/2000/svg";
+  var pan=document.getElementById("corePanel");
+  var mapEl=document.getElementById("abilMap");
+  var abHex=mapEl?mapEl.querySelector(".abhex"):null;
+  var vsEl=document.getElementById("viewStats");
+  var grps=Array.prototype.slice.call(document.querySelectorAll("#abilGrid .abgrp"));
+
+  // 1) le scritte si ritirano verso l'alto (tendina) e spariscono; l'esagono
+  //    (linee) resta.
+  grps.forEach(function(g,i){ g.animate([{opacity:1,transform:"translateY(0px)"},{opacity:0,transform:"translateY(-14px)"}],{duration:240,delay:i*18,fill:"forwards",easing:"ease-in"}); });
+  // le scritte attorno all'esagono (sigle, puntini, PP) svaniscono in dissolvenza
+  // secca e rapida (niente scivolamento: si sovrapponeva e stava male).
+  if(mapEl) mapEl.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.animate([{opacity:1},{opacity:0}],{duration:150,fill:"forwards",easing:"ease"}); });
+
+  // misuro (relative al riquadro, cosi' e' immune ai cambi d'altezza e allo
+  // scroll): esagono di Abilita' e centrale del favo (swap sincrono). Preservo
+  // lo scroll: lo swap accorcia un attimo la pagina e il browser lo sposterebbe.
+  var syScroll=window.scrollY, sxScroll=window.scrollX;
+  var panR=pan.getBoundingClientRect();
+  var sr=abHex?abHex.getBoundingClientRect():null;
+  va.hidden=true; vt.hidden=false;
+  var favo=document.querySelector("#tsGrid svg");
+  var centrale=favo?favo.querySelector(".tsdadohex"):null;
+  var tr=centrale?centrale.getBoundingClientRect():null;
+  var panR2=pan.getBoundingClientRect();
+  va.hidden=false; vt.hidden=true;
+  window.scrollTo(sxScroll, syScroll);
+
+  // favo "chiuso"
+  var dadoParti=favo?Array.prototype.slice.call(favo.querySelectorAll(".tsemb")):[];
+  var celle=favo?Array.prototype.slice.call(favo.querySelectorAll(".tscell")):[];
+  if(centrale) centrale.style.opacity="0";
+  dadoParti.forEach(function(e){ e.style.opacity="0"; });
+  celle.forEach(function(c){ c.style.opacity="0"; c.style.transformBox="fill-box"; c.style.transformOrigin="center"; });
+
+  if(!sr || !tr || !sr.width){   // misura fallita: ripiego sulla dissolvenza
+    azzeraTransizione(); vt.hidden=false; va.hidden=true; if(vsEl) vsEl.hidden=true; setTimeout(fine,10); return;
+  }
+
+  // Clone ASSOLUTO dentro il riquadro (top-left stabile: immune ai cambi
+  // d'altezza e allo scroll). Per essere IDENTICO all'esagono di Abilita'
+  // (stessa dimensione/forma/colore/spessore) clono la vera SVG e le tolgo
+  // sigle, pallini e passiva: resta solo l'esagono.
+  var mapR=mapEl.getBoundingClientRect();
+  var scx=(mapR.left-panR.left)+mapR.width/2, scy=(mapR.top-panR.top)+mapR.height/2;  // centro sorgente (= centro esagono)
+  var tx=(tr.left-panR2.left)+tr.width/2, ty=(tr.top-panR2.top)+tr.height/2;          // centro bersaglio
+  var clone=document.createElement("div");
+  clone.setAttribute("data-morphclone","1");
+  clone.style.cssText="position:absolute;left:"+(mapR.left-panR.left).toFixed(1)+"px;top:"+(mapR.top-panR.top).toFixed(1)+"px;width:"+mapR.width.toFixed(1)+"px;height:"+mapR.height.toFixed(1)+"px;overflow:visible;z-index:5;pointer-events:none;transform-origin:center;";
+  var cloneSvg=mapEl.querySelector("svg").cloneNode(true);
+  cloneSvg.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.parentNode.removeChild(e); });
+  cloneSvg.querySelectorAll(".abhex").forEach(function(h){ h.setAttribute("vector-effect","non-scaling-stroke"); });  // linee sottili anche da piccolo
+  cloneSvg.style.width="100%"; cloneSvg.style.height="100%"; cloneSvg.style.display="block"; cloneSvg.style.overflow="visible";
+  clone.appendChild(cloneSvg); pan.appendChild(clone);
+  // nascondo SOLO l'esagono vero (rimpiazzato dal clone): sigle, puntini e PP
+  // restano e si dissolvono con la loro animazione, come le abilita'.
+  if(abHex) abHex.style.opacity="0";
+
+  // 2) dopo la dissolvenza: passo ai TS, il clone rimpicciolisce ruotando fino
+  //    al centro, e il favo sboccia. Preservo lo scroll cosi' il riquadro resta
+  //    ancorato dov'e' e la pagina non "salta in su".
+  setTimeout(function(){
+    var sy2=window.scrollY, sx2=window.scrollX;
+    va.hidden=true; vt.hidden=false; if(vsEl) vsEl.hidden=true;
+    window.scrollTo(sx2, sy2);
+    var s=tr.width/sr.width, dx=tx-scx, dy=ty-scy;
+    clone.animate([
+      {transform:"translate(0px,0px) rotate(0deg) scale(1)"},
+      {transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")"}
+    ], {duration:680, fill:"forwards", easing:"ease-in-out"});
+
+    // i sei esagoni sbocciano in orario (portano sigle+valori), poi il dado
+    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:340+i*70,fill:"forwards",easing:"ease"}); });
+    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:640,fill:"forwards",easing:"ease"});
+    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:820+i*35,fill:"forwards",easing:"ease"}); });
+
+    setTimeout(function(){
+      if(clone.parentNode) clone.parentNode.removeChild(clone);
+      pan.style.transition=""; pan.style.height="";   // libero l'altezza
+      azzeraTransizione();
+      vt.hidden=false; va.hidden=true; if(vsEl) vsEl.hidden=true;
+      fine();
+    }, 1220);
+  }, 280);
+}
+
 /* Azzera ogni residuo di una transizione precedente: annulla le animazioni
    ancora "appese" (la Web Animations API con fill:"forwards" tiene attaccato lo
    stato finale finche' non la si annulla, e quello poteva sovrascrivere le
@@ -2041,12 +2133,14 @@ function azzeraTransizione(){
     var el=elVista(k);
     if(el && el.getAnimations) el.getAnimations({subtree:true}).forEach(function(a){ try{ a.cancel(); }catch(e){} });
   });
-  var slEl=document.getElementById("statsLine"), vsEl=elVista("stats"), mapEl=document.getElementById("abilMap"), vtEl=elVista("ts");
+  var slEl=document.getElementById("statsLine"), vsEl=elVista("stats"), vaEl=elVista("abil"), mapEl=document.getElementById("abilMap"), vtEl=elVista("ts");
   if(slEl){ slEl.style.transform=""; slEl.style.transformOrigin=""; slEl.style.opacity=""; slEl.style.transition=""; }
-  if(vsEl){ vsEl.style.position=""; vsEl.style.top=""; vsEl.style.left=""; vsEl.style.width=""; vsEl.style.margin=""; vsEl.style.zIndex=""; vsEl.style.opacity=""; vsEl.style.transition=""; }
-  if(mapEl){ mapEl.style.opacity=""; mapEl.style.transition=""; }
+  [vsEl,vaEl].forEach(function(el){ if(el){ el.style.position=""; el.style.top=""; el.style.left=""; el.style.width=""; el.style.margin=""; el.style.zIndex=""; el.style.opacity=""; el.style.transition=""; } });
+  if(mapEl){ mapEl.style.opacity=""; mapEl.style.transition=""; mapEl.style.transform=""; mapEl.style.transformOrigin=""; }
   if(vtEl){ vtEl.style.opacity=""; vtEl.style.transition=""; vtEl.style.transform=""; }
+  var panEl=document.getElementById("corePanel"); if(panEl){ panEl.style.height=""; panEl.style.transition=""; }   // altezza sbloccata
   document.querySelectorAll("#abilGrid .abgrp").forEach(function(g){ g.style.opacity=""; g.style.transform=""; });
+  document.querySelectorAll("[data-morphclone]").forEach(function(c){ if(c.parentNode) c.parentNode.removeChild(c); });   // cloni volanti rimasti appesi
   // Ridisegno pulito delle tre viste: qualunque residuo di una transizione
   // interrotta sparisce, perche' si riparte sempre dal disegno intero.
   if(typeof renderStats==="function") renderStats();
@@ -2096,29 +2190,22 @@ function mostraVista(v, animato){
   azzeraTransizione();   // parto da uno stato pulito
   contorno();
 
-  // Il morph "a smontaggio" c'e' solo tra Caratteristiche e Abilita'.
-  var morphAbilStats = state.transizione==="morph" &&
-    ((vecchia==="stats" && nuova==="abil") || (vecchia==="abil" && nuova==="stats"));
-
-  if(!morphAbilStats){
-    // Dissolvenza generica: la vista attuale si ritira, la nuova entra.
-    var usc=elVista(vecchia), ent=elVista(nuova);
-    if(usc){ usc.classList.remove("entra"); usc.classList.add("esce"); }
-    setTimeout(function(){
-      VISTE.forEach(function(x){ if(x!==nuova){ var el=elVista(x); if(el){ el.hidden=true; el.classList.remove("esce","entra"); } } });
-      if(ent){ ent.hidden=false; void ent.offsetWidth; ent.classList.add("entra"); }
-      setTimeout(function(){ if(ent) ent.classList.remove("entra"); animandoCore=false; }, 360);
-    }, 200);
-    return;
+  // Quali coppie hanno gia' il morph pronto (le altre usano la dissolvenza).
+  var fine0=function(){ animandoCore=false; };
+  if(state.transizione==="morph"){
+    if(vecchia==="stats" && nuova==="abil"){ morphSmontaRagno(function(){ morphScivolaVersoAbil(vs, va, fine0); }); return; }
+    if(vecchia==="abil" && nuova==="stats"){ morphRitornoVersoStats(vs, va, fine0); return; }
+    if(vecchia==="abil" && nuova==="ts"){ morphAbilVersoTs(va, elVista("ts"), fine0); return; }
   }
 
-  if(nuova==="abil"){
-    morphSmontaRagno(function(){
-      morphScivolaVersoAbil(vs, va, function(){ animandoCore=false; });
-    });
-    return;
-  }
-  morphRitornoVersoStats(vs, va, function(){ animandoCore=false; });
+  // Dissolvenza generica: la vista attuale si ritira, la nuova entra.
+  var usc=elVista(vecchia), ent=elVista(nuova);
+  if(usc){ usc.classList.remove("entra"); usc.classList.add("esce"); }
+  setTimeout(function(){
+    VISTE.forEach(function(x){ if(x!==nuova){ var el=elVista(x); if(el){ el.hidden=true; el.classList.remove("esce","entra"); } } });
+    if(ent){ ent.hidden=false; void ent.offsetWidth; ent.classList.add("entra"); }
+    setTimeout(function(){ if(ent) ent.classList.remove("entra"); animandoCore=false; }, 360);
+  }, 200);
 }
 document.getElementById("tabStats").addEventListener("click", function(){ mostraVista("stats", true); });
 document.getElementById("tabAbil").addEventListener("click", function(){ mostraVista("abil", true); });

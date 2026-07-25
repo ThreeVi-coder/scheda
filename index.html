@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
   <div class="wrap">
@@ -110,6 +110,12 @@
             <button class="hpbtn dmg" id="hpDmg" type="button">Danno</button>
             <button class="hpbtn heal" id="hpHeal" type="button">Cura</button>
           </div>
+          <div class="hpecg" id="hpEcg" hidden>
+            <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+              <polyline class="hpecg-line" points=""></polyline>
+              <line class="hpecg-flat" x1="0" y1="20" x2="240" y2="20"></line>
+            </svg>
+          </div>
           <div class="hphint" id="hpHint" hidden></div>
         </div>
         <div class="hpaside">
@@ -119,8 +125,9 @@
             <button class="hptab" id="hpTabMorte" type="button" role="tab" data-hpview="morte">Tiri morte</button>
           </div>
           <div class="hpsub" id="hpSub"></div>
+          <button class="hprest" id="hpRestBtn" type="button" data-hprest="lungo" title="Rimette i PF al massimo, azzera temporanei e tiri morte, recupera met&agrave; dei dadi vita"><span class="hprest-moon">&#9790;</span> Riposo lungo</button>
         </div>
-        <button class="gear" id="gearHp" title="Massimo e riposo" aria-label="Massimo e riposo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+        <button class="gear" id="gearHp" title="Massimo dei punti ferita" aria-label="Massimo dei punti ferita"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
       <div class="spanel corepanel" id="corePanel">
@@ -644,6 +651,6 @@
 
   </div>
 
-<script src="app.js?v=11"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

@@ -3504,8 +3504,9 @@ function avvia(){
    attuali/massimo, la barra e i pulsanti Danno/Cura (le cose più usate). A
    destra tre linguette che cambiano la vista dentro il riquadro (come
    Caratteristiche|Abilità): Temporanei, Dadi vita, Tiri morte; a 0 punti salta
-   da sola su Tiri morte. La rotella tiene solo la roba "interna": il ritocco del
-   massimo e il riposo lungo. Tutto passa da renderAll + aggiornaSalva. */
+   da sola su Tiri morte. Il Riposo lungo è un pulsante sul riquadro, a portata
+   di mano; la rotella tiene solo il ritocco del massimo. Tutto passa da
+   renderAll + aggiornaSalva. */
 function pipsMorteTipo(tipo){
   var n = tipo==="s" ? (state.morteS||0) : (state.morteF||0), cls=tipo==="s"?"succ":"fail", out="";
   for(var i=0;i<3;i++){
@@ -3571,6 +3572,21 @@ function riposoLungo(){
 }
 function mostraVistaHp(v){ if(v==="temp"||v==="dadi"||v==="morte"){ vistaHp=v; renderHp(); } }
 
+/* Il tracciato del battito (una riga da elettrocardiogramma): otto cicli
+   identici disegnati largo il doppio del riquadro, cosi' scorrendo verso
+   sinistra (in CSS) il ritmo sembra continuo. Si disegna una volta sola. */
+function disegnaEcg(){
+  var pl=document.querySelector("#hpEcg .hpecg-line"); if(!pl) return;
+  var base=20, cyc=60, n=8, pts=[];
+  for(var i=0;i<n;i++){
+    var x=i*cyc;
+    // tratto piatto, piccola onda P, piatto, il picco QRS, piatto
+    [[0,0],[12,0],[16,-4],[20,0],[30,0],[33,-14],[36,14],[39,-8],[42,0],[60,0]]
+      .forEach(function(p){ pts.push((x+p[0])+","+(base+p[1])); });
+  }
+  pl.setAttribute("points", pts.join(" "));
+}
+
 /* Le tre sotto-viste del riquadro (dentro #hpSub). */
 function subTemp(){
   var ro=soloLettura?" disabled":"";
@@ -3615,7 +3631,19 @@ function renderHp(){
   // il colore di barra e numero lo mette dipingiSaluteHp (in coda ad applicaTesti)
   var bloc = noCl || soloLettura;
   [elAmt,elDmg,elHeal].forEach(function(e){ if(e) e.disabled=bloc; });
+  var elRest=g("hpRestBtn"); if(elRest) elRest.disabled=bloc;
   if(elHint){ elHint.hidden=!noCl; if(noCl) elHint.textContent="Scegli una classe: i punti ferita nascono dai suoi dadi vita."; }
+
+  // il battito: compare quando sei a terra e cambia col tuo stato (morente
+  // debole e rosso, stabile calmo e verde, morto piatto)
+  var ecg=g("hpEcg");
+  if(ecg){
+    var mst=statoMortale();
+    ecg.hidden = (mst==="vivo");
+    ecg.classList.toggle("morente", mst==="morente");
+    ecg.classList.toggle("stabile", mst==="stabile");
+    ecg.classList.toggle("morto",   mst==="morto");
+  }
 
   // linguette: attiva quella giusta; "Tiri morte" si segnala quando sei a 0
   var giu = !noCl && cur===0;
@@ -3629,6 +3657,7 @@ function renderHp(){
     else if(vistaHp==="temp") elSub.innerHTML=subTemp();
     else if(vistaHp==="morte") elSub.innerHTML=subMorte();
     else elSub.innerHTML=subDadi();
+    montaSpinner(elSub);   // il campo dei temporanei nasce qui
   }
 }
 
@@ -3645,12 +3674,11 @@ function renderHpDialog(){
     +'<span class="subval">calcolato: <b>'+media+'</b>'+(scost?(' · ritocco '+(scost>0?'+':'')+scost):'')+'</span>'
     +(scost?('<button class="opt" data-hpreset="max"'+ro+'>Torna al calcolato</button>'):'')
     +'</div>';
-  h+='<div class="asplab">Riposo lungo</div>';
-  h+='<p class="subhint">Rimette i punti ferita al massimo, azzera i temporanei e i tiri contro la morte e recupera metà dei dadi vita, come da manuale.</p>';
-  h+='<div class="row"><button class="opt" data-hprest="lungo"'+ro+'>Fai un riposo lungo</button></div>';
   host.innerHTML=h;
+  montaSpinner(host);   // il campo del massimo nasce qui
 }
 
+disegnaEcg();
 document.getElementById("gearHp").addEventListener("click", openHp);
 document.getElementById("hpRevive").addEventListener("click", rianima);
 document.getElementById("hpPanel").addEventListener("click", function(e){
@@ -3662,6 +3690,7 @@ document.getElementById("hpPanel").addEventListener("click", function(e){
   var dv=e.target.closest("[data-dv]");
   if(dv){ var die=parseInt(dv.getAttribute("data-die"),10); if(dv.getAttribute("data-dv")==="spend") spendiDado(die); else recuperaDado(die); return; }
   if(e.target.closest("[data-hprianima]")){ rianima(); return; }
+  if(e.target.closest("[data-hprest]")){ riposoLungo(); return; }
   var mz=e.target.closest("[data-hpreset]");
   if(mz && mz.getAttribute("data-hpreset")==="morte"){ state.morteS=0; state.morteF=0; renderAll(); aggiornaSalva(); return; }
   var tz=e.target.closest("[data-hptemp]");
@@ -3678,12 +3707,46 @@ document.getElementById("modalHp").addEventListener("click", function(e){
   if(soloLettura) return;
   var rs=e.target.closest("[data-hpreset]");
   if(rs && rs.getAttribute("data-hpreset")==="max"){ state.pfScostamento=0; if(typeof state.pfAttuali==="number"&&state.pfAttuali>pfMax()) state.pfAttuali=pfMax(); renderAll(); aggiornaSalva(); return; }
-  var rl=e.target.closest("[data-hprest]");
-  if(rl){ riposoLungo(); return; }
 });
 document.getElementById("modalHp").addEventListener("change", function(e){
   if(soloLettura) return;
   if(e.target.id==="hpMaxIn"){ impostaMax(parseInt(e.target.value,10)); }
 });
+
+/* ============ CAMPI NUMERICI: freccette su misura e clic che seleziona ============
+   Le freccette bianche native stanno appiccicate al numero e stonano: le
+   nascondo (nel CSS) e ne metto due chevron tenui, intonati alla scheda, con lo
+   spazio giusto. Inoltre il PRIMO fuoco (clic o Tab) seleziona tutto - cosi'
+   scrivi e sostituisci - mentre un SECONDO clic posiziona il cursore, per
+   modificare senza dover cancellare. Vale per ogni <input type="number">, anche
+   quelli creati al volo, perche' montaSpinner si richiama dopo i ridisegni. */
+function montaSpinner(root){
+  var lista=(root||document).querySelectorAll('input[type="number"]');
+  for(var i=0;i<lista.length;i++){
+    var inp=lista[i];
+    if(inp.parentNode && inp.parentNode.classList && inp.parentNode.classList.contains("numwrap")) continue;   // gia' fatto
+    var wrap=document.createElement("span"); wrap.className="numwrap";
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp); inp.classList.add("hasspin");
+    var spin=document.createElement("span"); spin.className="numspin";
+    spin.innerHTML='<button type="button" tabindex="-1" data-step="up" aria-label="Aumenta"><svg viewBox="0 0 10 7"><path d="M1 5.5 L5 2 L9 5.5"/></svg></button>'
+                  +'<button type="button" tabindex="-1" data-step="down" aria-label="Diminuisci"><svg viewBox="0 0 10 7"><path d="M1 1.5 L5 5 L9 1.5"/></svg></button>';
+    wrap.appendChild(spin);
+  }
+}
+document.addEventListener("click", function(e){
+  var b=e.target.closest ? e.target.closest(".numspin [data-step]") : null; if(!b) return;
+  var w=b.closest(".numwrap"), inp=w&&w.querySelector("input"); if(!inp || inp.disabled) return;
+  if(b.getAttribute("data-step")==="up") inp.stepUp(); else inp.stepDown();
+  inp.dispatchEvent(new Event("change", {bubbles:true}));
+});
+/* primo fuoco: seleziona tutto. Il clic che da' il fuoco altrimenti
+   deselezionerebbe subito, quindi quella prima volta annullo il mouseup. */
+document.addEventListener("focusin", function(e){
+  var t=e.target; if(t && t.matches && t.matches('input[type="number"]')){ t._selTutto=true; try{ t.select(); }catch(_){} }
+});
+document.addEventListener("mouseup", function(e){
+  var t=e.target; if(t && t._selTutto){ t._selTutto=false; e.preventDefault(); }
+});
+montaSpinner(document);
 
 avvia();

@@ -359,6 +359,12 @@
   .hptab.on{ color:#fff; border-color:transparent; background:linear-gradient(150deg,var(--violet-2),#5b45c9); font-weight:600; }
   .hptab.urge:not(.on){ color:var(--danger); border-color:rgba(229,104,109,.55); }
   .hpsub{ flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; }
+  /* Riposo lungo: un pulsante sul riquadro, in fondo alla colonna destra */
+  .hprest{ margin-top:2px; border:1px solid var(--line); background:var(--panel2); color:var(--muted);
+    border-radius:9px; padding:8px 12px; font-family:var(--ui); font-size:12.5px; cursor:pointer; transition:.12s; }
+  .hprest:hover:not(:disabled){ border-color:var(--violet); color:var(--violet); }
+  .hprest:disabled{ opacity:.5; cursor:default; }
+  .hprest-moon{ color:var(--gold); margin-right:4px; }
   .hpsublab{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
   .hpsubrow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .hpsubnote{ font-size:11px; color:var(--muted); line-height:1.45; margin-top:9px; }
@@ -397,6 +403,49 @@
   @container (max-width: 560px){
     .hpaside{ border-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:14px; }
   }
+
+  /* ============ CAMPI NUMERICI: freccette su misura ============ */
+  /* Via le freccette bianche native (brutte e appiccicate al numero); al loro
+     posto due chevron tenui che si intonano alla scheda e si accendono di viola
+     al passaggio del mouse. Lo spazio a destra evita che tocchino le cifre. */
+  input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .numwrap{ position:relative; display:inline-flex; align-items:stretch; }
+  .numwrap > input.hasspin{ padding-right:22px; }
+  .numspin{ position:absolute; top:0; right:6px; bottom:0; display:flex; flex-direction:column;
+    justify-content:center; gap:3px; pointer-events:none; }
+  .numspin button{ pointer-events:auto; border:0; background:none; padding:0; margin:0; width:13px; height:9px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted); opacity:.65; transition:.12s; }
+  .numspin button:hover{ color:var(--violet); opacity:1; }
+  .numspin svg{ width:9px; height:6px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .numwrap > input:disabled ~ .numspin{ opacity:.4; }
+  .numwrap > input:disabled ~ .numspin button{ pointer-events:none; }
+
+  /* ============ BATTITO (ECG) E PULSAZIONE ============ */
+  /* Compare sotto i PF quando sei a terra. La riga e' larga il doppio del
+     riquadro e scorre verso sinistra: cosi' il ritmo sembra continuo. Il colore
+     e la velocita' raccontano lo stato. */
+  .hpecg{ width:100%; height:26px; margin-top:10px; overflow:hidden; }
+  .hpecg svg{ width:100%; height:100%; display:block; }
+  .hpecg-line{ fill:none; stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round;
+    stroke-linecap:round; transform-box:fill-box; }
+  .hpecg-flat{ display:none; stroke:#8a8894; stroke-width:2; vector-effect:non-scaling-stroke; opacity:.55; }
+  /* morente: battito debole, lento, rossastro */
+  .hpecg.morente .hpecg-line{ stroke:var(--danger); opacity:.55; animation:ecgscroll 5s linear infinite; }
+  /* stabile: il cuore riprende un ritmo calmo e regolare, verde */
+  .hpecg.stabile .hpecg-line{ stroke:#57c46a; opacity:.95;
+    animation:ecgscroll 2.6s linear infinite, ecgriparte .9s ease-out 1; }
+  /* morto: linea piatta, nessun battito */
+  .hpecg.morto .hpecg-line{ display:none; }
+  .hpecg.morto .hpecg-flat{ display:block; }
+  @keyframes ecgscroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  /* il primo battito "forte" quando ci si stabilizza */
+  @keyframes ecgriparte{ 0%{ opacity:.2; filter:none; } 30%{ opacity:1; filter:drop-shadow(0 0 6px rgba(87,196,106,.9)); } 100%{ opacity:.95; filter:none; } }
+
+  /* i tre pallini di successo, quando sei stabile, pulsano piano di verde */
+  .hpanel.stabile .dpip.succ.on{ animation:pipbattito 1.9s ease-in-out infinite; }
+  @keyframes pipbattito{ 0%,100%{ box-shadow:0 0 0 rgba(87,196,106,0); } 50%{ box-shadow:0 0 9px 1px rgba(87,196,106,.75); } }
 
   /* ============ MORTE E STATI A TERRA ============ */
   /* La scheda sbiadisce dolcemente man mano che cali; il colore lo mette il JS

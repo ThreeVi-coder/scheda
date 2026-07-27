@@ -45,6 +45,62 @@ var CLASSES=[
 var BY_KEY={}; CLASSES.forEach(function(c){ BY_KEY[c.key]=c; });
 var MAX_CLASSI=3;   /* fino al triclasse, non oltre */
 
+/* ============ DATI DELLE CLASSI (Manuale 2024) ============
+   Il "cosa dà ogni classe": caratteristica primaria (per il multiclasse),
+   addestramento nelle armature, abilità a scelta, armi, strumenti e cosa porta
+   in dote quando la si prende in multiclasse. Sono DATI puri: aggiungerne o
+   correggerne non tocca alcun calcolo. Le competenze nei tiri salvezza stanno
+   già in CLASSES (campo `ts`). Per ora la scheda ne usa solo una parte (le
+   armature serviranno alla CA, le abilità all'auto-assegnazione): il resto è
+   qui pronto per i mattoni successivi. `abilTra:"tutte"` = qualsiasi abilità;
+   `primaOr:true` = per il multiclasse basta UNA delle primarie (le altre le
+   richiedono tutte). Armature: leggera | media | pesante | scudi. */
+var CLASSE_DATI={
+  artificere:{ primaria:["int"], armature:["leggera","media","scudi"], abilNum:2,
+    abilTra:["arcani","storia","indagini","medicina","natura","percezione","rapidita"],
+    armi:"semplici", strumenti:"Arnesi da scasso, Strumenti da inventore e un tipo di Strumenti da artigiano a scelta",
+    multi:"1 abilità dalla lista, Strumenti da inventore, armatura Leggera e Media, Scudi" },
+  barbaro:{ primaria:["for"], armature:["leggera","media","scudi"], abilNum:2,
+    abilTra:["animali","atletica","intimidazione","natura","percezione","sopravvivenza"],
+    armi:"semplici e da guerra", strumenti:"", multi:"armi da Guerra, Scudi" },
+  bardo:{ primaria:["car"], armature:["leggera"], abilNum:3, abilTra:"tutte",
+    armi:"semplici", strumenti:"tre Strumenti musicali a scelta",
+    multi:"1 abilità a scelta, uno Strumento musicale, armatura Leggera" },
+  chierico:{ primaria:["sag"], armature:["leggera","media","scudi"], abilNum:2,
+    abilTra:["storia","intuizione","medicina","persuasione","religione"],
+    armi:"semplici", strumenti:"", multi:"armatura Leggera e Media, Scudi" },
+  druido:{ primaria:["sag"], armature:["leggera","scudi"], abilNum:2,
+    abilTra:["arcani","animali","intuizione","medicina","natura","percezione","religione","sopravvivenza"],
+    armi:"semplici", strumenti:"Kit da erborista", multi:"armatura Leggera, Scudi" },
+  guerriero:{ primaria:["for","des"], primaOr:true, armature:["leggera","media","pesante","scudi"], abilNum:2,
+    abilTra:["acrobazia","animali","atletica","storia","intuizione","intimidazione","persuasione","percezione","sopravvivenza"],
+    armi:"semplici e da guerra", strumenti:"", multi:"armi da Guerra, armatura Leggera e Media, Scudi" },
+  ladro:{ primaria:["des"], armature:["leggera"], abilNum:4,
+    abilTra:["acrobazia","atletica","inganno","intuizione","intimidazione","indagini","percezione","persuasione","rapidita","furtivita"],
+    armi:"semplici e armi da guerra con proprietà Accuratezza o Leggera", strumenti:"Arnesi da scasso",
+    multi:"1 abilità dalla lista, Arnesi da scasso, armatura Leggera" },
+  mago:{ primaria:["int"], armature:[], abilNum:2,
+    abilTra:["arcani","storia","intuizione","indagini","medicina","natura","religione"],
+    armi:"semplici", strumenti:"", multi:"nessuna competenza aggiuntiva" },
+  monaco:{ primaria:["des","sag"], armature:[], abilNum:2,
+    abilTra:["acrobazia","atletica","storia","intuizione","religione","furtivita"],
+    armi:"semplici e armi da guerra con proprietà Leggera",
+    strumenti:"un tipo di Strumenti da artigiano o uno Strumento musicale a scelta", multi:"nessuna competenza aggiuntiva" },
+  paladino:{ primaria:["for","car"], armature:["leggera","media","pesante","scudi"], abilNum:2,
+    abilTra:["atletica","intuizione","intimidazione","medicina","persuasione","religione"],
+    armi:"semplici e da guerra", strumenti:"", multi:"armi da Guerra, armatura Leggera e Media, Scudi" },
+  ranger:{ primaria:["des","sag"], armature:["leggera","media","scudi"], abilNum:3,
+    abilTra:["animali","atletica","intuizione","indagini","natura","percezione","furtivita","sopravvivenza"],
+    armi:"semplici e da guerra", strumenti:"", multi:"1 abilità dalla lista, armi da Guerra, armatura Leggera e Media, Scudi" },
+  stregone:{ primaria:["car"], armature:[], abilNum:2,
+    abilTra:["arcani","inganno","intuizione","intimidazione","persuasione","religione"],
+    armi:"semplici", strumenti:"", multi:"nessuna competenza aggiuntiva" },
+  warlock:{ primaria:["car"], armature:["leggera"], abilNum:2,
+    abilTra:["arcani","inganno","storia","intimidazione","indagini","natura","religione"],
+    armi:"semplici", strumenti:"", multi:"armatura Leggera" }
+};
+function datiClasse(k){ return CLASSE_DATI[k] || null; }
+
 /* Soglie di esperienza per livello (manuale base) */
 var XP_TABLE=[0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
 function levelFromXP(xp){
@@ -165,6 +221,7 @@ var state={
   hpColorPieno:"#57C46A",   // barra e numero PF: colore quando la vita e' piena
   hpColorFerito:"#E0B15E",  // colore sotto un quarto della vita (25%)
   hpColorCritico:"#E5686D", // colore sotto un decimo della vita (10%) o a 0
+  difScost:{},              // ritocco a mano di CA/Iniziativa/Velocita' (differenza dal calcolo)
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -684,6 +741,11 @@ function applicaDati(o){
   }
   state.morteS = (typeof o.morteS==="number" && o.morteS>0) ? Math.min(3, Math.round(o.morteS)) : 0;
   state.morteF = (typeof o.morteF==="number" && o.morteF>0) ? Math.min(3, Math.round(o.morteF)) : 0;
+  // ritocco a mano di CA / Iniziativa / Velocita': solo numeri, il resto si scarta
+  state.difScost={};
+  if(o.difScost && typeof o.difScost==="object"){
+    ["ca","iniz","vel"].forEach(function(k){ var v=o.difScost[k]; if(typeof v==="number" && isFinite(v)) state.difScost[k]=Math.round(v); });
+  }
 
   elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
@@ -696,6 +758,7 @@ function datiDaSalvare(){
   o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
   o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
   o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
+  o.difScost=state.difScost;
   return o;
 }
 
@@ -927,6 +990,45 @@ function dadiVitaPool(){
     return { die:d, tot:tot, spesi:sp, liberi:tot-sp };
   });
 }
+/* ============ SORGENTI E CONTRIBUTI (CA, Iniziativa, Velocità) ============
+   Ogni valore derivato nasce da una BASE più una somma di CONTRIBUTI, ognuno con
+   un'etichetta e una fonte. Oggi le fonti sono le caratteristiche e le regole di
+   base; domani si aggiungono specie, sottoclassi, talenti e homebrew SENZA
+   toccare i calcoli: basta che queste funzioni restituiscano più voci. Ogni
+   valore ha inoltre un RITOCCO a mano salvato (la rete di sicurezza). I cassetti
+   delle fonti future sono già qui e per ora tornano vuoti. */
+function contribRazza(k){ return []; }         // niente finché non c'è la specie
+function contribSottoclassi(k){ return []; }   // niente sottoclassi ancora
+function contribTalenti(k){ return []; }        // niente talenti ancora
+function contribHomebrew(k){ return []; }       // regole della casa: per ora a mano (il ritocco)
+function contribFuture(k){ return contribRazza(k).concat(contribSottoclassi(k), contribTalenti(k), contribHomebrew(k)); }
+
+function contributiCA(){
+  // FUTURO: armatura indossata e scudo (equipaggiamento), Difesa senza armatura
+  // di Barbaro/Monaco, bonus da talenti/oggetti/specie — ognuno una voce qui.
+  return [{ et:"Base", val:10, fonte:"regola" },
+          { et:"Destrezza", val:modCar("des"), fonte:"caratteristica" }].concat(contribFuture("ca"));
+}
+function contributiIniz(){
+  // FUTURO: talento Allerta, tratti di specie, altri bonus.
+  return [{ et:"Destrezza", val:modCar("des"), fonte:"caratteristica" }].concat(contribFuture("iniz"));
+}
+function contributiVel(){
+  // FUTURO: la specie imposta la base; tratti/talenti/condizioni la cambiano.
+  return [{ et:"Base", val:30, fonte:"regola" }].concat(contribFuture("vel"));
+}
+var DIF_VOCI={
+  ca:  { nome:"Classe Armatura", fn:contributiCA },
+  iniz:{ nome:"Iniziativa", fn:contributiIniz, segno:true },
+  vel: { nome:"Velocità", fn:contributiVel, unita:" ft" }
+};
+var DIF_ORD=["ca","iniz","vel"];
+function ritoccoDif(k){ var m=state.difScost||{}, v=m[k]; return (typeof v==="number"&&isFinite(v))?Math.round(v):0; }
+function baseDif(k){ return DIF_VOCI[k].fn().reduce(function(s,x){ return s+(x.val||0); },0); }
+function valoreDif(k){ return baseDif(k)+ritoccoDif(k); }
+/* Formattazione per la vista: l'iniziativa col segno, la velocità coi piedi. */
+function mostraDif(k, v){ var d=DIF_VOCI[k]; return d.segno ? segno(v) : (v + (d.unita||"")); }
+
 /* La "salute": pieno finche' stai sopra un quarto della vita, ferito sotto il
    25%, critico sotto il 10% (e a 0). Da qui nascono il colore della barra e
    quello del numero dei punti attuali quando cala. */
@@ -953,6 +1055,8 @@ function dipingiSaluteHp(){
   var noCl=!state.classes.length, st=saluteHp(), col=coloreSaluteHp(st);
   fill.style.background = noCl ? "" : col;
   if(cur && !noCl && st!=="pieno"){ cur.style.color=col; cur.style.fill=col; }
+  var heart=document.getElementById("hpHeart");
+  if(heart) heart.style.color = noCl ? "" : col;   // il cuore segue la salute (verde/oro/rosso)
 }
 
 /* Lo stato mortale del personaggio, dai tiri contro la morte quando sei a 0:
@@ -1858,7 +1962,7 @@ function applicaTesti(){
 
 function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
   renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
-  renderHp(); renderHpDialog(); apply(); setHub(null);
+  renderHp(); renderHpDialog(); renderDif(); renderDifDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
 
 FONT_GROUPS.forEach(function(g){
@@ -1923,6 +2027,7 @@ function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidd
   document.getElementById("modalTs").hidden=true;
   document.getElementById("modalAbil").hidden=true;
   var mh=document.getElementById("modalHp"); if(mh) mh.hidden=true;
+  var md=document.getElementById("modalDif"); if(md) md.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
@@ -2726,6 +2831,9 @@ function collegaInfo(idBtn, idPop){
 }
 collegaInfo("tsInfoBtn", "tsHint");
 collegaInfo("abilInfoBtn", "abilHint");
+collegaInfo("dif_ca_i", "dif_ca_pop");
+collegaInfo("dif_iniz_i", "dif_iniz_pop");
+collegaInfo("dif_vel_i", "dif_vel_pop");
 
 /* Luce su richiesta: passando il mouse su una caratteristica - il suo vertice
    nell'esagono o il suo gruppo di abilita' - si accendono insieme. Delega sul
@@ -3711,6 +3819,65 @@ document.getElementById("modalHp").addEventListener("click", function(e){
 document.getElementById("modalHp").addEventListener("change", function(e){
   if(soloLettura) return;
   if(e.target.id==="hpMaxIn"){ impostaMax(parseInt(e.target.value,10)); }
+});
+
+/* ============ CA / INIZIATIVA / VELOCITÀ — disegno e comandi ============
+   Tre valori a "strati": ognuno mostra il totale, e la "i" ne spiega la
+   scomposizione (base + Destrezza + ... + ritocco), elencando anche i cassetti
+   futuri ancora vuoti. La rotella apre il ritocco a mano (rete di sicurezza). */
+function scomposizioneHtml(k){
+  var d=DIF_VOCI[k], voci=d.fn(), rit=ritoccoDif(k), tot=valoreDif(k);
+  var righe=voci.filter(function(v){ return v.val!==0 || v.fonte==="regola"; }).map(function(v){
+    return '<div class="scrow"><span>'+esc(v.et)+'</span><b>'+(d.segno?segno(v.val):v.val)+'</b></div>';
+  });
+  if(rit) righe.push('<div class="scrow rit"><span>Ritocco a mano</span><b>'+segno(rit)+'</b></div>');
+  var futuri = k==="ca" ? "armatura, scudo, specie, talenti"
+            : (k==="vel" ? "specie, tratti, talenti" : "talenti, tratti");
+  return '<div class="scbd">'+righe.join("")
+    + '<div class="scrow tot"><span>Totale</span><b>'+mostraDif(k,tot)+'</b></div></div>'
+    + '<div class="scfut">In arrivo: '+futuri+'. Si aggiungeranno da soli.</div>';
+}
+function renderDif(){
+  var host=document.getElementById("difPanel"); if(!host) return;
+  DIF_ORD.forEach(function(k){
+    var el=document.getElementById("dif_"+k+"_val"); if(el) el.textContent=mostraDif(k, valoreDif(k));
+    var pop=document.getElementById("dif_"+k+"_pop"); if(pop) pop.innerHTML=scomposizioneHtml(k);
+  });
+}
+function renderDifDialog(){
+  var host=document.getElementById("difDlgBody"); if(!host) return;
+  var ro=soloLettura?" disabled":"", h="";
+  h+='<p class="hint">Questi valori si calcolano da soli da quello che sappiamo adesso (la Destrezza e le regole di base). Quando arriveranno specie, equipaggiamento e talenti si aggiorneranno da soli. Se intanto un caso particolare — o una regola della casa — chiede un altro numero, ritoccalo qui: si salva solo la differenza dal calcolo, così segue comunque i cambiamenti futuri.</p>';
+  DIF_ORD.forEach(function(k){
+    var d=DIF_VOCI[k], base=baseDif(k), val=valoreDif(k), rit=ritoccoDif(k);
+    h+='<div class="row"><span class="rowlab">'+d.nome+'</span>'
+      +'<input class="hpin" type="number" id="dif_'+k+'_in" step="1" value="'+val+'"'+ro+' />'
+      +'<span class="subval">calcolato: <b>'+mostraDif(k,base)+'</b>'+(rit?(' · ritocco '+segno(rit)):'')+'</span>'
+      +(rit?('<button class="opt" data-difreset="'+k+'"'+ro+'>Torna al calcolato</button>'):'')
+      +'</div>';
+  });
+  host.innerHTML=h;
+  montaSpinner(host);
+}
+function impostaDif(k, v){
+  if(!isFinite(v)){ renderDifDialog(); return; }
+  if(!state.difScost) state.difScost={};
+  var s=Math.round(v)-baseDif(k);
+  if(s===0) delete state.difScost[k]; else state.difScost[k]=s;
+  renderAll(); aggiornaSalva();
+}
+function openDif(){ document.getElementById("modalDif").hidden=false; renderDifDialog(); }
+document.getElementById("gearDif").addEventListener("click", openDif);
+document.getElementById("modalDif").addEventListener("click", function(e){
+  if(e.target.closest("[data-close]")){ closeAll(); return; }
+  if(soloLettura) return;
+  var r=e.target.closest("[data-difreset]");
+  if(r){ var k=r.getAttribute("data-difreset"); if(state.difScost) delete state.difScost[k]; renderAll(); aggiornaSalva(); return; }
+});
+document.getElementById("modalDif").addEventListener("change", function(e){
+  if(soloLettura) return;
+  var m=e.target.id && e.target.id.match(/^dif_(ca|iniz|vel)_in$/);
+  if(m){ impostaDif(m[1], parseInt(e.target.value,10)); }
 });
 
 /* ============ CAMPI NUMERICI: freccette su misura e clic che seleziona ============

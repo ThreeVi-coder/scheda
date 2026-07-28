@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
   <div class="wrap">
@@ -527,10 +527,29 @@
           <button class="dlgx" data-close="dif" aria-label="Chiudi">&times;</button>
         </div>
         <div class="dlgbody">
-          <div id="difDlgBody"></div>
+          <div class="mech" id="difDlgBody"></div>
+
+          <div class="este">
+            <div class="row top">
+              <span class="rowlab">Colore simboli</span>
+              <div id="difIcoPicker" class="picker"></div>
+            </div>
+            <p class="subhint">Il colore di scudo, fulmine e frecce. I numeri e le etichette si toccano qui sotto.</p>
+
+            <div class="asplab">Aspetto delle scritte</div>
+            <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
+            <div class="antepsel" id="antsel_dif"></div>
+            <div class="comandi" id="com_dif"></div>
+          </div>
         </div>
-        <div class="dlgbar">
+        <div class="dlgbar" id="barDif">
+          <button class="btn-reset" data-reset="Dif">Azzera</button>
           <button class="btn-close" data-close="dif">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmDif" hidden>
+          <span class="cfmtxt">Riportare colore dei simboli e scritte di CA/Iniziativa/Velocit&agrave; com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Dif">Annulla</button>
+          <button class="btn-yes" data-yes="Dif">Azzera</button>
         </div>
       </div>
     </div>
@@ -699,6 +718,6 @@
 
   </div>
 
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

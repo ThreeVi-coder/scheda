@@ -222,6 +222,7 @@ var state={
   hpColorFerito:"#E0B15E",  // colore sotto un quarto della vita (25%)
   hpColorCritico:"#E5686D", // colore sotto un decimo della vita (10%) o a 0
   difScost:{},              // ritocco a mano di CA/Iniziativa/Velocita' (differenza dal calcolo)
+  difIcoColor:"#E0B15E",    // colore dei tre simboli (scudo, fulmine, frecce)
   testi:null,  // riempiti subito sotto, quando TESTI e CARATT sono dichiarati
   stats:null
 };
@@ -588,7 +589,9 @@ var TESTI=[
   { id:"etPf",      dove:"hp",    nome:"Etichetta",            sel:"#hpPanel .eyebrow",     font:"",       colore:"#9A97AD" },
   { id:"numPf",     dove:"hp",    nome:"Punti attuali",        sel:"#hpCur",                font:"cinzel", colore:"#57C46A" },
   { id:"maxPf",     dove:"hp",    nome:"Massimo",              sel:"#hpMax",                font:"cinzel", colore:"#9A97AD" },
-  { id:"tempPf",    dove:"hp",    nome:"Temporanei",           sel:"#hpTemp",               font:"",       colore:"#A78BFA" }
+  { id:"tempPf",    dove:"hp",    nome:"Temporanei",           sel:"#hpTemp",               font:"",       colore:"#A78BFA" },
+  { id:"etDif",     dove:"dif",   nome:"Etichette",            sel:"#difPanel .eyebrow",    font:"",       colore:"#9A97AD" },
+  { id:"valDif",    dove:"dif",   nome:"Valore",               sel:"#dif_ca_val, #dif_iniz_val, #dif_vel_val", font:"cinzel", colore:"#E0B15E" }
 ];
 var TESTO={}; TESTI.forEach(function(t){ TESTO[t.id]=t; });
 function testiDiPartenza(){
@@ -621,7 +624,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -746,6 +749,7 @@ function applicaDati(o){
   if(o.difScost && typeof o.difScost==="object"){
     ["ca","iniz","vel"].forEach(function(k){ var v=o.difScost[k]; if(typeof v==="number" && isFinite(v)) state.difScost[k]=Math.round(v); });
   }
+  state.difIcoColor = (typeof o.difIcoColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.difIcoColor)) ? o.difIcoColor : "#E0B15E";
 
   elName.textContent = (typeof o.name==="string") ? o.name : "";
 }
@@ -1366,6 +1370,13 @@ function doReset(which){
       try{ hpPienoPicker.setHex(state.hpColorPieno); hpFeritoPicker.setHex(state.hpColorFerito); hpCriticoPicker.setHex(state.hpColorCritico); }
       finally{ hpFermo=false; }
     }
+  } else if(which==="Dif"){
+    azzeraTesti("dif");   // solo l'aspetto: i valori e i ritocchi restano
+    state.difIcoColor="#E0B15E";
+    if(typeof difIcoPicker!=="undefined" && difIcoPicker){
+      difFermo=true;
+      try{ difIcoPicker.setHex(state.difIcoColor); } finally{ difFermo=false; }
+    }
   }
   cancelReset(which);
   renderAll();
@@ -1718,7 +1729,8 @@ var ASP_CONT={
   prof: { ant:"antsel_prof",  com:"com_prof" },
   ts:   { ant:"antsel_ts",    com:"com_ts" },
   abil: { ant:"antsel_abil",  com:"com_abil" },
-  hp:   { ant:"antsel_hp",    com:"com_hp" }
+  hp:   { ant:"antsel_hp",    com:"com_hp" },
+  dif:  { ant:"antsel_dif",   com:"com_dif" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
@@ -1729,7 +1741,8 @@ var CAMPIONI={
   siglaTs:{t:"DES",cls:"apmid"}, valTs:{t:"+5",cls:"apbig"},
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"},
-  etPf:{t:"PUNTI FERITA",cls:"apsmall"}, numPf:{t:"27",cls:"apbig"}, maxPf:{t:"31",cls:"apmid"}, tempPf:{t:"+5",cls:"apmid"}
+  etPf:{t:"PUNTI FERITA",cls:"apsmall"}, numPf:{t:"27",cls:"apbig"}, maxPf:{t:"31",cls:"apmid"}, tempPf:{t:"+5",cls:"apmid"},
+  etDif:{t:"CLASSE ARMATURA",cls:"apsmall"}, valDif:{t:"14",cls:"apbig"}
 };
 
 function targetValido(dove,key){
@@ -1901,6 +1914,12 @@ function sincronizzaExtra(dove){
       finally{ hpFermo=false; }
     }
   }
+  if(dove==="dif"){
+    if(typeof difIcoPicker!=="undefined" && difIcoPicker){
+      difFermo=true;
+      try{ difIcoPicker.setHex(state.difIcoColor); } finally{ difFermo=false; }
+    }
+  }
 }
 function sincronizzaSel(dove){ disegnaAntepSel(dove); costruisciComandi(dove); sincronizzaExtra(dove); }
 function sincronizzaClasse(){ sincronizzaSel("class"); }   // alias, la finestra Classe lo chiama ancora
@@ -1915,10 +1934,11 @@ function apertaAspetto(){
   var mt=document.getElementById("modalTs"); if(mt && !mt.hidden) return "ts";
   var ma=document.getElementById("modalAbil"); if(ma && !ma.hidden) return "abil";
   var mh=document.getElementById("modalHp"); if(mh && !mh.hidden) return "hp";
+  var md=document.getElementById("modalDif"); if(md && !md.hidden) return "dif";
   return null;
 }
 (function(){
-  ["name","xp","class","stats","prof","ts","abil","hp"].forEach(function(dove){
+  ["name","xp","class","stats","prof","ts","abil","hp","dif"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -2954,6 +2974,8 @@ var hpFermo=false;
 var hpPienoPicker=makePicker(document.getElementById("hpPienoPicker"), state.hpColorPieno, function(hex){ if(hpFermo) return; state.hpColorPieno=hex; dipingiSaluteHp(); aggiornaSalva(); });
 var hpFeritoPicker=makePicker(document.getElementById("hpFeritoPicker"), state.hpColorFerito, function(hex){ if(hpFermo) return; state.hpColorFerito=hex; dipingiSaluteHp(); aggiornaSalva(); });
 var hpCriticoPicker=makePicker(document.getElementById("hpCriticoPicker"), state.hpColorCritico, function(hex){ if(hpFermo) return; state.hpColorCritico=hex; dipingiSaluteHp(); aggiornaSalva(); });
+var difFermo=false;
+var difIcoPicker=makePicker(document.getElementById("difIcoPicker"), state.difIcoColor, function(hex){ if(difFermo) return; state.difIcoColor=hex; renderDif(); aggiornaSalva(); });
 buildWheel();
 
 /* Riallinea tutti i comandi allo stato appena caricato */
@@ -3843,6 +3865,8 @@ function renderDif(){
     var el=document.getElementById("dif_"+k+"_val"); if(el) el.textContent=mostraDif(k, valoreDif(k));
     var pop=document.getElementById("dif_"+k+"_pop"); if(pop) pop.innerHTML=scomposizioneHtml(k);
   });
+  var col=/^#[0-9a-fA-F]{6}$/.test(state.difIcoColor||"")?state.difIcoColor:"#E0B15E";
+  host.querySelectorAll(".difico").forEach(function(e){ e.style.color=col; });   // colore dei simboli
 }
 function renderDifDialog(){
   var host=document.getElementById("difDlgBody"); if(!host) return;
@@ -3866,7 +3890,7 @@ function impostaDif(k, v){
   if(s===0) delete state.difScost[k]; else state.difScost[k]=s;
   renderAll(); aggiornaSalva();
 }
-function openDif(){ document.getElementById("modalDif").hidden=false; renderDifDialog(); }
+function openDif(){ document.getElementById("modalDif").hidden=false; renderDifDialog(); if(personalizza) sincronizzaSel("dif"); }
 document.getElementById("gearDif").addEventListener("click", openDif);
 document.getElementById("modalDif").addEventListener("click", function(e){
   if(e.target.closest("[data-close]")){ closeAll(); return; }

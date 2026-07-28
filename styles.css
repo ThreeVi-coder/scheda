@@ -435,33 +435,17 @@
   .scrow.tot b{ color:var(--gold); font-size:14px; }
   .scfut{ font-size:11px; color:var(--muted); opacity:.8; font-style:italic; line-height:1.45; }
 
-  /* ============ LINGUAGGIO ARCANO (favo + cornici) ============ */
-  /* Tutta la fascia entra nello stesso mondo del riquadro Caratteristiche: una
-     trama a favo tenue di fondo, un bordo che si scalda al passaggio del mouse,
-     e i numeri chiave incorniciati in un esagono col bagliore che respira. */
+  /* ============ LINGUAGGIO ARCANO (cornici) ============ */
+  /* Per ora restiamo puliti: niente trama a favo di fondo e niente esagono
+     attorno ai numeri (li ripenseremo insieme allo sfondo più avanti). Resta
+     solo il bordo che si scalda al passaggio del mouse. */
   .lpanel, .ppanel, .cpanel, .hpanel, .dpanel, .header{
     position:relative; transition:border-color .18s ease, box-shadow .2s ease; }
-  .lpanel::before, .ppanel::before, .cpanel::before, .hpanel::before, .dpanel::before, .header::before, .dialog::before{
-    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48' viewBox='0 0 56 48'%3E%3Cpath d='M14 1 L42 1 L56 24 L42 47 L14 47 L0 24 Z' fill='none' stroke='%23e0b15e' stroke-opacity='0.075' stroke-width='1'/%3E%3C/svg%3E");
-    background-size:54px 46px; }
-  .lpanel > *, .ppanel > *, .cpanel > *, .hpanel > *, .dpanel > *, .header > *, .dialog > *{ position:relative; z-index:1; }
   .lpanel:hover, .ppanel:hover, .cpanel:hover, .hpanel:hover, .dpanel:hover, .header:hover{
     border-color:rgba(224,177,94,.35); box-shadow:0 0 0 1px rgba(224,177,94,.1), 0 8px 26px rgba(0,0,0,.3); }
 
-  /* i numeri incorniciati nell'esagono (per ora Livello e Competenza) */
-  @keyframes arcbreath{ 0%,100%{ filter:drop-shadow(0 0 3px rgba(224,177,94,.22)); }
-    50%{ filter:drop-shadow(0 0 8px rgba(224,177,94,.5)); } }
-  .prow .lvnum, .prow .profval{
-    display:inline-flex; align-items:center; justify-content:center; width:78px; height:68px; margin:0;
-    background:center / 78px 68px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 76 68'%3E%3Cpolygon points='19,2 57,2 74,34 57,66 19,66 2,34' fill='rgba(224,177,94,0.05)' stroke='%23e0b15e' stroke-width='1.4'/%3E%3Cpolygon points='23,8 53,8 68,34 53,60 23,60 8,34' fill='none' stroke='rgba(224,177,94,0.32)' stroke-width='1'/%3E%3C/svg%3E");
-    animation:arcbreath 4.4s ease-in-out infinite; }
   /* il simbolo della classe prende un alone arcano viola */
   .cpanel .ce{ filter:drop-shadow(0 0 6px rgba(167,139,250,.4)); }
-  /* NIENTE trama sul riquadro grande: dietro i grafici a esagoni/favo si
-     confonderebbe con loro (devono restare i protagonisti). */
-  @media (prefers-reduced-motion: reduce){
-    .prow .lvnum, .prow .profval{ animation:none; filter:drop-shadow(0 0 5px rgba(224,177,94,.3)); } }
 
   /* ============ CAMPI NUMERICI: freccette su misura ============ */
   /* Via le freccette bianche native (brutte e appiccicate al numero); al loro

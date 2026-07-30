@@ -1,4 +1,4 @@
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=EB+Garamond:wght@400;700&family=Marcellus&family=Cardo:wght@400;700&family=Playfair+Display:wght@400;700&family=Spectral:wght@400;700&family=Uncial+Antiqua&family=MedievalSharp&family=Grenze+Gotisch:wght@400;700&family=UnifrakturCook:wght@700&family=Metamorphous&family=Pirata+One&family=IM+Fell+English&family=Great+Vibes&family=Tangerine:wght@400;700&family=Cormorant+SC:wght@400;700&family=Almendra:wght@400;700&family=Griffy&family=Eagle+Lake&family=Fondamento&family=Macondo&family=Inter:wght@400;500;700&family=Oswald:wght@400;700&family=Bebas+Neue&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=EB+Garamond:wght@400;700&family=Marcellus&family=Cardo:wght@400;700&family=Playfair+Display:wght@400;700&family=Spectral:wght@400;700&family=Uncial+Antiqua&family=MedievalSharp&family=Grenze+Gotisch:wght@400;700&family=UnifrakturCook:wght@700&family=Metamorphous&family=Pirata+One&family=IM+Fell+English&family=Great+Vibes&family=Tangerine:wght@400;700&family=Cormorant+SC:wght@400;700&family=Almendra:wght@400;700&family=Griffy&family=Eagle+Lake&family=Fondamento&family=Macondo&family=Inter:wght@400;500;700&family=Oswald:wght@400;700&family=Bebas+Neue&family=Lugrasimo&display=swap');
 
   :root{
     --bg:#111019; --panel:#1a1926; --panel2:#201f2e; --line:#2e2d3e;
@@ -211,6 +211,33 @@
   .cl{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:700; color:var(--gold); align-self:flex-start; margin-top:3px; }
   .cdiv{ width:1.5px; height:30px; background:var(--line); transform:rotate(18deg); border-radius:2px; margin:0 3px; flex:0 0 auto; }
   .cempty{ font-size:15px; color:var(--muted); font-style:italic; padding:6px 0; }
+
+  /* ============ PANNELLO RAZZA ============ */
+  /* Una banda lunga a tutta larghezza, in cima alla fila (come CA/Iniz/Vel).
+     L'intero riquadro e' un pulsante: toccarlo apre il grimorio. Etichetta e
+     nome in orizzontale, il libricino a destra fa da invito. La composizione
+     definitiva la decideremo dopo: per ora sta larga e comoda. */
+  .rzpanel{
+    flex:1 1 100%; width:100%; min-width:0; box-sizing:border-box;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:14px 22px 16px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:5px;
+  }
+  .rzpanel:focus-visible{ outline:2px solid var(--violet); outline-offset:2px; }
+  .rzet{ text-align:center; }
+  .rzmid{ display:inline-flex; align-items:center; justify-content:center; gap:12px; min-height:32px; }
+  .rzline{ display:inline-flex; align-items:baseline; gap:10px; }
+  /* la frase di sapore, in corsivo elegante (font provvisorio, da rivedere) */
+  .rztag{ font-family:'Lugrasimo',cursive; font-size:19px; line-height:1.3; color:var(--gold); }
+  .rzname{ font-family:'Cinzel',Georgia,serif; font-size:24px; font-weight:700; line-height:1.1; color:var(--ink); }
+  .rztipo{ font-size:12px; color:var(--gold); letter-spacing:.05em; }
+  .rzghost{ font-size:14px; color:var(--muted); font-style:italic; }
+  .rzquill{ width:22px; height:22px; color:var(--gold); flex:0 0 auto; opacity:.85; transition:.18s ease; }
+  .rzquill svg{ width:100%; height:100%; display:block; }
+  .rzpanel:hover .rzquill{ opacity:1; transform:rotate(-10deg) translateY(-1px); }
+  /* il cursore lampeggiante mentre la piuma "scrive" */
+  .rzwriting::after{ content:'|'; margin-left:1px; opacity:.6; animation:rzcaret .7s steps(1) infinite; }
+  @keyframes rzcaret{ 50%{ opacity:0; } }
 
   /* ============ PANNELLO CARATTERISTICHE ============ */
   .spanel{
@@ -439,9 +466,9 @@
   /* Per ora restiamo puliti: niente trama a favo di fondo e niente esagono
      attorno ai numeri (li ripenseremo insieme allo sfondo più avanti). Resta
      solo il bordo che si scalda al passaggio del mouse. */
-  .lpanel, .ppanel, .cpanel, .hpanel, .dpanel, .header{
+  .lpanel, .ppanel, .cpanel, .rzpanel, .hpanel, .dpanel, .header{
     position:relative; transition:border-color .18s ease, box-shadow .2s ease; }
-  .lpanel:hover, .ppanel:hover, .cpanel:hover, .hpanel:hover, .dpanel:hover, .header:hover{
+  .lpanel:hover, .ppanel:hover, .cpanel:hover, .rzpanel:hover, .hpanel:hover, .dpanel:hover, .header:hover{
     border-color:rgba(224,177,94,.35); box-shadow:0 0 0 1px rgba(224,177,94,.1), 0 8px 26px rgba(0,0,0,.3); }
 
   /* il simbolo della classe prende un alone arcano viola */
@@ -720,6 +747,255 @@
      pagina: tenere il posto vuoto a una barra sfocata non serviva a niente. */
   .dialog.centrata{ top:50%; transform:translate(-50%,-50%); max-height:calc(100dvh - 80px); }
   .dialog.mezzo{ top:50%; transform:translate(-50%,-50%); width:min(460px,92vw); }
+
+  /* ============ GRIMORIO DELLE RAZZE ============ */
+  /* La finestra e' larga e alta come un tomo: la pagina del bestiario contiene
+     tante informazioni, quindi puo' allargarsi quasi a tutto lo schermo. A
+     sinistra l'indice delle razze; a destra la pagina: nome grande e centrato
+     con una riga sottile, poi illustrazione a sinistra e info a elenco. */
+  .dialog.grimorio{ top:50%; transform:translate(-50%,-50%); width:min(1500px,96vw); max-height:calc(100dvh - 56px);
+    background-color:#241b12; color:#ece3d3; border-color:rgba(224,177,94,.25);
+    background-image:
+      radial-gradient(ellipse 60% 55% at 22% 12%, rgba(126,96,54,.20), transparent 60%),
+      radial-gradient(ellipse 55% 50% at 84% 88%, rgba(98,72,40,.20), transparent 55%),
+      radial-gradient(ellipse 70% 60% at 55% 50%, rgba(52,38,22,.30), transparent 75%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.05'/%3E%3C/svg%3E"); }
+  .dialog.grimorio .dlghead h2{ color:#ece3d3; }
+  .dialog.grimorio .dlgbar{ background:transparent; border-top-color:rgba(224,177,94,.2); }
+  /* il tomo: prima la copertina, poi (voltando pagina) il libro aperto.
+     display:flex column + i figli con min-height:0 = la pagina scorre davvero.
+     Il padding tiene l'area che scorre DENTRO la cornice: il contenuto viene
+     tagliato prima della linea e non la supera mai. */
+  .grimwrap{ padding:22px; position:relative; overflow:hidden; perspective:2200px; min-height:min(560px, 70dvh);
+    display:flex; flex-direction:column; }
+  /* cornice geometrica sottilissima (doppio filo), disegnata nel margine — mai sul contenuto */
+  .grimwrap::after{ content:""; position:absolute; inset:9px; pointer-events:none; z-index:6; border:1px solid rgba(224,177,94,.24); }
+  .grimwrap::before{ content:""; position:absolute; inset:14px; pointer-events:none; z-index:6; border:1px solid rgba(224,177,94,.09); }
+  .grimbody{ display:flex; gap:0; padding:0; flex:1 1 auto; min-height:0; }
+  /* stadi: copertina o libro aperto */
+  .grimwrap.in-cover .grimbody{ visibility:hidden; }
+  .grimwrap.in-aperto .grimcover{ display:none; }
+  .grimwrap.turning .grimcover{ display:flex; }
+  /* Durante il giro il libro chiaro resta NASCOSTO: dietro la copertina che si
+     dissolve si vede solo il fondo scuro. Le pagine chiare compaiono solo a
+     dissolvenza finita (lo fa voltaPagina passando ad "aperto"). */
+
+  /* --- la copertina --- */
+  .grimcover{ position:absolute; inset:0; z-index:3;
+    background:radial-gradient(ellipse 75% 70% at 50% 45%, rgba(60,44,26,.35), rgba(20,14,9,.55));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:34px;
+    transform-origin:center; will-change:transform,filter,opacity; }
+  .cover-sigillo{ width:clamp(160px,27vw,250px); height:clamp(160px,27vw,250px); border-radius:50%;
+    overflow:hidden; border:1px solid rgba(224,177,94,.45); background:#f4efe3;
+    box-shadow:0 0 0 6px rgba(224,177,94,.06), 0 10px 34px rgba(0,0,0,.4); }
+  .cover-sigillo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cover-titolo{ font-family:'Lugrasimo',cursive; font-size:clamp(26px,4.4vw,44px); margin:0; color:#efe6d4; letter-spacing:.02em; line-height:1.15; }
+  .cover-autore{ font-family:'Lugrasimo',cursive; font-size:clamp(14px,1.9vw,18px); color:var(--gold); margin:0; line-height:1.7; }
+  .cover-autore span{ font-size:.85em; opacity:.85; }
+  .cover-volta{ margin-top:8px; border:1px solid rgba(224,177,94,.5); background:transparent; color:var(--gold);
+    border-radius:99px; padding:11px 22px; font-family:var(--ui); font-size:14px; cursor:pointer; transition:.15s;
+    display:inline-flex; align-items:center; gap:9px; }
+  .cover-volta:hover{ background:rgba(224,177,94,.1); box-shadow:0 0 24px rgba(224,177,94,.15); }
+  .cover-freccia{ transition:transform .15s ease; }
+  .cover-volta:hover .cover-freccia{ transform:translateX(4px); }
+
+  /* --- il giro di pagina + l'apertura del libro --- */
+  /* la copertina si dissolve come sabbia soffiata dal vento verso sinistra:
+     deriva a sinistra + sfocatura + una maschera morbida che la erode */
+  @keyframes coverSand{
+    0%{ transform:translateX(0) scale(1); filter:blur(0); -webkit-mask-position:0% 0; mask-position:0% 0; opacity:1; }
+    100%{ transform:translateX(-16%) scale(1.03); filter:blur(9px); -webkit-mask-position:150% 0; mask-position:150% 0; opacity:0; } }
+  .grimcover.gira{
+    -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 24%, #000 100%);
+    mask-image:linear-gradient(90deg, transparent 0%, #000 24%, #000 100%);
+    -webkit-mask-size:230% 100%; mask-size:230% 100%; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    animation:coverSand .95s ease-in forwards; }
+  @keyframes bookListIn{ 0%{ opacity:0; transform:translateX(-24px); } 100%{ opacity:1; transform:translateX(0); } }
+  @keyframes bookPageIn{ 0%{ opacity:0; } 100%{ opacity:1; } }
+  .grimbody.apre .grimlist{ animation:bookListIn .5s ease .05s both; }
+  .grimbody.apre .grimpage{ animation:bookPageIn .55s ease .12s both; }
+
+  /* --- lo stato iniziale del libro aperto: nessuna razza scelta --- */
+  .grimchiama{ height:100%; min-height:min(440px,56dvh); display:flex; align-items:center; justify-content:center; text-align:center;
+    font-family:'Lugrasimo',cursive; font-size:clamp(22px,3.2vw,32px); color:var(--gold); opacity:.92; padding:20px; line-height:1.4; }
+
+  @media (prefers-reduced-motion: reduce){
+    .grimcover.gira{ animation:none; opacity:0; }
+    .grimbody.apre .grimlist, .grimbody.apre .grimpage{ animation:none; }
+  }
+  .grimlist{ flex:0 0 236px; border-right:1px solid var(--line); overflow-y:auto; min-height:0;
+    padding:12px; display:flex; flex-direction:column; gap:4px; }
+  .grimpage{ flex:1 1 auto; overflow-y:auto; min-height:0; padding:26px 34px 30px; min-width:0; }
+  .grimadd{ border:1px dashed var(--line); background:transparent; color:var(--muted); border-radius:10px;
+    padding:9px 12px; font-family:var(--ui); font-size:13px; cursor:pointer; transition:.12s; margin-bottom:4px; }
+  .grimadd:hover{ border-color:var(--violet); color:var(--violet); }
+  .grimitem{ text-align:left; border:1px solid transparent; background:transparent; color:#ece3d3;
+    border-radius:10px; padding:9px 12px; font-family:'Lugrasimo',cursive; font-size:15px; cursor:pointer; transition:.12s; }
+  .grimitem:hover{ background:var(--panel2); border-color:var(--line); }
+  .grimitem.on{ background:linear-gradient(150deg,rgba(124,92,255,.22),rgba(91,69,201,.14)); border-color:var(--violet); }
+  .grimitem .git-tipo{ display:block; font-family:var(--ui); font-size:11px; color:var(--muted); margin-top:1px; }
+  .grimvuoto{ color:var(--muted); font-style:italic; font-size:13.5px; padding:12px; line-height:1.5; }
+
+  /* --- la pagina del bestiario --- */
+  .grimtitle{ text-align:center; margin:2px 0 24px; }
+  .grimnome{ font-family:'Lugrasimo',cursive; font-size:40px; letter-spacing:.02em;
+    line-height:1.15; margin:0 0 12px; color:#efe6d4; }
+  .grimrule{ height:1px; width:min(560px,90%); margin:0 auto;
+    background:linear-gradient(90deg, transparent, rgba(224,177,94,.55) 20%, rgba(224,177,94,.55) 80%, transparent); }
+  /* L'illustrazione è "sticky": a dimensione naturale, ancorata in alto a
+     sinistra, scende col testo restando sempre visibile (niente più stiramento
+     a tutta altezza che lasciava il vuoto). */
+  .grimcols{ display:flex; gap:34px; align-items:flex-start; }
+  .grimillu{ flex:0 0 clamp(220px, 32%, 360px); display:flex; flex-direction:column; gap:16px; align-items:center;
+    position:sticky; top:0; align-self:flex-start; }
+  /* con l'immagine: solo il soggetto, NESSUN riquadro (le pic possono essere
+     senza sfondo, il solo personaggio ritagliato) */
+  .grimillu img{ width:100%; height:auto; max-height:58vh; object-fit:contain; display:block; }
+  /* senza immagine: il segnaposto tratteggiato, che sparisce appena c'e' la pic */
+  .grimillu .ph{ width:100%; min-height:300px; border:1px dashed var(--line); border-radius:12px;
+    background:var(--panel2); display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:12px; text-align:center; line-height:1.5; }
+  .grimass{ width:100%; }
+  .grimass .btn-assegna{ width:100%; }
+  .btn-assegna{ border:0; background:linear-gradient(150deg,var(--violet-2),#5b45c9); color:#fff;
+    border-radius:9px; padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer; transition:.12s; }
+  .btn-assegna:hover{ filter:brightness(1.08); }
+  .btn-assegna.gia{ background:var(--panel2); color:var(--gold); border:1px solid rgba(224,177,94,.5); }
+  .grimtesto{ flex:1 1 auto; min-width:0; }
+  .grimlista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:13px; }
+  .grimriga{ position:relative; padding-left:20px; font-size:14.5px; line-height:1.6; color:var(--ink); }
+  .grimriga::before{ content:"\25C6"; position:absolute; left:0; top:.15em; color:var(--gold); font-size:10px; }
+  .gl-lab{ font-weight:700; letter-spacing:.03em; color:var(--gold); text-transform:uppercase; margin-right:5px; }
+  /* pre-wrap: la lore lunga va a capo esattamente come e' stata scritta */
+  .gl-val{ white-space:pre-wrap; word-break:break-word; }
+
+  /* ====== PAGINE INTERNE: MANOSCRITTO ANTICO CHIARO ======
+     La copertina resta marrone scuro; il libro APERTO (indice + pagina) è una
+     pergamena crema ingiallita e consumata, con inchiostro scuro leggibile.
+     Tutto scoped a .grimbody, così non tocca la copertina né la scheda. */
+  .grimbody{ color:#3a2c18;
+    background-color:#e6d8b6;
+    background-image:
+      radial-gradient(ellipse 55% 45% at 18% 12%, rgba(150,120,68,.22), transparent 55%),
+      radial-gradient(ellipse 50% 45% at 85% 88%, rgba(120,92,50,.26), transparent 52%),
+      radial-gradient(ellipse 60% 55% at 60% 45%, rgba(176,150,98,.15), transparent 72%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)' opacity='0.06'/%3E%3C/svg%3E");
+    box-shadow:inset 0 0 90px rgba(70,48,22,.42); }
+  .grimbody .grimlist{ border-right-color:rgba(92,66,30,.35); }
+  .grimbody .grimadd{ border-color:rgba(92,66,30,.45); color:#6f5a34; }
+  .grimbody .grimadd:hover{ border-color:#7a2e1e; color:#7a2e1e; }
+  .grimbody .grimitem{ color:#33260f; }
+  .grimbody .grimitem .git-tipo{ color:#7a6238; }
+  .grimbody .grimitem:hover{ background:rgba(120,90,40,.14); border-color:rgba(120,90,40,.4); }
+  .grimbody .grimitem.on{ background:rgba(122,46,30,.14); border-color:#7a2e1e; }
+  .grimbody .grimvuoto{ color:#6f5a34; }
+  .grimbody .grimchiama{ color:#5a3c14; }
+  .grimbody .grimnome{ color:#2c2011; }
+  .grimbody .grimrule{ background:linear-gradient(90deg, transparent, rgba(120,80,30,.55) 20%, rgba(120,80,30,.55) 80%, transparent); }
+  .grimbody .grimriga{ color:#3a2c18; }
+  .grimbody .grimriga::before{ color:#8a5a1e; }
+  .grimbody .gl-lab{ color:#7a4e12; }
+  .grimbody .gl-val{ color:#3a2c18; }
+  .grimbody .grimillu .ph{ background:rgba(120,95,55,.12); border-color:rgba(92,66,30,.45); color:#7a6238; }
+  /* pulsante di scelta: ceralacca scura (invece del viola, fuori tono sul manoscritto) */
+  .grimbody .btn-assegna{ background:linear-gradient(150deg,#6e2c1e,#4f1e13); color:#f0e2c6; }
+  .grimbody .btn-assegna.gia{ background:rgba(120,90,40,.14); color:#6e3a12; border:1px solid rgba(110,44,30,.5); }
+  .grimbody .grimlink{ color:#7a4e12; }
+  .grimbody .grimlink:hover{ color:#5a3c14; }
+  .grimbody .grimlink.danger{ color:#8a2e1e; }
+  .grimbody .grimstaff .grimdelconf{ color:#8a2e1e; }
+  .grimbody .grimdelbtns button{ background:rgba(120,95,55,.16); border-color:rgba(92,66,30,.45); color:#33260f; }
+  .grimbody .grimdelbtns .danger{ border-color:rgba(122,46,30,.5); color:#8a2e1e; }
+  /* il modulo d'inserimento sulla pergamena chiara */
+  .grimbody .grimform h3{ color:#2c2011; }
+  .grimbody .frz-hint{ color:#6f5a34; }
+  .grimbody .frz-row > label{ color:#7a5a2a; }
+  .grimbody .frz-row > label .req{ color:#a3301e; }
+  .grimbody .frz-in, .grimbody .frz-ta{ background:#efe6cd; border-color:rgba(92,66,30,.45); color:#33260f; }
+  .grimbody .frz-in::placeholder, .grimbody .frz-ta::placeholder{ color:#9a875e; }
+  .grimbody .frz-in:focus, .grimbody .frz-ta:focus{ border-color:#7a2e1e; }
+  .grimbody .frz-file{ color:#6f5a34; }
+  .grimbody .frz-preview{ background:rgba(120,95,55,.12); border-color:rgba(92,66,30,.45); color:#7a6238; }
+  .grimbody .grimformbar{ border-top-color:rgba(92,66,30,.35); }
+  .grimbody .frz-err{ color:#a3301e; }
+  .grimbody .btn-close{ background:rgba(120,95,55,.16); border-color:rgba(92,66,30,.45); color:#33260f; }
+  .grimbody .btn-close:hover{ border-color:#7a2e1e; }
+
+  /* --- il modulo "aggiungi razza" --- */
+  .grimform{ max-width:820px; }
+  .grimform h3{ font-family:'Cinzel',Georgia,serif; font-size:24px; font-weight:700; margin:0 0 8px; color:var(--ink); }
+  .frz-hint{ font-size:12px; color:var(--muted); line-height:1.5; margin:0 0 18px; }
+  .frz-row{ margin-bottom:14px; }
+  .frz-row > label{ display:block; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .frz-row > label .req{ color:var(--danger); }
+  .frz-in, .frz-ta{ width:100%; box-sizing:border-box; background:var(--panel2); border:1px solid var(--line);
+    color:var(--ink); border-radius:9px; padding:9px 11px; font-family:var(--ui); font-size:14px; }
+  .frz-in:focus, .frz-ta:focus{ border-color:var(--violet); outline:none; }
+  .frz-ta{ resize:vertical; min-height:78px; line-height:1.55; }
+  .frz-ta.big{ min-height:140px; }
+  .frz-grid{ display:flex; flex-wrap:wrap; gap:14px; }
+  .frz-grid > .frz-row{ flex:1 1 220px; margin-bottom:14px; }
+  .frz-imgbox{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+  .frz-preview{ flex:0 0 auto; width:150px; min-height:170px; border:1px dashed var(--line); border-radius:10px;
+    background:var(--panel2); display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:11px; text-align:center; line-height:1.5; overflow:hidden; }
+  .frz-preview img{ width:100%; height:auto; object-fit:contain; display:block; }
+  .frz-imgbtns{ display:flex; flex-direction:column; gap:9px; flex:1 1 200px; min-width:0; }
+  .frz-file{ font-size:12.5px; color:var(--muted); }
+  .grimlink{ align-self:flex-start; border:0; background:none; color:var(--violet); font-family:var(--ui);
+    font-size:12px; cursor:pointer; padding:0; text-decoration:underline; }
+  .grimlink:hover{ color:var(--gold); }
+  .grimlink[hidden]{ display:none; }
+  .grimformbar{ display:flex; gap:10px; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); }
+  .grimformbar .btn-assegna{ width:auto; }
+  .frz-err{ color:var(--danger); font-size:13px; margin-left:auto; text-align:right; }
+
+  /* comandi dello staff sotto il pulsante di scelta (Modifica / Elimina) */
+  .grimstaff{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; width:100%; }
+  .grimlink.danger{ color:var(--danger); }
+  .grimlink.danger:hover{ color:var(--danger); filter:brightness(1.15); }
+  .grimdelconf{ width:100%; font-size:12.5px; color:var(--danger); line-height:1.5; }
+  .grimdelbtns{ display:flex; gap:8px; margin-top:8px; }
+  .grimdelbtns button{ border:1px solid var(--line); background:var(--panel2); color:var(--ink); border-radius:8px;
+    padding:7px 13px; font-size:12.5px; cursor:pointer; font-family:var(--ui); transition:.12s; }
+  .grimdelbtns .danger{ border-color:rgba(229,104,109,.5); color:var(--danger); }
+  .grimdelbtns .danger:hover{ background:rgba(229,104,109,.14); }
+
+  /* --- RIVELAZIONE A INCHIOSTRO (quando apri o cambi una razza) ---
+     La pagina non compare di colpo: il nome affiora come inchiostro fresco, la
+     riga si traccia, le info scendono una dopo l'altra e l'illustrazione passa
+     da schizzo sfocato (grigio) a immagine piena. Scatta solo con .entra. */
+  /* 1) il contenuto uscente viene "bevuto" dalla pagina (stile diario di Riddle) */
+  @keyframes inkAbsorb{ 0%{ opacity:1; filter:blur(0); } 100%{ opacity:0; filter:blur(3px); transform:scale(.985); } }
+  .grimpage.assorbe{ animation:inkAbsorb .38s ease forwards; }
+  /* 2) il nome si scrive a mano, tracciato da sinistra a destra */
+  @keyframes inkWrite{ 0%{ clip-path:inset(0 100% -8% 0); opacity:.5; } 100%{ clip-path:inset(0 0 -8% 0); opacity:1; } }
+  @keyframes inkRule{ 0%{ transform:scaleX(0); opacity:0; } 100%{ transform:scaleX(1); opacity:1; } }
+  @keyframes inkRow{ 0%{ opacity:0; transform:translateY(7px); } 100%{ opacity:1; transform:translateY(0); } }
+  /* 3) l'immagine si mette a fuoco lentamente, finendo insieme all'ultima riga */
+  @keyframes inkImg{ 0%{ opacity:0; filter:grayscale(1) contrast(1.5) blur(5px); transform:scale(1.03); }
+    100%{ opacity:1; filter:grayscale(0) contrast(1) blur(0); transform:scale(1); } }
+  .grimpage.entra .grimnome{ clip-path:inset(0 0 -8% 0); animation:inkWrite .95s cubic-bezier(.6,0,.35,1) both; }
+  .grimpage.entra .grimrule{ transform-origin:left center; animation:inkRule .55s ease .6s both; }
+  .grimpage.entra .grimriga{ animation:inkRow .42s ease both; }   /* ritardo inline: le righe seguono il nome */
+  .grimpage.entra .grimillu img, .grimpage.entra .grimillu .ph{ animation:inkImg 1.9s ease .1s both; }
+  @media (prefers-reduced-motion: reduce){
+    .grimpage.assorbe{ animation:none; }
+    .grimpage.entra .grimnome{ clip-path:none; }
+    .grimpage.entra .grimnome, .grimpage.entra .grimrule, .grimpage.entra .grimriga,
+    .grimpage.entra .grimillu img, .grimpage.entra .grimillu .ph{ animation:none; }
+  }
+  @media (max-width:860px){
+    /* impilate: l'immagine torna in cima, niente sticky */
+    .grimcols{ flex-direction:column; align-items:center; }
+    .grimillu{ position:static; flex:0 0 auto; width:100%; max-width:340px; margin:0 auto; }
+    .grimillu img{ height:auto; max-height:60vh; }
+  }
+  @media (max-width:720px){
+    .grimbody{ flex-direction:column; }
+    .grimlist{ flex:0 0 auto; max-height:168px; border-right:0; border-bottom:1px solid var(--line);
+      flex-direction:row; flex-wrap:wrap; }
+  }
   .btn-via{ border:1px solid var(--line); background:transparent; color:var(--muted);
     border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; }
   .btn-via:hover{ color:var(--danger); border-color:var(--danger); }
@@ -899,6 +1175,7 @@
     .statsline svg{ max-width:240px; margin:0 auto; }
     .stcol{ display:block; margin-top:12px; }
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
+    .rzpanel{ min-width:0; width:100%; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }
     .hpanel{ min-width:0; width:100%; padding-right:56px; }

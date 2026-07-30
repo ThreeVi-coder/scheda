@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=22">
+<link rel="stylesheet" href="styles.css?v=38">
 </head>
 <body>
   <div class="wrap">
@@ -76,6 +76,14 @@
     </div>
 
     <div class="prow">
+      <div class="rzpanel" id="razzaPanel" role="button" tabindex="0" aria-label="Apri il grimorio delle razze" title="Apri il grimorio delle razze">
+        <div class="eyebrow rzet">Razza</div>
+        <div class="rzmid">
+          <span class="rzline" id="razzaLine"></span>
+          <span class="rzquill" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 C13 4.5 7.5 9 5 15.5"></path><path d="M20.5 3.5 C19.5 9.5 16 13.5 10.5 14.5 C12.5 11.5 13.5 8 13.5 5.5"></path><path d="M5 15.5 L3 21"></path><path d="M6.5 12 L9.5 13"></path></svg></span>
+        </div>
+      </div>
+
       <div class="lpanel" id="levelPanel">
         <div class="eyebrow">Livello</div>
         <div><span class="lvnum" id="lvNum">1</span><span class="lvmax" id="lvMax"></span></div>
@@ -649,6 +657,57 @@
       </div>
     </div>
 
+    <div class="modal" id="modalRazze" hidden>
+      <div class="backdrop" data-close="razze"></div>
+      <div class="dialog grimorio" id="dialogRazze">
+        <div class="dlghead">
+          <h2>Grimorio delle razze</h2>
+          <button class="dlgx" data-close="razze" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody grimwrap" id="grimWrap">
+          <div class="grimcover" id="grimCover">
+            <div class="cover-sigillo">
+              <img src="copertina.webp" alt="Sigillo di Corda d&rsquo;Argento" />
+            </div>
+            <h2 class="cover-titolo">Bestiario delle Razze</h2>
+            <p class="cover-autore">Redatto da Dorian Voss<br><span>&mdash; Corda d&rsquo;Argento &mdash;</span></p>
+            <button class="cover-volta" type="button" data-volta>Volta pagina <span class="cover-freccia" aria-hidden="true">&rarr;</span></button>
+          </div>
+          <div class="grimbody" id="grimBody">
+            <aside class="grimlist" id="grimList"></aside>
+            <section class="grimpage" id="grimPage"></section>
+          </div>
+        </div>
+        <div class="dlgbar">
+          <button class="btn-close" data-close="razze">Chiudi</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modalRazzaAsp" hidden>
+      <div class="backdrop" data-close="razzaasp"></div>
+      <div class="dialog centrata" id="dialogRazzaAsp">
+        <div class="dlghead">
+          <h2>Aspetto della Razza</h2>
+          <button class="dlgx" data-close="razzaasp" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <p class="hint hintsel">Tocca la scritta che vuoi cambiare: l&rsquo;etichetta, il nome della razza o la tipologia.</p>
+          <div class="antepsel" id="antsel_razza"></div>
+          <div class="comandi" id="com_razza"></div>
+        </div>
+        <div class="dlgbar" id="barRazzaAsp">
+          <button class="btn-reset" data-reset="RazzaAsp">Azzera</button>
+          <button class="btn-close" data-close="razzaasp">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmRazzaAsp" hidden>
+          <span class="cfmtxt">Riportare le scritte del pannello Razza com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="RazzaAsp">Annulla</button>
+          <button class="btn-yes" data-yes="RazzaAsp">Azzera</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalEsci" hidden>
       <div class="backdrop" data-close="esci"></div>
       <div class="dialog mezzo">
@@ -718,6 +777,6 @@
 
   </div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>

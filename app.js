@@ -201,6 +201,7 @@ var state={
   emblemMode:"auto",
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
+  razza:"",            // id (dal database) della razza scelta per il personaggio; "" = nessuna
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
   xp:0,
@@ -575,6 +576,9 @@ var TESTI=[
   { id:"numPE",     dove:"xp",    nome:"Numeri dei PE",        sel:"#xpTxt b",             font:"",       colore:"#E8E6F0" },
   { id:"etClasse",  dove:"class", nome:"Etichetta",            sel:"#classPanel .eyebrow", font:"",       colore:"#9A97AD" },
   { id:"lvCl",      dove:"class", nome:"Livello della classe", sel:".cl",                  font:"",       colore:"#E0B15E" },
+  { id:"etRazza",   dove:"razza", nome:"Etichetta",            sel:"#razzaPanel .eyebrow", font:"",       colore:"#9A97AD" },
+  { id:"nomeRazza", dove:"razza", nome:"Nome della razza",     sel:".rzname",              font:"cinzel", colore:"#E8E6F0" },
+  { id:"tipoRazza", dove:"razza", nome:"Tipologia",            sel:".rztipo",              font:"",       colore:"#E0B15E" },
   { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".slsig, .scrow .ss, .hexsig", font:"", colore:"#9A97AD" },
   { id:"valCar",    dove:"stats", nome:"Valore",               sel:".slval, .scrow .sv, .hexval", font:"cinzel", colore:"#E8E6F0" },
   { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
@@ -624,7 +628,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -731,6 +735,9 @@ function applicaDati(o){
     }
   });
   sel.class=null;
+  // Razza: si salva solo l'id (una stringa) della razza scelta nel grimorio.
+  // Se la scheda e' vecchia o il dato e' scritto male, resta "nessuna razza".
+  state.razza = (typeof o.razza==="string") ? o.razza : "";
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
 
   // Punti ferita: attuali, temporanei, ritocco del massimo, dadi vita spesi e
@@ -866,6 +873,7 @@ function schedaVuota(){
   for(var j in DEF_XP) state[j]=DEF_XP[j];
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
+  state.razza="";
   elName.textContent="";
 }
 
@@ -1346,6 +1354,9 @@ function doReset(which){
     xpPicker2.setHex(state.xpColor2);
   } else if(which==="Prof"){
     azzeraTesti("prof");
+  } else if(which==="RazzaAsp"){
+    azzeraTesti("razza");
+    if(personalizza){ var mrza=document.getElementById("modalRazzaAsp"); if(mrza && !mrza.hidden) sincronizzaSel("razza"); }
   } else if(which==="Ts"){
     azzeraTesti("ts");
     state.tsCompColor="#E0B15E";
@@ -1717,6 +1728,404 @@ function applicaClassi(){
   for(var j=0;j<simb.length;j++){ var q=simb[j].getAttribute("data-clskey"); if(q) pitturaSimbolo(simb[j], simboloDi(q)); }
 }
 
+/* ===== GRIMORIO DELLE RAZZE =====
+   Le razze vivono nel database (tabella "razze"), non nel codice: il supporto
+   tecnico le aggiunge e tutti le leggono in tempo reale. Qui le teniamo in una
+   cache e disegniamo il grimorio: a sinistra l'indice, a destra la pagina del
+   bestiario (in lettura) oppure il modulo d'inserimento (solo per chi può
+   toccare le schede: supporto/sviluppatore). */
+var RAZZE=[], razzeCaricate=false, razzaVista=null;   // razzaVista = quale razza si sta guardando ora
+var grimMode="view";      // "view" = pagina bestiario | "form" = modulo aggiungi/modifica razza
+var grimFile=null;        // il file immagine scelto nel modulo (non ancora caricato)
+var grimSalvando=false;   // sto salvando: blocco i pulsanti per non salvare due volte
+var grimEditId=null;      // null = sto aggiungendo; altrimenti l'id della razza che sto modificando
+var grimImgRemoved=false; // in modifica: ho tolto l'immagine esistente (senza caricarne una nuova)
+var grimDelId=null;       // id della razza in attesa di conferma d'eliminazione
+var grimAnima=false;      // il prossimo disegno della pagina deve fare la rivelazione a inchiostro
+var razzeSig="";          // "firma" dell'elenco: per non ridisegnare (e interrompere l'effetto) se nulla è cambiato
+var grimStage="cover";    // "cover" = copertina del tomo | "aperto" = libro aperto (indice + pagina)
+var grimGirando=false;    // sto voltando pagina: non ripeto l'animazione
+
+/* piccolo scudo: i testi delle razze sono liberi, quindi vanno messi in pagina
+   senza che eventuali < > & rompano o iniettino HTML */
+function escRz(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+  return c==="&"?"&amp;":c==="<"?"&lt;":c===">"?"&gt;":"&quot;"; }); }
+
+function caricaRazze(poi){
+  sb.from("razze").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
+    if(!res.error && Array.isArray(res.data)) RAZZE=res.data;
+    else if(res.error) console.warn("Non riesco a leggere le razze:", res.error.message);
+    razzeCaricate=true;
+    // "firma" dell'elenco: se il ricarico non cambia niente, NON ridisegno il
+    // grimorio (così non interrompo la rivelazione a inchiostro appena partita)
+    var nuova = RAZZE.map(function(r){ return r.id+":"+(r.modificato_il||r.nome||""); }).join("|");
+    var cambiato = nuova!==razzeSig; razzeSig=nuova;
+    renderRazzaPanel();
+    var mr=document.getElementById("modalRazze");
+    if(mr && !mr.hidden && cambiato) renderGrimorio();
+    if(typeof poi==="function") poi();
+  }, function(e){ razzeCaricate=true; console.warn("Razze:", e); if(typeof poi==="function") poi(); });
+}
+function razzaById(id){ for(var i=0;i<RAZZE.length;i++){ if(RAZZE[i].id===id) return RAZZE[i]; } return null; }
+
+/* Il pannello in scheda: "Razza" in alto, e sotto la frase di sapore (o il nome
+   della razza scelta). Al passaggio del mouse la piuma riscrive un invito. */
+var RZ_FRASE = "A te la scelta del corpo, l’anima agli Dei.";
+var RZ_INVITO = "Dai inizio alla Caccia";
+var razzaRest = "";               // HTML "a riposo" del pannello (da ripristinare dopo l'hover)
+var rzHovering = false, rzTypeTimer = null;
+
+function renderRazzaPanel(){
+  var line=document.getElementById("razzaLine"); if(!line) return;
+  var r = state.razza ? razzaById(state.razza) : null;
+  var html;
+  if(state.razza && !r){
+    // razza salvata ma non in cache: sto caricando, o è stata cancellata dal grimorio
+    html = razzeCaricate ? '<span class="rzghost">Razza non più nel grimorio</span>' : '<span class="rzghost">…</span>';
+  } else if(!r){
+    html = '<span class="rztag">'+escRz(RZ_FRASE)+'</span>';
+  } else {
+    html = '<span class="rzname">'+escRz(r.nome||"Senza nome")+'</span>'
+         + (r.tipologia ? '<span class="rztipo">'+escRz(r.tipologia)+'</span>' : '');
+  }
+  razzaRest = html;
+  // se il mouse sta scrivendo l'invito, non gli scippo la scritta: aggiorno solo il "riposo"
+  if(!rzHovering){
+    line.innerHTML = html;
+    if(r) applicaTesti();   // nome/tipologia nascono ora: ridipinti col loro stile
+  }
+}
+
+/* La piuma "scrive" un testo lettera per lettera */
+function rzStopType(){ if(rzTypeTimer){ clearTimeout(rzTypeTimer); rzTypeTimer=null; } }
+function rzWrite(testo){
+  var line=document.getElementById("razzaLine"); if(!line) return;
+  rzStopType();
+  line.innerHTML='<span class="rztag rzwriting"></span>';
+  var span=line.firstChild, i=0;
+  (function step(){
+    if(!rzHovering || !span) return;              // uscito col mouse: mi fermo
+    span.textContent = testo.slice(0, i);
+    if(i<testo.length){ i++; rzTypeTimer=setTimeout(step, 55); }
+    else { span.classList.remove("rzwriting"); }  // finito: via il cursore
+  })();
+}
+function rzEnter(){ if(personalizza) return; rzHovering=true; rzWrite(RZ_INVITO); }
+function rzLeave(){
+  rzHovering=false; rzStopType();
+  var line=document.getElementById("razzaLine");
+  if(line){ line.innerHTML=razzaRest; if(state.razza && razzaById(state.razza)) applicaTesti(); }
+}
+
+function openRazze(){
+  var mr=document.getElementById("modalRazze"); if(!mr) return;
+  mr.hidden=false;
+  grimMode="view"; grimFile=null; grimEditId=null; grimImgRemoved=false; grimDelId=null;   // si riparte sempre dalla lettura
+  grimStage="cover"; grimGirando=false;   // si apre sulla COPERTINA
+  razzaVista=null;    // dentro non si parte da una razza: pagina vuota ("Richiama la tua razza")
+  grimAnima=false;
+  var cov=document.getElementById("grimCover"); if(cov) cov.classList.remove("gira");
+  var bdy=document.getElementById("grimBody"); if(bdy) bdy.classList.remove("apre");
+  mostraStadio();
+  renderGrimorio();   // disegno l'indice e la pagina (restano dietro la copertina)
+  caricaRazze();      // e intanto rinfresco dal database
+}
+
+/* Mostra lo stadio giusto: copertina, oppure libro aperto */
+function mostraStadio(){
+  var wrap=document.getElementById("grimWrap"); if(!wrap) return;
+  wrap.classList.remove("turning");
+  wrap.classList.toggle("in-cover", grimStage==="cover");
+  wrap.classList.toggle("in-aperto", grimStage!=="cover");
+}
+
+/* Volta la copertina: gira via e sotto si apre il libro (indice a sinistra, pagina a destra) */
+function voltaPagina(){
+  if(grimGirando || grimStage!=="cover") return;
+  var wrap=document.getElementById("grimWrap"), cover=document.getElementById("grimCover"), body=document.getElementById("grimBody");
+  if(!wrap||!cover||!body){ grimStage="aperto"; mostraStadio(); return; }
+  grimGirando=true;
+  wrap.classList.add("turning");        // durante il giro il libro resta nascosto (dietro solo scuro)
+  cover.classList.add("gira");          // la copertina si dissolve come sabbia
+  setTimeout(function(){
+    // dissolvenza FINITA: solo ora compaiono le pagine chiare
+    grimStage="aperto"; mostraStadio();
+    cover.classList.remove("gira");
+    body.classList.add("apre");         // le pagine si rivelano
+    grimGirando=false;
+    setTimeout(function(){ body.classList.remove("apre"); }, 700);
+  }, 950);
+}
+
+/* Mostra una razza con la transizione: prima la pagina attuale ("Richiama la tua
+   razza", o la razza precedente) viene ASSORBITA, poi la nuova si rivela a
+   inchiostro (nome scritto a mano + righe + immagine a fuoco). */
+function mostraRazza(id){
+  var page=document.getElementById("grimPage");
+  var ridotto = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  if(!page || ridotto){ razzaVista=id; grimMode="view"; grimAnima=!ridotto; renderGrimorio(); return; }
+  if(id===razzaVista && grimMode==="view") return;   // già lì: niente da fare
+  page.classList.remove("entra");
+  page.classList.add("assorbe");
+  setTimeout(function(){
+    page.classList.remove("assorbe");
+    razzaVista=id; grimMode="view"; grimAnima=true;
+    renderGrimorio();
+  }, 380);
+}
+
+/* In personalizzazione il pannello Razza apre l'aspetto delle sue scritte
+   (font/colori/formato), come le rotelline degli altri riquadri. */
+function openRazzaAsp(){
+  var m=document.getElementById("modalRazzaAsp"); if(!m) return;
+  m.hidden=false;
+  sincronizzaSel("razza");
+}
+/* Il tocco sul pannello: in personalizzazione l'aspetto, altrimenti il grimorio */
+function apriRazzaPanel(){ if(personalizza) openRazzaAsp(); else openRazze(); }
+
+function renderGrimorio(){
+  var list=document.getElementById("grimList"), page=document.getElementById("grimPage");
+  if(!list||!page) return;
+  var staff=puoToccareSchede();
+  // INDICE (colonna sinistra) — con il "+" in cima per chi può aggiungere
+  var testa = staff ? '<button class="grimadd" type="button" data-grimadd>+ Aggiungi razza</button>' : '';
+  if(!RAZZE.length){
+    list.innerHTML=testa+'<div class="grimvuoto">'+(razzeCaricate?'Il grimorio &egrave; ancora vuoto.':'Carico&hellip;')+'</div>';
+  } else {
+    if(razzaVista && !razzaById(razzaVista)) razzaVista=null;   // NON forzo la prima: si può stare "a pagina vuota"
+    list.innerHTML=testa+RAZZE.map(function(r){
+      return '<button class="grimitem'+((r.id===razzaVista && grimMode==="view")?' on':'')+'" type="button" data-razza="'+escRz(r.id)+'">'
+        + escRz(r.nome||"Senza nome")
+        + (r.tipologia?'<span class="git-tipo">'+escRz(r.tipologia)+'</span>':'')
+        + '</button>';
+    }).join('');
+  }
+  // PAGINA (colonna destra): il modulo d'inserimento, o la pagina del bestiario
+  if(grimMode==="form"){
+    if(staff){ page.classList.remove("entra"); page.innerHTML=formRazzaHtml(); grimAnima=false; return; }
+    grimMode="view";   // sicurezza: se non è più staff, niente modulo
+  }
+  var r = razzaVista ? razzaById(razzaVista) : null;
+  if(!r){
+    page.classList.remove("entra");
+    page.innerHTML = RAZZE.length
+      ? '<div class="grimchiama">Richiama la tua razza.</div>'
+      : '<div class="grimvuoto">'+(staff
+          ? 'Il grimorio è ancora vuoto. Premi <b>+ Aggiungi razza</b> per inserire la prima.'
+          : 'Quando il supporto tecnico avr&agrave; aggiunto le prime razze, compariranno qui, come le pagine di un bestiario.')+'</div>';
+    grimAnima=false;
+    return;
+  }
+  // la rivelazione a inchiostro scatta solo se richiesta (apertura o cambio razza)
+  if(grimAnima){
+    page.classList.remove("entra");
+    page.innerHTML=paginaRazza(r);
+    void page.offsetWidth;        // forza il riavvio dell'animazione
+    page.classList.add("entra");
+  } else {
+    page.classList.remove("entra");
+    page.innerHTML=paginaRazza(r);
+  }
+  grimAnima=false;
+}
+
+/* La pagina del bestiario di UNA razza: immagine + nome + tutte le informazioni */
+function paginaRazza(r){
+  // una riga dell'elenco: etichetta in maiuscolo + valore (il valore va a capo
+  // da solo, e la lore mantiene gli a-capo scritti grazie al pre-wrap)
+  function riga(lab, val, delay){
+    return '<li class="grimriga"'+(delay?' style="animation-delay:'+delay+'s"':'')+'>'
+      + '<span class="gl-lab">'+lab+':</span><span class="gl-val">'+escRz(val)+'</span></li>';
+  }
+  function pieno(v){ return (v!=null && String(v).trim()!==""); }
+  function tratt(v){ return pieno(v) ? v : "—"; }   // "—" quando il campo e' vuoto
+
+  var img = r.immagine_url
+    ? '<img src="'+escRz(r.immagine_url)+'" alt="'+escRz(r.nome||"")+'" loading="lazy">'
+    : '<div class="ph">Nessuna<br>illustrazione</div>';
+  var scelta = (state.razza===r.id);
+  var ass = soloLettura ? ''
+    : '<div class="grimass"><button class="btn-assegna'+(scelta?' gia':'')+'" type="button" data-assegna="'+escRz(r.id)+'">'
+      + (scelta ? '✓ È la tua razza — togli' : 'Scegli questa razza') + '</button></div>';
+  // comandi dello staff: Modifica / Elimina (con conferma per l'eliminazione)
+  var staff = !puoToccareSchede() ? ''
+    : (grimDelId===r.id
+        ? '<div class="grimstaff"><div class="grimdelconf">Eliminare «'+escRz(r.nome||"questa razza")+'» dal grimorio? Non si può annullare.'
+          + '<div class="grimdelbtns"><button type="button" data-delno>Annulla</button>'
+          + '<button type="button" class="danger" data-delyes="'+escRz(r.id)+'">Elimina</button></div></div></div>'
+        : '<div class="grimstaff"><button class="grimlink" type="button" data-edit="'+escRz(r.id)+'">Modifica</button>'
+          + '<button class="grimlink danger" type="button" data-del="'+escRz(r.id)+'">Elimina</button></div>');
+
+  // Le sei "fisse" (attributi del bestiario) ci sono sempre, con "—" se vuote;
+  // le "lunghe" compaiono solo se compilate.
+  var voci=[
+    ["TIPOLOGIA", tratt(r.tipologia)], ["ETÀ", tratt(r.eta)], ["DIMENSIONI", tratt(r.dimensioni)],
+    ["VELOCITÀ DI MOVIMENTO", tratt(r.velocita)], ["SCUROVISIONE", tratt(r.scurovisione)], ["LINGUE", tratt(r.lingue)]
+  ];
+  if(pieno(r.abilita))     voci.push(["ABILITÀ DI RAZZA", r.abilita]);
+  if(pieno(r.incantesimi)) voci.push(["INCANTESIMI DI RAZZA", r.incantesimi]);
+  if(pieno(r.aspetto))     voci.push(["ASPETTO", r.aspetto]);
+  if(pieno(r.lore))        voci.push(["LORE", r.lore]);
+  if(pieno(r.manuale))     voci.push(["MANUALE", r.manuale]);
+  // ogni riga parte un pelo dopo la precedente (lo scaglionamento a inchiostro);
+  // il ritardo serve solo quando è attiva la classe .entra, altrimenti è inerte
+  var righe=voci.map(function(v,i){ return riga(v[0], v[1], (0.85 + i*0.07).toFixed(2)); }).join("");
+
+  return '<div class="grimtitle"><h3 class="grimnome">'+escRz(r.nome||"Senza nome")+'</h3><div class="grimrule"></div></div>'
+    + '<div class="grimcols">'
+    +   '<div class="grimillu">'+img+ass+staff+'</div>'
+    +   '<div class="grimtesto"><ul class="grimlista">'+righe+'</ul></div>'
+    + '</div>';
+}
+
+/* ===== INSERIMENTO RAZZA (solo supporto/sviluppatore) =====
+   Un modulo con tutti i campi (i testi lunghi senza limiti) e il caricamento
+   dell'immagine su Supabase Storage. Nome obbligatorio, il resto libero. */
+function campoText(id, lab, ph, req, val){
+  return '<div class="frz-row"><label for="'+id+'">'+lab+(req?' <span class="req">*</span>':'')+'</label>'
+    + '<input class="frz-in" id="'+id+'" type="text" autocomplete="off"'+(ph?' placeholder="'+ph+'"':'')
+    + ' value="'+escRz(val||"")+'"></div>';
+}
+function campoArea(id, lab, big, val){
+  return '<div class="frz-row"><label for="'+id+'">'+lab+'</label>'
+    + '<textarea class="frz-ta'+(big?' big':'')+'" id="'+id+'">'+escRz(val||"")+'</textarea></div>';
+}
+/* l'immagine da mostrare ora nell'anteprima del modulo: il nuovo file scelto,
+   oppure (in modifica) quella già salvata se non è stata tolta */
+function immagineCorrente(){
+  if(grimFile) return URL.createObjectURL(grimFile);
+  if(grimEditId && !grimImgRemoved){ var r=razzaById(grimEditId); if(r && r.immagine_url) return r.immagine_url; }
+  return null;
+}
+function formRazzaHtml(){
+  var r = grimEditId ? (razzaById(grimEditId) || {}) : {};
+  var mod = !!grimEditId;
+  var src = immagineCorrente();
+  var prev = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  return '<div class="grimform">'
+    + '<h3>'+(mod?'Modifica razza':'Aggiungi una razza')+'</h3>'
+    + '<p class="frz-hint">Solo il <b>Nome</b> è obbligatorio. I campi lunghi (Abilità, Aspetto, Lore) non hanno limiti. '+(mod?'Le modifiche sono visibili a tutti.':'Una volta salvata, la razza compare nel grimorio per tutti.')+'</p>'
+    + campoText("frz_nome","Nome razza","Es. Umano",true,r.nome)
+    + '<div class="frz-grid">'+campoText("frz_tipologia","Tipologia","Es. Umanoide",false,r.tipologia)+campoText("frz_eta","Età","Es. Maturi verso i 18 anni…",false,r.eta)+'</div>'
+    + '<div class="frz-grid">'+campoText("frz_dimensioni","Dimensioni","Es. Media (1,5–1,8 m)",false,r.dimensioni)+campoText("frz_velocita","Velocità di movimento","Es. 9 metri (30 piedi)",false,r.velocita)+'</div>'
+    + '<div class="frz-grid">'+campoText("frz_scurovisione","Scurovisione","Es. 18 metri — oppure lascia vuoto",false,r.scurovisione)+campoText("frz_lingue","Lingue","Es. Comune e una a scelta",false,r.lingue)+'</div>'
+    + campoText("frz_manuale","Manuale di riferimento","Es. Manuale del Giocatore 2024, p. 36",false,r.manuale)
+    + campoArea("frz_abilita","Abilità di razza",false,r.abilita)
+    + campoArea("frz_incantesimi","Incantesimi di razza",false,r.incantesimi)
+    + campoArea("frz_aspetto","Aspetto",false,r.aspetto)
+    + campoArea("frz_lore","Lore", true, r.lore)
+    + '<div class="frz-row"><label>Illustrazione</label>'
+    +   '<div class="frz-imgbox">'
+    +     '<div class="frz-preview" id="frz_prev">'+prev+'</div>'
+    +     '<div class="frz-imgbtns">'
+    +       '<input class="frz-file" id="frz_img" type="file" accept="image/*">'
+    +       '<button class="grimlink" type="button" id="frz_rm" data-imgremove'+(src?'':' hidden')+'>Togli immagine</button>'
+    +       '<span class="frz-hint" style="margin:0">Consigliato un PNG <b>senza sfondo</b> (solo il soggetto): nel grimorio non avrà cornice.</span>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="grimformbar">'
+    +   '<button class="btn-assegna" type="button" data-grimsave'+(grimSalvando?' disabled':'')+'>'+(grimSalvando?'Salvo…':(mod?'Salva modifiche':'Salva razza'))+'</button>'
+    +   '<button class="btn-close" type="button" data-grimcancel>Annulla</button>'
+    +   '<span class="frz-err" id="frz_err"></span>'
+    + '</div>'
+    + '</div>';
+}
+
+function apriFormRazza(id){
+  if(!puoToccareSchede()) return;
+  grimEditId = id || null; grimMode="form"; grimFile=null; grimImgRemoved=false; grimDelId=null;
+  renderGrimorio();
+}
+
+/* Aggiorna solo l'anteprima dell'immagine (senza ridisegnare il modulo, per non
+   perdere quello che si è già scritto nei campi) */
+function aggiornaAnteprimaImg(){
+  var prev=document.getElementById("frz_prev"); if(!prev) return;
+  var src=immagineCorrente();
+  prev.innerHTML = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  var rm=document.getElementById("frz_rm"); if(rm) rm.hidden = !src;
+}
+
+function salvaRazza(){
+  if(!puoToccareSchede() || grimSalvando) return;
+  var g=function(id){ var e=document.getElementById(id); return e ? e.value : ""; };
+  var err=document.getElementById("frz_err");
+  var nome=g("frz_nome").trim();
+  if(!nome){ if(err) err.textContent="Il nome è obbligatorio."; var n=document.getElementById("frz_nome"); if(n) n.focus(); return; }
+  if(err) err.textContent="";
+  var obj={
+    nome:nome,
+    tipologia:g("frz_tipologia").trim()||null,
+    eta:g("frz_eta").trim()||null,
+    dimensioni:g("frz_dimensioni").trim()||null,
+    velocita:g("frz_velocita").trim()||null,
+    scurovisione:g("frz_scurovisione").trim()||null,
+    lingue:g("frz_lingue").trim()||null,
+    manuale:g("frz_manuale").trim()||null,
+    abilita:g("frz_abilita")||null,
+    incantesimi:g("frz_incantesimi")||null,
+    aspetto:g("frz_aspetto")||null,
+    lore:g("frz_lore")||null
+  };
+  // i testi lunghi: se sono solo spazi/vuoti, meglio null (campo assente)
+  ["abilita","incantesimi","aspetto","lore"].forEach(function(k){ if(obj[k]!=null && !obj[k].trim()) obj[k]=null; });
+
+  grimSalvando=true;
+  var saveBtn=document.querySelector("[data-grimsave]");
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent="Salvo…"; }
+  function fallito(msg){
+    grimSalvando=false;
+    var b=document.querySelector("[data-grimsave]"); if(b){ b.disabled=false; b.textContent=grimEditId?"Salva modifiche":"Salva razza"; }
+    var e=document.getElementById("frz_err"); if(e) e.textContent=msg;
+  }
+  function scrivi(){
+    if(grimEditId) obj.modificato_il = new Date().toISOString();
+    var op = grimEditId
+      ? sb.from("razze").update(obj).eq("id", grimEditId).select()
+      : sb.from("razze").insert(obj).select();
+    op.then(function(res){
+      if(res.error){ fallito("Non riesco a salvare: "+res.error.message); return; }
+      var row = res.data && res.data[0];
+      var idFatto = (row && row.id) || grimEditId;
+      grimSalvando=false; grimFile=null; grimImgRemoved=false; grimEditId=null; grimMode="view";
+      caricaRazze(function(){ if(idFatto) razzaVista=idFatto; renderGrimorio(); });
+    }, function(){ fallito("Non riesco a salvare: la rete non ha risposto."); });
+  }
+  if(grimFile){
+    // c'è una NUOVA immagine: la carico e poi scrivo la riga con il suo indirizzo
+    var ext=((grimFile.name||"").split(".").pop()||"png").toLowerCase().replace(/[^a-z0-9]/g,"") || "png";
+    var path=Date.now()+"_"+Math.random().toString(36).slice(2)+"."+ext;
+    sb.storage.from("razze").upload(path, grimFile, { cacheControl:"3600", upsert:false }).then(function(res){
+      if(res.error){ fallito("Immagine non caricata: "+res.error.message); return; }
+      var pub=sb.storage.from("razze").getPublicUrl(path);
+      obj.immagine_url = (pub && pub.data && pub.data.publicUrl) || null;
+      scrivi();
+    }, function(){ fallito("Immagine non caricata: la rete non ha risposto."); });
+  } else if(grimEditId){
+    // modifica senza nuova immagine: se è stata tolta azzero il campo, altrimenti
+    // NON lo tocco affatto (resta quella già salvata)
+    if(grimImgRemoved) obj.immagine_url=null;
+    scrivi();
+  } else {
+    obj.immagine_url=null;   // nuova razza senza immagine
+    scrivi();
+  }
+}
+
+/* Elimina una razza dal grimorio (solo staff, con conferma già data nella pagina) */
+function eliminaRazza(id){
+  if(!puoToccareSchede() || !id) return;
+  sb.from("razze").delete().eq("id", id).then(function(res){
+    if(res.error){ console.warn("Eliminazione razza:", res.error.message); grimDelId=null; renderGrimorio(); return; }
+    grimDelId=null;
+    if(razzaVista===id) razzaVista=null;   // era quella aperta: il grimorio sceglierà la prima
+    // se qualche personaggio l'aveva scelta, il suo pannello dirà "non più nel grimorio"
+    caricaRazze(function(){ renderRazzaPanel(); renderGrimorio(); });
+  }, function(){ console.warn("Eliminazione razza: rete assente"); });
+}
+
 /* ===== Il pannello nuovo della Classe =====
    Si sceglie l'elemento toccandolo nell'anteprima, e sotto compaiono solo i
    comandi che servono a quell'elemento. */
@@ -1725,6 +2134,7 @@ var ASP_CONT={
   name: { ant:"antsel_name",  com:"com_name" },
   xp:   { ant:"antsel_xp",    com:"com_xp" },
   class:{ ant:"antep_classe", com:"comandi_classe" },
+  razza:{ ant:"antsel_razza", com:"com_razza" },
   stats:{ ant:"antsel_stats", com:"com_stats" },
   prof: { ant:"antsel_prof",  com:"com_prof" },
   ts:   { ant:"antsel_ts",    com:"com_ts" },
@@ -1742,7 +2152,8 @@ var CAMPIONI={
   nomeAbil:{t:"Furtivit\u00E0",cls:"apmid"}, valAbil:{t:"+7",cls:"apbig"},
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"},
   etPf:{t:"PUNTI FERITA",cls:"apsmall"}, numPf:{t:"27",cls:"apbig"}, maxPf:{t:"31",cls:"apmid"}, tempPf:{t:"+5",cls:"apmid"},
-  etDif:{t:"CLASSE ARMATURA",cls:"apsmall"}, valDif:{t:"14",cls:"apbig"}
+  etDif:{t:"CLASSE ARMATURA",cls:"apsmall"}, valDif:{t:"14",cls:"apbig"},
+  etRazza:{t:"RAZZA",cls:"apsmall"}, nomeRazza:{t:"Umano",cls:"apbig"}, tipoRazza:{t:"Umanoide",cls:"apmid"}
 };
 
 function targetValido(dove,key){
@@ -1929,6 +2340,7 @@ function apertaAspetto(){
   if(typeof modalName!=="undefined"  && modalName  && !modalName.hidden)  return "name";
   if(typeof modalXp!=="undefined"    && modalXp    && !modalXp.hidden)    return "xp";
   if(typeof modalClass!=="undefined" && modalClass && !modalClass.hidden) return "class";
+  var mrza=document.getElementById("modalRazzaAsp"); if(mrza && !mrza.hidden) return "razza";
   var ms=document.getElementById("modalStats"); if(ms && !ms.hidden) return "stats";
   if(typeof modalProf!=="undefined" && modalProf && !modalProf.hidden) return "prof";
   var mt=document.getElementById("modalTs"); if(mt && !mt.hidden) return "ts";
@@ -1938,7 +2350,7 @@ function apertaAspetto(){
   return null;
 }
 (function(){
-  ["name","xp","class","stats","prof","ts","abil","hp","dif"].forEach(function(dove){
+  ["name","xp","class","razza","stats","prof","ts","abil","hp","dif"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -1980,7 +2392,7 @@ function applicaTesti(){
   aggiornaMortalita();   // e la sbiadita/il banner/il teschio se sei a terra
 }
 
-function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderLevel(); renderXpDialog();
+function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderRazzaPanel(); renderLevel(); renderXpDialog();
   renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
   renderHp(); renderHpDialog(); renderDif(); renderDifDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
@@ -2048,11 +2460,70 @@ function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidd
   document.getElementById("modalAbil").hidden=true;
   var mh=document.getElementById("modalHp"); if(mh) mh.hidden=true;
   var md=document.getElementById("modalDif"); if(md) md.hidden=true;
+  var mrz=document.getElementById("modalRazze"); if(mrz) mrz.hidden=true;
+  var mrza=document.getElementById("modalRazzaAsp"); if(mrza) mrza.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
+
+// Il pannello Razza e' tutto un pulsante: toccarlo (o Invio/Spazio) apre il grimorio.
+(function(){
+  var rp=document.getElementById("razzaPanel"); if(!rp) return;
+  rp.addEventListener("click", function(){ apriRazzaPanel(); });
+  rp.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); apriRazzaPanel(); } });
+  rp.addEventListener("mouseenter", rzEnter);
+  rp.addEventListener("mouseleave", rzLeave);
+})();
+// Dentro il grimorio: si sfoglia (data-razza) e si sceglie/toglie la razza (data-assegna).
+// La chiusura (data-close) la gestisce gia' il click globale piu' in basso.
+(function(){
+  var mr=document.getElementById("modalRazze"); if(!mr) return;
+  mr.addEventListener("click", function(e){
+    // copertina: volta pagina per aprire il libro
+    if(e.target.closest("[data-volta]")){ voltaPagina(); return; }
+    // comandi staff sulla pagina di una razza
+    var ed=e.target.closest("[data-edit]");
+    if(ed){ apriFormRazza(ed.getAttribute("data-edit")); return; }
+    var del=e.target.closest("[data-del]");
+    if(del){ grimDelId=del.getAttribute("data-del"); renderGrimorio(); return; }
+    if(e.target.closest("[data-delno]")){ grimDelId=null; renderGrimorio(); return; }
+    var dy=e.target.closest("[data-delyes]");
+    if(dy){ eliminaRazza(dy.getAttribute("data-delyes")); return; }
+    // comandi del modulo
+    if(e.target.closest("[data-grimadd]")){ apriFormRazza(); return; }
+    if(e.target.closest("[data-grimcancel]")){ grimMode="view"; grimFile=null; grimEditId=null; grimImgRemoved=false; renderGrimorio(); return; }
+    if(e.target.closest("[data-grimsave]")){ salvaRazza(); return; }
+    if(e.target.closest("[data-imgremove]")){
+      if(grimFile){ grimFile=null; var inp=document.getElementById("frz_img"); if(inp) inp.value=""; }
+      else { grimImgRemoved=true; }   // in modifica: segno che l'immagine esistente va tolta
+      aggiornaAnteprimaImg(); return;
+    }
+    var it=e.target.closest("[data-razza]");
+    if(it){
+      grimFile=null; grimEditId=null; grimDelId=null; grimMode="view";
+      mostraRazza(it.getAttribute("data-razza"));   // assorbimento + rivelazione a inchiostro
+      return;
+    }
+    var as=e.target.closest("[data-assegna]");
+    if(as){
+      if(soloLettura) return;
+      var id=as.getAttribute("data-assegna");
+      state.razza = (state.razza===id) ? "" : id;
+      renderRazzaPanel(); renderGrimorio(); aggiornaSalva();
+      return;
+    }
+  });
+  // la scelta del file immagine: aggiorno solo l'anteprima
+  mr.addEventListener("change", function(e){
+    if(e.target && e.target.id==="frz_img"){
+      grimFile = (e.target.files && e.target.files[0]) ? e.target.files[0] : null;
+      if(grimFile) grimImgRemoved=false;   // ho scelto una nuova immagine
+      aggiornaAnteprimaImg();
+    }
+  });
+})();
 // I Tiri salvezza ora sono la terza linguetta: la loro rotellina e' quella
 // unica del riquadro (gearCore), che apre openTs quando la vista attiva e' TS.
 
@@ -3619,6 +4090,7 @@ function avvia(){
       sincronizzaComandi();     // e solo dopo si misura il nome
       salvato=foto();           // fotografia a comandi fermi: da qui ogni differenza accende il tasto
       aggiornaSalva();
+      caricaRazze();            // l'indice delle razze dal database, per il pannello e il grimorio
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }

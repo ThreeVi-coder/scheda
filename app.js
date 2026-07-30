@@ -1862,8 +1862,7 @@ function voltaPagina(){
    inchiostro (nome scritto a mano + righe + immagine a fuoco). */
 function mostraRazza(id){
   var page=document.getElementById("grimPage");
-  var ridotto = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  if(!page || ridotto){ razzaVista=id; grimMode="view"; grimAnima=!ridotto; renderGrimorio(); return; }
+  if(!page){ razzaVista=id; grimMode="view"; grimAnima=true; renderGrimorio(); return; }
   if(id===razzaVista && grimMode==="view") return;   // già lì: niente da fare
   page.classList.remove("entra");
   page.classList.add("assorbe");

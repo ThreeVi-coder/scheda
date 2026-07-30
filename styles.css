@@ -819,10 +819,6 @@
   .grimchiama{ height:100%; min-height:min(440px,56dvh); display:flex; align-items:center; justify-content:center; text-align:center;
     font-family:'Lugrasimo',cursive; font-size:clamp(22px,3.2vw,32px); color:var(--gold); opacity:.92; padding:20px; line-height:1.4; }
 
-  @media (prefers-reduced-motion: reduce){
-    .grimcover.gira{ animation:none; opacity:0; }
-    .grimbody.apre .grimlist, .grimbody.apre .grimpage{ animation:none; }
-  }
   .grimlist{ flex:0 0 236px; border-right:1px solid var(--line); overflow-y:auto; min-height:0;
     padding:12px; display:flex; flex-direction:column; gap:4px; }
   .grimpage{ flex:1 1 auto; overflow-y:auto; min-height:0; padding:26px 34px 30px; min-width:0; }
@@ -979,12 +975,9 @@
   .grimpage.entra .grimrule{ transform-origin:left center; animation:inkRule .55s ease .6s both; }
   .grimpage.entra .grimriga{ animation:inkRow .42s ease both; }   /* ritardo inline: le righe seguono il nome */
   .grimpage.entra .grimillu img, .grimpage.entra .grimillu .ph{ animation:inkImg 1.9s ease .1s both; }
-  @media (prefers-reduced-motion: reduce){
-    .grimpage.assorbe{ animation:none; }
-    .grimpage.entra .grimnome{ clip-path:none; }
-    .grimpage.entra .grimnome, .grimpage.entra .grimrule, .grimpage.entra .grimriga,
-    .grimpage.entra .grimillu img, .grimpage.entra .grimillu .ph{ animation:none; }
-  }
+  /* NB: il grimorio anima SEMPRE, anche con "riduci animazioni" attivo: è
+     l'esperienza voluta. (Il resto della scheda continua a rispettare la
+     preferenza.) Se in futuro serve un interruttore per-utente, si aggiunge. */
   @media (max-width:860px){
     /* impilate: l'immagine torna in cima, niente sticky */
     .grimcols{ flex-direction:column; align-items:center; }

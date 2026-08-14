@@ -1025,21 +1025,51 @@ function contributiIniz(){
   // FUTURO: talento Allerta, tratti di specie, altri bonus.
   return [{ et:"Destrezza", val:modCar("des"), fonte:"caratteristica" }].concat(contribFuture("iniz"));
 }
+/* Ricava un numero di PIEDI dal testo libero della velocità nel grimorio
+   (es. "9 metri (30 piedi)" → 30). Preferisce i piedi se scritti; altrimenti
+   converte i metri (regola D&D: 1,5 m = 5 ft, cioè 1 ft = 0,3 m). Se non trova
+   un'unità riconoscibile torna null (e si usa la base di regola). */
+function parseVelPiedi(txt){
+  if(!txt) return null;
+  var s=String(txt).toLowerCase().replace(/,/g,"."), m;
+  // preferisco i PIEDI se scritti (anche tra parentesi); poi i METRI convertiti.
+  if((m=s.match(/(\d+(?:\.\d+)?)\s*(?:piedi|piede|feet|ft)\b/))) return Math.round(parseFloat(m[1]));
+  if((m=s.match(/(\d+(?:\.\d+)?)\s*(?:metri|metro|mt|m)\b/)))    return Math.round(parseFloat(m[1])/0.3);
+  return null;   // nessuna unità riconoscibile → velocità "non definita" (trattino)
+}
+function velRazzaPiedi(){
+  var r = state.razza ? razzaById(state.razza) : null;
+  return r ? parseVelPiedi(r.velocita) : null;
+}
 function contributiVel(){
-  // FUTURO: la specie imposta la base; tratti/talenti/condizioni la cambiano.
-  return [{ et:"Base", val:30, fonte:"regola" }].concat(contribFuture("vel"));
+  // La velocità arriva TUTTA dalla specie (nessuna base fissa): se non c'è razza,
+  // o il testo non è leggibile, non è definita (in vista appare "—"). Tratti e
+  // talenti si aggiungeranno come voci in più (cassetti futuri) senza toccare questo.
+  var rv=velRazzaPiedi();
+  var base = (rv!=null) ? { et:"Base (specie)", val:rv, fonte:"specie" }
+                        : { et:"Base", val:0, fonte:"regola" };
+  return [base].concat(contribFuture("vel"));
 }
 var DIF_VOCI={
   ca:  { nome:"Classe Armatura", fn:contributiCA },
   iniz:{ nome:"Iniziativa", fn:contributiIniz, segno:true },
-  vel: { nome:"Velocità", fn:contributiVel, unita:" ft" }
+  vel: { nome:"Velocità", fn:contributiVel, unita:" ft",
+         fmt:function(v){ return metriDaPiedi(v)+" m ("+v+" ft)"; } }
 };
+/* Converte i piedi in metri per la vista (5 ft = 1,5 m), con la virgola
+   italiana e senza decimali inutili: 30→"9", 35→"10,5". */
+function metriDaPiedi(ft){ var m=Math.round(ft*0.3*100)/100; return (m%1===0?String(m):String(m).replace(".",",")); }
 var DIF_ORD=["ca","iniz","vel"];
 function ritoccoDif(k){ var m=state.difScost||{}, v=m[k]; return (typeof v==="number"&&isFinite(v))?Math.round(v):0; }
 function baseDif(k){ return DIF_VOCI[k].fn().reduce(function(s,x){ return s+(x.val||0); },0); }
 function valoreDif(k){ return baseDif(k)+ritoccoDif(k); }
 /* Formattazione per la vista: l'iniziativa col segno, la velocità coi piedi. */
-function mostraDif(k, v){ var d=DIF_VOCI[k]; return d.segno ? segno(v) : (v + (d.unita||"")); }
+function mostraDif(k, v){
+  var d=DIF_VOCI[k];
+  if(k==="vel" && velRazzaPiedi()==null) return "—";   // niente razza (o velocità illeggibile) → trattino
+  if(d.fmt) return d.fmt(v);
+  return d.segno ? segno(v) : (v + (d.unita||""));
+}
 
 /* La "salute": pieno finche' stai sopra un quarto della vita, ferito sotto il
    25%, critico sotto il 10% (e a 0). Da qui nascono il colore della barra e
@@ -1794,6 +1824,7 @@ function renderRazzaPanel(){
     line.innerHTML = html;
     if(r) applicaTesti();   // nome/tipologia nascono ora: ridipinti col loro stile
   }
+  renderDif();   // la Velocità dipende dalla razza scelta → si aggiorna qui
 }
 
 /* La piuma "scrive" un testo lettera per lettera */
@@ -4319,13 +4350,17 @@ document.getElementById("modalHp").addEventListener("change", function(e){
    scomposizione (base + Destrezza + ... + ritocco), elencando anche i cassetti
    futuri ancora vuoti. La rotella apre il ritocco a mano (rete di sicurezza). */
 function scomposizioneHtml(k){
+  if(k==="vel" && velRazzaPiedi()==null){
+    return '<div class="scbd"><div class="scrow tot"><span>Velocità</span><b>—</b></div></div>'
+         + '<div class="scfut">Scegli una razza: la velocità arriva da lì.</div>';
+  }
   var d=DIF_VOCI[k], voci=d.fn(), rit=ritoccoDif(k), tot=valoreDif(k);
   var righe=voci.filter(function(v){ return v.val!==0 || v.fonte==="regola"; }).map(function(v){
     return '<div class="scrow"><span>'+esc(v.et)+'</span><b>'+(d.segno?segno(v.val):v.val)+'</b></div>';
   });
   if(rit) righe.push('<div class="scrow rit"><span>Ritocco a mano</span><b>'+segno(rit)+'</b></div>');
   var futuri = k==="ca" ? "armatura, scudo, specie, talenti"
-            : (k==="vel" ? "specie, tratti, talenti" : "talenti, tratti");
+            : (k==="vel" ? "tratti, talenti" : "talenti, tratti");
   return '<div class="scbd">'+righe.join("")
     + '<div class="scrow tot"><span>Totale</span><b>'+mostraDif(k,tot)+'</b></div></div>'
     + '<div class="scfut">In arrivo: '+futuri+'. Si aggiungeranno da soli.</div>';

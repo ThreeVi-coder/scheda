@@ -753,24 +753,37 @@
      tante informazioni, quindi puo' allargarsi quasi a tutto lo schermo. A
      sinistra l'indice delle razze; a destra la pagina: nome grande e centrato
      con una riga sottile, poi illustrazione a sinistra e info a elenco. */
+  /* Finestra tutta blu con un leggero reticolo a rombi ovunque; la cornice dorata
+     con le borchie a stella incornicia il CONTENUTO (in .grimwrap), così non tocca
+     intestazione e piè di pagina. */
   .dialog.grimorio{ top:50%; transform:translate(-50%,-50%); width:min(1500px,96vw); max-height:calc(100dvh - 56px);
-    background-color:#241b12; color:#ece3d3; border-color:rgba(224,177,94,.25);
+    background-color:#33334c; color:#e9e6f0; border-color:#ae9861;
     background-image:
-      radial-gradient(ellipse 60% 55% at 22% 12%, rgba(126,96,54,.20), transparent 60%),
-      radial-gradient(ellipse 55% 50% at 84% 88%, rgba(98,72,40,.20), transparent 55%),
-      radial-gradient(ellipse 70% 60% at 55% 50%, rgba(52,38,22,.30), transparent 75%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.05'/%3E%3C/svg%3E"); }
-  .dialog.grimorio .dlghead h2{ color:#ece3d3; }
-  .dialog.grimorio .dlgbar{ background:transparent; border-top-color:rgba(224,177,94,.2); }
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M0 18 L18 0 L36 18 L18 36 Z' fill='none' stroke='%23ae9861' stroke-opacity='0.13' stroke-width='1'/%3E%3Ccircle cx='18' cy='18' r='1.3' fill='%23ae9861' fill-opacity='0.16'/%3E%3C/svg%3E"); }
+  .dialog.grimorio .dlghead h2{ color:#ae9861; }
+  .dialog.grimorio .dlgx{ color:rgba(174,152,97,.7); }
+  .dialog.grimorio .dlgx:hover{ color:#ae9861; }
+  .dialog.grimorio .dlgbar{ background:transparent; border-top-color:rgba(174,152,97,.35); }
+  /* il tasto Chiudi in tema (oro su blu, non più il pulsante scuro fuori posto) */
+  .dialog.grimorio .btn-close{ background:transparent; border:1px solid rgba(174,152,97,.6);
+    color:#ae9861; border-radius:99px; padding:8px 20px; transition:.15s; }
+  .dialog.grimorio .btn-close:hover{ background:rgba(174,152,97,.12); box-shadow:0 0 20px rgba(174,152,97,.18); }
   /* il tomo: prima la copertina, poi (voltando pagina) il libro aperto.
      display:flex column + i figli con min-height:0 = la pagina scorre davvero.
      Il padding tiene l'area che scorre DENTRO la cornice: il contenuto viene
      tagliato prima della linea e non la supera mai. */
   .grimwrap{ padding:22px; position:relative; overflow:hidden; perspective:2200px; min-height:min(560px, 70dvh);
-    display:flex; flex-direction:column; }
-  /* cornice geometrica sottilissima (doppio filo), disegnata nel margine — mai sul contenuto */
-  .grimwrap::after{ content:""; position:absolute; inset:9px; pointer-events:none; z-index:6; border:1px solid rgba(224,177,94,.24); }
-  .grimwrap::before{ content:""; position:absolute; inset:14px; pointer-events:none; z-index:6; border:1px solid rgba(224,177,94,.09); }
+    display:flex; flex-direction:column;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23ae9861' stroke-width='1.3'%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3Cg fill='%23ae9861'%3E%3Cpath d='M20 4 L22.5 17.5 L20 20 L17.5 17.5 Z'/%3E%3Cpath d='M36 20 L22.5 22.5 L20 20 L22.5 17.5 Z'/%3E%3Cpath d='M20 36 L17.5 22.5 L20 20 L22.5 22.5 Z'/%3E%3Cpath d='M4 20 L17.5 17.5 L20 20 L17.5 22.5 Z'/%3E%3Ccircle cx='20' cy='20' r='2.4'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23ae9861' stroke-width='1.3'%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3Cg fill='%23ae9861'%3E%3Cpath d='M20 4 L22.5 17.5 L20 20 L17.5 17.5 Z'/%3E%3Cpath d='M36 20 L22.5 22.5 L20 20 L22.5 17.5 Z'/%3E%3Cpath d='M20 36 L17.5 22.5 L20 20 L22.5 22.5 Z'/%3E%3Cpath d='M4 20 L17.5 17.5 L20 20 L17.5 22.5 Z'/%3E%3Ccircle cx='20' cy='20' r='2.4'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23ae9861' stroke-width='1.3'%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3Cg fill='%23ae9861'%3E%3Cpath d='M20 4 L22.5 17.5 L20 20 L17.5 17.5 Z'/%3E%3Cpath d='M36 20 L22.5 22.5 L20 20 L22.5 17.5 Z'/%3E%3Cpath d='M20 36 L17.5 22.5 L20 20 L22.5 22.5 Z'/%3E%3Cpath d='M4 20 L17.5 17.5 L20 20 L17.5 22.5 Z'/%3E%3Ccircle cx='20' cy='20' r='2.4'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23ae9861' stroke-width='1.3'%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3Cg fill='%23ae9861'%3E%3Cpath d='M20 4 L22.5 17.5 L20 20 L17.5 17.5 Z'/%3E%3Cpath d='M36 20 L22.5 22.5 L20 20 L22.5 17.5 Z'/%3E%3Cpath d='M20 36 L17.5 22.5 L20 20 L22.5 22.5 Z'/%3E%3Cpath d='M4 20 L17.5 17.5 L20 20 L17.5 22.5 Z'/%3E%3Ccircle cx='20' cy='20' r='2.4'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat:no-repeat,no-repeat,no-repeat,no-repeat;
+    background-position:left 6px top 6px, right 6px top 6px, left 6px bottom 6px, right 6px bottom 6px; }
+  /* cornice geometrica a doppio filo dorato attorno al contenuto */
+  .grimwrap::after{ content:""; position:absolute; inset:9px; pointer-events:none; z-index:6; border:1px solid rgba(174,152,97,.5); }
+  .grimwrap::before{ content:""; position:absolute; inset:14px; pointer-events:none; z-index:6; border:1px solid rgba(174,152,97,.22); }
   .grimbody{ display:flex; gap:0; padding:0; flex:1 1 auto; min-height:0; }
   /* stadi: copertina o libro aperto */
   .grimwrap.in-cover .grimbody{ visibility:hidden; }
@@ -780,22 +793,29 @@
      dissolve si vede solo il fondo scuro. Le pagine chiare compaiono solo a
      dissolvenza finita (lo fa voltaPagina passando ad "aperto"). */
 
-  /* --- la copertina --- */
-  .grimcover{ position:absolute; inset:0; z-index:3;
-    background:radial-gradient(ellipse 75% 70% at 50% 45%, rgba(60,44,26,.35), rgba(20,14,9,.55));
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; text-align:center; padding:34px;
+  /* --- la copertina (blu + cornice li mette la finestra; qui solo i contenuti) --- */
+  .grimcover{ position:absolute; inset:0; z-index:3; background:transparent;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:24px 44px;
     transform-origin:center; will-change:transform,filter,opacity; }
-  .cover-sigillo{ width:clamp(160px,27vw,250px); height:clamp(160px,27vw,250px); border-radius:50%;
-    overflow:hidden; border:1px solid rgba(224,177,94,.45); background:#f4efe3;
-    box-shadow:0 0 0 6px rgba(224,177,94,.06), 0 10px 34px rgba(0,0,0,.4); }
+  /* la mandorla dorata ATTORNO al simbolo, al centro */
+  .cover-medaglione{ position:relative; display:flex; align-items:center; justify-content:center;
+    width:clamp(165px,19vw,200px); aspect-ratio:3 / 4;
+    border:1.5px solid rgba(174,152,97,.6); border-radius:50%;
+    box-shadow:0 0 0 5px #33334c, 0 0 0 6px rgba(174,152,97,.3), inset 0 0 55px rgba(0,0,0,.28); }
+  .cover-sigillo{ width:clamp(112px,13vw,140px); height:clamp(112px,13vw,140px); border-radius:50%;
+    overflow:hidden; background:#f4efe3;
+    box-shadow:0 0 0 2px #ae9861, 0 0 0 5px #33334c, 0 0 0 7px rgba(174,152,97,.4), 0 8px 24px rgba(0,0,0,.5); }
   .cover-sigillo img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .cover-titolo{ font-family:'Lugrasimo',cursive; font-size:clamp(26px,4.4vw,44px); margin:0; color:#efe6d4; letter-spacing:.02em; line-height:1.15; }
-  .cover-autore{ font-family:'Lugrasimo',cursive; font-size:clamp(14px,1.9vw,18px); color:var(--gold); margin:0; line-height:1.7; }
+  /* le scritte stanno SOTTO l'ovale */
+  .cover-titolo{ font-family:'Lugrasimo',cursive; font-size:clamp(22px,3.2vw,32px); margin:14px 0 0; color:#ae9861; letter-spacing:.02em; line-height:1.15;
+    text-shadow:0 1px 0 rgba(0,0,0,.35); }
+  .cover-autore{ font-family:'Lugrasimo',cursive; font-size:clamp(12px,1.6vw,15px); color:rgba(174,152,97,.85); margin:0; line-height:1.6; }
   .cover-autore span{ font-size:.85em; opacity:.85; }
-  .cover-volta{ margin-top:8px; border:1px solid rgba(224,177,94,.5); background:transparent; color:var(--gold);
-    border-radius:99px; padding:11px 22px; font-family:var(--ui); font-size:14px; cursor:pointer; transition:.15s;
+  /* il pulsante staccato, non si sovrappone a niente */
+  .cover-volta{ margin-top:16px; border:1px solid rgba(174,152,97,.6); background:transparent; color:#ae9861;
+    border-radius:99px; padding:10px 20px; font-family:var(--ui); font-size:13.5px; cursor:pointer; transition:.15s;
     display:inline-flex; align-items:center; gap:9px; }
-  .cover-volta:hover{ background:rgba(224,177,94,.1); box-shadow:0 0 24px rgba(224,177,94,.15); }
+  .cover-volta:hover{ background:rgba(174,152,97,.12); box-shadow:0 0 24px rgba(174,152,97,.2); }
   .cover-freccia{ transition:transform .15s ease; }
   .cover-volta:hover .cover-freccia{ transform:translateX(4px); }
 
@@ -870,7 +890,7 @@
      pergamena crema ingiallita e consumata, con inchiostro scuro leggibile.
      Tutto scoped a .grimbody, così non tocca la copertina né la scheda. */
   .grimbody{ color:#3a2c18;
-    background-color:#e6d8b6;
+    background-color:#a6aba6;
     background-image:
       radial-gradient(ellipse 55% 45% at 18% 12%, rgba(150,120,68,.22), transparent 55%),
       radial-gradient(ellipse 50% 45% at 85% 88%, rgba(120,92,50,.26), transparent 52%),

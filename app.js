@@ -1914,22 +1914,47 @@ function openRazzaAsp(){
 /* Il tocco sul pannello: in personalizzazione l'aspetto, altrimenti il grimorio */
 function apriRazzaPanel(){ if(personalizza) openRazzaAsp(); else openRazze(); }
 
+var grimFiltro="";   // testo cercato nell'indice delle razze
+
+/* Filtra l'indice per nome: nasconde le voci che non contengono il testo cercato,
+   senza ridisegnare la lista (così non perde il fuoco mentre si scrive). */
+function applicaFiltroGrimorio(){
+  var list=document.getElementById("grimList"); if(!list) return;
+  var q=(grimFiltro||"").trim().toLowerCase();
+  var items=list.querySelectorAll(".grimitem"), visti=0;
+  for(var i=0;i<items.length;i++){
+    var n=items[i].getAttribute("data-nome")||"";
+    var ok = !q || n.indexOf(q)>=0;
+    items[i].style.display = ok ? "" : "none";
+    if(ok) visti++;
+  }
+  var msg=document.getElementById("grimNoRes");
+  if(q && visti===0){
+    if(!msg){ msg=document.createElement("div"); msg.id="grimNoRes"; msg.className="grimvuoto"; msg.textContent="Nessuna razza trovata."; list.appendChild(msg); }
+  } else if(msg){ msg.parentNode.removeChild(msg); }
+}
+
 function renderGrimorio(){
   var list=document.getElementById("grimList"), page=document.getElementById("grimPage");
   if(!list||!page) return;
   var staff=puoToccareSchede();
   // INDICE (colonna sinistra) — con il "+" in cima per chi può aggiungere
   var testa = staff ? '<button class="grimadd" type="button" data-grimadd>+ Aggiungi razza</button>' : '';
+  var cerca = RAZZE.length ? '<div class="grimsearch"><input id="grimCerca" type="search" placeholder="Cerca una razza&hellip;" aria-label="Cerca una razza" autocomplete="off"></div>' : '';
   if(!RAZZE.length){
     list.innerHTML=testa+'<div class="grimvuoto">'+(razzeCaricate?'Il grimorio &egrave; ancora vuoto.':'Carico&hellip;')+'</div>';
   } else {
     if(razzaVista && !razzaById(razzaVista)) razzaVista=null;   // NON forzo la prima: si può stare "a pagina vuota"
-    list.innerHTML=testa+RAZZE.map(function(r){
-      return '<button class="grimitem'+((r.id===razzaVista && grimMode==="view")?' on':'')+'" type="button" data-razza="'+escRz(r.id)+'">'
+    list.innerHTML=cerca+testa+RAZZE.map(function(r){
+      return '<button class="grimitem'+((r.id===razzaVista && grimMode==="view")?' on':'')+'" type="button" data-razza="'+escRz(r.id)+'" data-nome="'+escRz((r.nome||"").toLowerCase())+'">'
         + escRz(r.nome||"Senza nome")
         + (r.tipologia?'<span class="git-tipo">'+escRz(r.tipologia)+'</span>':'')
         + '</button>';
     }).join('');
+    // ripristino il testo cercato e riapplico il filtro dopo il ridisegno
+    var inpC=document.getElementById("grimCerca");
+    if(inpC) inpC.value=grimFiltro;
+    applicaFiltroGrimorio();
   }
   // PAGINA (colonna destra): il modulo d'inserimento, o la pagina del bestiario
   if(grimMode==="form"){
@@ -2552,6 +2577,10 @@ document.getElementById("gearProf").addEventListener("click", openProf);
       if(grimFile) grimImgRemoved=false;   // ho scelto una nuova immagine
       aggiornaAnteprimaImg();
     }
+  });
+  // la ricerca nell'indice: filtra le voci mentre si scrive
+  mr.addEventListener("input", function(e){
+    if(e.target && e.target.id==="grimCerca"){ grimFiltro=e.target.value; applicaFiltroGrimorio(); }
   });
 })();
 // I Tiri salvezza ora sono la terza linguetta: la loro rotellina e' quella

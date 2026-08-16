@@ -909,8 +909,10 @@
   /* barra di ricerca in cima all'indice (solo la colonna sinistra), sempre visibile */
   .grimbody .grimsearch{ position:sticky; top:0; z-index:3; padding:0 0 10px; margin-bottom:2px; background:#a6aba6; }
   .grimbody #grimCerca{ width:100%; box-sizing:border-box; padding:8px 12px; border-radius:8px;
-    border:1px solid rgba(92,66,30,.4); background:rgba(120,90,40,.10); color:#33260f;
+    -webkit-appearance:none; appearance:none;
+    border:1px solid rgba(92,66,30,.4); background:rgba(120,90,40,.12); color:#33260f;
     font-family:var(--ui); font-size:13.5px; }
+  .grimbody #grimCerca::-webkit-search-cancel-button{ -webkit-appearance:none; appearance:none; }
   .grimbody #grimCerca::placeholder{ color:rgba(92,66,30,.6); }
   .grimbody #grimCerca:focus{ outline:none; border-color:#7a4e12; background:rgba(120,90,40,.16); box-shadow:0 0 0 2px rgba(122,78,18,.12); }
   .grimbody .grimadd{ border-color:rgba(92,66,30,.45); color:#6f5a34; }

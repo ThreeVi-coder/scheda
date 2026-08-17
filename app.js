@@ -202,6 +202,7 @@ var state={
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
   razza:"",            // id (dal database) della razza scelta per il personaggio; "" = nessuna
+  allineamento:"",     // codice dell'allineamento scelto (LB, N, CM, SA...); "" = nessuno
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
   xp:0,
@@ -579,6 +580,8 @@ var TESTI=[
   { id:"etRazza",   dove:"razza", nome:"Etichetta",            sel:"#razzaPanel .eyebrow", font:"",       colore:"#9A97AD" },
   { id:"nomeRazza", dove:"razza", nome:"Nome della razza",     sel:".rzname",              font:"cinzel", colore:"#E8E6F0" },
   { id:"tipoRazza", dove:"razza", nome:"Tipologia",            sel:".rztipo",              font:"",       colore:"#E0B15E" },
+  { id:"etAlign",   dove:"align", nome:"Etichetta",            sel:"#alignPanel .eyebrow", font:"",       colore:"#9A97AD" },
+  { id:"nomeAlign", dove:"align", nome:"Allineamento",         sel:".alname",              font:"cinzel", colore:"#E8E6F0" },
   { id:"siglaCar",  dove:"stats", nome:"Sigla",                sel:".slsig, .scrow .ss, .hexsig", font:"", colore:"#9A97AD" },
   { id:"valCar",    dove:"stats", nome:"Valore",               sel:".slval, .scrow .sv, .hexval", font:"cinzel", colore:"#E8E6F0" },
   { id:"modiCar",   dove:"stats", nome:"Modificatore",         sel:".slmod, .scrow .sm, .hexmod", font:"", colore:"#E0B15E" },
@@ -628,7 +631,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza","allineamento"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -845,7 +848,7 @@ function modoEstetica(acceso){
 function aggiornaRotelline(){
   var g=document.getElementById("gearName");
   if(g) g.hidden = soloLettura || !personalizza;   // il nome ha solo comandi estetici
-  ["gearXp","gearClass","gearCore","gearProf"].forEach(function(id){
+  ["gearXp","gearClass","gearCore","gearProf","gearAlign"].forEach(function(id){
     var x=document.getElementById(id); if(x) x.hidden = soloLettura;
   });
   // le "i" (abilita' / tiri salvezza) si mostrano solo sulla vista attiva e non
@@ -874,6 +877,7 @@ function schedaVuota(){
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
   state.razza="";
+  state.allineamento="";
   elName.textContent="";
 }
 
@@ -1384,6 +1388,8 @@ function doReset(which){
     xpPicker2.setHex(state.xpColor2);
   } else if(which==="Prof"){
     azzeraTesti("prof");
+  } else if(which==="Align"){
+    azzeraTesti("align");   // solo l'aspetto: la scelta dell'allineamento resta
   } else if(which==="RazzaAsp"){
     azzeraTesti("razza");
     if(personalizza){ var mrza=document.getElementById("modalRazzaAsp"); if(mrza && !mrza.hidden) sincronizzaSel("razza"); }
@@ -1710,6 +1716,55 @@ function renderPanel(){
   applicaTesti();     // etichetta e livello (condivisi)
   applicaClassi();    // nomi e simboli, uno per classe
 }
+
+/* ================= ALLINEAMENTO =================
+   Le nove caselle classiche (legge/caos x bene/male) piu' "Senza allineamento"
+   per creature e costrutti. Il codice si salva, il nome mostrato no: cosi' un
+   domani si puo' cambiare la scritta senza toccare le schede gia' salvate. */
+var ALLINEAMENTI=[
+  {k:"LB",nome:"Legale Buono",     d:"Fa la cosa giusta seguendo regole e tradizioni: onore, lealtà, dovere."},
+  {k:"NB",nome:"Neutrale Buono",   d:"Fa del bene come può, senza pregiudizi verso o contro l’ordine."},
+  {k:"CB",nome:"Caotico Buono",    d:"Segue la propria coscienza, ribelle alle regole ma dalla parte del bene."},
+  {k:"LN",nome:"Legale Neutrale",  d:"Agisce secondo legge, codice o tradizione, al di là di bene e male."},
+  {k:"N", nome:"Neutrale",         d:"Evita gli estremi: lascia che le cose seguano il loro corso naturale."},
+  {k:"CN",nome:"Caotico Neutrale", d:"Segue i propri capricci e la propria libertà sopra ogni altra cosa."},
+  {k:"LM",nome:"Legale Malvagio",  d:"Prende ciò che vuole nei limiti di un codice, con metodo e disciplina."},
+  {k:"NM",nome:"Neutrale Malvagio",d:"Fa il male quando conviene, senza scrupoli né rispetto per le regole."},
+  {k:"CM",nome:"Caotico Malvagio", d:"Agisce con crudeltà e violenza, spinto da avidità, odio o sete di sangue."},
+  {k:"SA",nome:"Senza allineamento",d:"Creature prive di coscienza morale (bestie, molti costrutti): non hanno un allineamento."}
+];
+var ALLIN_BY={}; ALLINEAMENTI.forEach(function(a){ ALLIN_BY[a.k]=a; });
+function nomeAllin(k){ return ALLIN_BY[k] ? ALLIN_BY[k].nome : ""; }
+
+function renderAlign(){
+  var line=document.getElementById("alignLine"); if(!line) return;
+  var k=state.allineamento;
+  line.innerHTML = k
+    ? '<span class="alname">'+esc(nomeAllin(k))+'</span>'
+    : '<span class="alempty">Nessuno — apri la rotellina</span>';
+  applicaTesti();
+}
+function renderAlignDialog(){
+  var g=document.getElementById("alignGrid"); if(!g) return;
+  g.innerHTML=ALLINEAMENTI.filter(function(a){ return a.k!=="SA"; }).map(function(a){
+    return '<button type="button" class="alcell'+(state.allineamento===a.k?" sel":"")+'" data-align="'+a.k+'">'+esc(a.nome)+'</button>';
+  }).join("");
+  var sa=document.querySelector('#modalAlign [data-align="SA"]');
+  if(sa) sa.classList.toggle("sel", state.allineamento==="SA");
+  var d=document.getElementById("alignDesc");
+  if(d){ var cur=ALLIN_BY[state.allineamento]; d.textContent = cur ? cur.d : ""; }
+}
+function openAlign(){ document.getElementById("modalAlign").hidden=false; renderAlignDialog(); if(personalizza) sincronizzaSel("align"); }
+/* Scelta dell'allineamento: toccare la casella scelta la toglie (ritocco). */
+(function(){
+  var ma=document.getElementById("modalAlign"); if(!ma) return;
+  ma.addEventListener("click", function(e){
+    var b=e.target.closest("[data-align]"); if(!b) return;
+    var k=b.getAttribute("data-align");
+    state.allineamento = (state.allineamento===k) ? "" : k;
+    renderAlign(); renderAlignDialog(); aggiornaSalva();
+  });
+})();
 
 /* ===== Classe: nomi e simboli, uno per classe =====
    Ogni nome di classe ha uno stile suo (nomiClasse), e ogni simbolo pure
@@ -2195,7 +2250,8 @@ var ASP_CONT={
   ts:   { ant:"antsel_ts",    com:"com_ts" },
   abil: { ant:"antsel_abil",  com:"com_abil" },
   hp:   { ant:"antsel_hp",    com:"com_hp" },
-  dif:  { ant:"antsel_dif",   com:"com_dif" }
+  dif:  { ant:"antsel_dif",   com:"com_dif" },
+  align:{ ant:"antsel_align", com:"com_align" }
 };
 /* Testo e dimensione con cui mostrare ogni scritta nell'anteprima */
 var CAMPIONI={
@@ -2208,7 +2264,8 @@ var CAMPIONI={
   etPP:{t:"PERCEZIONE PASSIVA",cls:"apsmall"}, valPP:{t:"14",cls:"apbig"},
   etPf:{t:"PUNTI FERITA",cls:"apsmall"}, numPf:{t:"27",cls:"apbig"}, maxPf:{t:"31",cls:"apmid"}, tempPf:{t:"+5",cls:"apmid"},
   etDif:{t:"CLASSE ARMATURA",cls:"apsmall"}, valDif:{t:"14",cls:"apbig"},
-  etRazza:{t:"RAZZA",cls:"apsmall"}, nomeRazza:{t:"Umano",cls:"apbig"}, tipoRazza:{t:"Umanoide",cls:"apmid"}
+  etRazza:{t:"RAZZA",cls:"apsmall"}, nomeRazza:{t:"Umano",cls:"apbig"}, tipoRazza:{t:"Umanoide",cls:"apmid"},
+  etAlign:{t:"ALLINEAMENTO",cls:"apsmall"}, nomeAlign:{t:"Legale Buono",cls:"apbig"}
 };
 
 function targetValido(dove,key){
@@ -2402,10 +2459,11 @@ function apertaAspetto(){
   var ma=document.getElementById("modalAbil"); if(ma && !ma.hidden) return "abil";
   var mh=document.getElementById("modalHp"); if(mh && !mh.hidden) return "hp";
   var md=document.getElementById("modalDif"); if(md && !md.hidden) return "dif";
+  var mal=document.getElementById("modalAlign"); if(mal && !mal.hidden) return "align";
   return null;
 }
 (function(){
-  ["name","xp","class","razza","stats","prof","ts","abil","hp","dif"].forEach(function(dove){
+  ["name","xp","class","razza","stats","prof","ts","abil","hp","dif","align"].forEach(function(dove){
     var ap=document.getElementById(ASP_CONT[dove].ant);
     if(ap) ap.addEventListener("click", function(e){
       var t=e.target.closest("[data-ctarget]"); if(!t) return;
@@ -2447,7 +2505,7 @@ function applicaTesti(){
   aggiornaMortalita();   // e la sbiadita/il banner/il teschio se sei a terra
 }
 
-function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderRazzaPanel(); renderLevel(); renderXpDialog();
+function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderAlign(); renderAlignDialog(); renderRazzaPanel(); renderLevel(); renderXpDialog();
   renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
   renderHp(); renderHpDialog(); renderDif(); renderDifDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
@@ -2515,6 +2573,7 @@ function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidd
   document.getElementById("modalAbil").hidden=true;
   var mh=document.getElementById("modalHp"); if(mh) mh.hidden=true;
   var md=document.getElementById("modalDif"); if(md) md.hidden=true;
+  var mal=document.getElementById("modalAlign"); if(mal) mal.hidden=true;
   var mrz=document.getElementById("modalRazze"); if(mrz) mrz.hidden=true;
   var mrza=document.getElementById("modalRazzaAsp"); if(mrza) mrza.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
@@ -2522,6 +2581,7 @@ document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
 document.getElementById("gearXp").addEventListener("click", openXp);
 document.getElementById("gearProf").addEventListener("click", openProf);
+document.getElementById("gearAlign").addEventListener("click", openAlign);
 
 // Il pannello Razza e' tutto un pulsante: toccarlo (o Invio/Spazio) apre il grimorio.
 (function(){

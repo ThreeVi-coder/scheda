@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=46">
+<link rel="stylesheet" href="styles.css?v=47">
 </head>
 <body>
   <div class="wrap">
@@ -103,6 +103,12 @@
         <div class="eyebrow">Classe</div>
         <div class="cline" id="classLine"></div>
         <button class="gear" id="gearClass" title="Scegli la classe" aria-label="Scegli la classe"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
+      </div>
+
+      <div class="alpanel" id="alignPanel">
+        <div class="eyebrow">Allineamento</div>
+        <div class="alline" id="alignLine"></div>
+        <button class="gear" id="gearAlign" title="Scegli l&rsquo;allineamento" aria-label="Scegli l'allineamento"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
       <div class="hpanel" id="hpPanel">
@@ -492,6 +498,42 @@
       </div>
     </div>
 
+    <div class="modal" id="modalAlign" hidden>
+      <div class="backdrop" data-close="align"></div>
+      <div class="dialog centrata" id="dialogAlign">
+        <div class="dlghead">
+          <h2>Allineamento</h2>
+          <button class="dlgx" data-close="align" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <div class="mech">
+          <p class="hint">Dove sta il personaggio tra la legge e il caos, e tra il bene e il male. Tocca una casella per sceglierla; toccala di nuovo per toglierla.</p>
+          <div class="algrid" id="alignGrid"></div>
+          <div class="alextra">
+            <button type="button" class="alcell alwide" data-align="SA">Senza allineamento</button>
+          </div>
+          <p class="aldesc" id="alignDesc"></p>
+          </div>
+
+          <div class="este">
+          <div class="asplab">Aspetto delle scritte</div>
+          <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
+          <div class="antepsel" id="antsel_align"></div>
+          <div class="comandi" id="com_align"></div>
+          </div>
+        </div>
+        <div class="dlgbar" id="barAlign">
+          <button class="btn-reset" data-reset="Align">Azzera</button>
+          <button class="btn-close" data-close="align">Chiudi</button>
+        </div>
+        <div class="cfmbar" id="cfmAlign" hidden>
+          <span class="cfmtxt">Riportare le scritte dell&rsquo;allineamento com&rsquo;erano? L&rsquo;azione non si pu&ograve; annullare.</span>
+          <button class="btn-no" data-cancel="Align">Annulla</button>
+          <button class="btn-yes" data-yes="Align">Azzera</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalHp" hidden>
       <div class="backdrop" data-close="hp"></div>
       <div class="dialog centrata" id="dialogHp">
@@ -779,6 +821,6 @@
 
   </div>
 
-<script src="app.js?v=46"></script>
+<script src="app.js?v=47"></script>
 </body>
 </html>

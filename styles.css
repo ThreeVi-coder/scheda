@@ -173,6 +173,7 @@
   .lpanel{ flex:2 1 250px; }
   .ppanel{ flex:1 1 150px; }
   .cpanel{ flex:2 1 250px; }
+  .alpanel{ flex:2 1 230px; }
   .hpanel{ flex:1 1 100%; max-width:none; }
   .dpanel{ flex:1 1 100%; max-width:none; }
   .spanel{ flex:1 1 100%; max-width:none; }
@@ -192,6 +193,7 @@
   .prow .hpmax{ font-size:clamp(19px, 10cqi, 26px); }
   .prow .difval{ font-size:clamp(26px, 14cqi, 38px); }
   .prow .cn{ font-size:clamp(19px, 13cqi, 30px); }
+  .prow .alname{ font-size:clamp(15px, 9.5cqi, 24px); }
   .prow .ce{ width:clamp(26px, 17.5cqi, 40px); height:clamp(26px, 17.5cqi, 40px); }
   .prow .cl{ font-size:clamp(13px, 7.5cqi, 17px); }
   .prow .eyebrow{ font-size:clamp(10px, 4.8cqi, 11px); }
@@ -211,6 +213,29 @@
   .cl{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:700; color:var(--gold); align-self:flex-start; margin-top:3px; }
   .cdiv{ width:1.5px; height:30px; background:var(--line); transform:rotate(18deg); border-radius:2px; margin:0 3px; flex:0 0 auto; }
   .cempty{ font-size:15px; color:var(--muted); font-style:italic; padding:6px 0; }
+
+  /* ============ PANNELLO ALLINEAMENTO ============ */
+  .alpanel{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
+    padding:16px 22px 16px 22px; text-align:center;
+  }
+  /* etichetta e nome centrati; il padding ai lati tiene il testo lontano dalla rotella */
+  .alpanel .eyebrow{ padding:0 44px; }
+  .alline{ display:flex; align-items:center; justify-content:center; min-height:40px; padding:0 44px; }
+  .alname{ font-family:'Cinzel',Georgia,serif; font-size:24px; font-weight:700; line-height:1.12; }
+  .alempty{ font-size:14.5px; color:var(--muted); font-style:italic; padding:6px 0; }
+  /* la griglia dentro la finestra */
+  .algrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0 10px; }
+  .alcell{
+    border:1px solid var(--line); background:rgba(255,255,255,.02); color:var(--ink);
+    border-radius:10px; padding:11px 8px; font-size:14px; font-weight:600; cursor:pointer;
+    font-family:'Cinzel',Georgia,serif; text-align:center; line-height:1.2; transition:border-color .14s, background .14s, color .14s;
+  }
+  .alcell:hover{ border-color:var(--violet); color:#fff; }
+  .alcell.sel{ border-color:transparent; background:linear-gradient(150deg,var(--violet-2),#5b45c9); color:#fff; box-shadow:0 0 0 1px var(--violet); }
+  .alextra{ margin-bottom:8px; }
+  .alwide{ width:100%; }
+  .aldesc{ min-height:2.6em; color:var(--muted); font-size:13.5px; font-style:italic; margin:6px 2px 2px; }
 
   /* ============ PANNELLO RAZZA ============ */
   /* Una banda lunga a tutta larghezza, in cima alla fila (come CA/Iniz/Vel).
@@ -466,9 +491,9 @@
   /* Per ora restiamo puliti: niente trama a favo di fondo e niente esagono
      attorno ai numeri (li ripenseremo insieme allo sfondo più avanti). Resta
      solo il bordo che si scalda al passaggio del mouse. */
-  .lpanel, .ppanel, .cpanel, .rzpanel, .hpanel, .dpanel, .header{
+  .lpanel, .ppanel, .cpanel, .alpanel, .rzpanel, .hpanel, .dpanel, .header{
     position:relative; transition:border-color .18s ease, box-shadow .2s ease; }
-  .lpanel:hover, .ppanel:hover, .cpanel:hover, .rzpanel:hover, .hpanel:hover, .dpanel:hover, .header:hover{
+  .lpanel:hover, .ppanel:hover, .cpanel:hover, .alpanel:hover, .rzpanel:hover, .hpanel:hover, .dpanel:hover, .header:hover{
     border-color:rgba(224,177,94,.35); box-shadow:0 0 0 1px rgba(224,177,94,.1), 0 8px 26px rgba(0,0,0,.3); }
 
   /* il simbolo della classe prende un alone arcano viola */
@@ -1205,6 +1230,7 @@
     .statsline svg{ max-width:240px; margin:0 auto; }
     .stcol{ display:block; margin-top:12px; }
     .cpanel{ min-width:0; width:100%; padding-right:56px; }
+    .alpanel{ min-width:0; width:100%; padding-right:56px; }
     .rzpanel{ min-width:0; width:100%; }
     .lpanel{ min-width:0; width:100%; padding-right:56px; }
     .ppanel{ min-width:0; width:100%; padding-right:56px; }

@@ -1747,9 +1747,9 @@ function renderAlign(){
 function renderAlignDialog(){
   var g=document.getElementById("alignGrid"); if(!g) return;
   g.innerHTML=ALLINEAMENTI.filter(function(a){ return a.k!=="SA"; }).map(function(a){
-    return '<button type="button" class="alcell'+(state.allineamento===a.k?" sel":"")+'" data-align="'+a.k+'">'+esc(a.nome)+'</button>';
+    return '<button type="button" class="alcell'+(state.allineamento===a.k?" sel":"")+'" data-allin="'+a.k+'">'+esc(a.nome)+'</button>';
   }).join("");
-  var sa=document.querySelector('#modalAlign [data-align="SA"]');
+  var sa=document.querySelector('#modalAlign [data-allin="SA"]');
   if(sa) sa.classList.toggle("sel", state.allineamento==="SA");
   var d=document.getElementById("alignDesc");
   if(d){ var cur=ALLIN_BY[state.allineamento]; d.textContent = cur ? cur.d : ""; }
@@ -1759,8 +1759,8 @@ function openAlign(){ document.getElementById("modalAlign").hidden=false; render
 (function(){
   var ma=document.getElementById("modalAlign"); if(!ma) return;
   ma.addEventListener("click", function(e){
-    var b=e.target.closest("[data-align]"); if(!b) return;
-    var k=b.getAttribute("data-align");
+    var b=e.target.closest("[data-allin]"); if(!b) return;
+    var k=b.getAttribute("data-allin");
     state.allineamento = (state.allineamento===k) ? "" : k;
     renderAlign(); renderAlignDialog(); aggiornaSalva();
   });

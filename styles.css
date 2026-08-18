@@ -14,6 +14,17 @@
     background:radial-gradient(1200px 500px at 80% -10%, rgba(124,92,255,.12), transparent 60%), var(--bg);
     min-height:100vh;
   }
+
+  /* ============ BARRE DI SCORRIMENTO ============
+     In tinta con la scheda (tema arcano: viola tenue sul fondo scuro), non piu'
+     quelle bianche di sistema. Vale per tutta la pagina e per ogni finestra. Le
+     sezioni con un tema proprio (il Grimorio, blu/oro) le ridefiniscono da se'. */
+  :root{ scrollbar-color:rgba(167,139,250,.32) transparent; scrollbar-width:thin; }
+  ::-webkit-scrollbar{ width:12px; height:12px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:rgba(167,139,250,.30); border-radius:8px; border:3px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-thumb:hover{ background:rgba(167,139,250,.52); background-clip:content-box; }
+  ::-webkit-scrollbar-corner{ background:transparent; }
   .wrap{max-width:900px; margin:0 auto; padding:26px}
 
   /* ============ ACCESSO ============ */
@@ -334,6 +345,17 @@
   .stsel:focus{ outline:none; border-color:var(--violet); }
   .bcalc{ font-size:10px; color:var(--muted); margin-top:3px; font-family:ui-monospace,Consolas,monospace; }
   .bcalc i{ color:var(--gold); font-style:normal; font-weight:700; }
+  /* ---- Bonus di creazione (livello 1) ---- */
+  .crea{ margin-top:18px; padding-top:16px; border-top:1px solid var(--line); text-align:left; }
+  .creahd{ font-family:'Cinzel',Georgia,serif; font-size:16px; font-weight:700; color:var(--ink); }
+  .crfmt{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
+  .crslots{ display:flex; flex-direction:column; gap:8px; max-width:360px; }
+  .crslot{ display:flex; align-items:center; gap:12px; }
+  .cramt{ font-family:'Cinzel',Georgia,serif; font-weight:700; color:var(--gold); font-size:18px; min-width:34px; text-align:center; }
+  .crslot select{ flex:1 1 auto; min-width:0; background:var(--panel2); color:var(--ink);
+    border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:14px; font-family:var(--ui); cursor:pointer; }
+  .crslot select:focus{ outline:none; border-color:var(--violet); }
+  .crwarn{ margin-top:9px; color:var(--gold); font-size:13px; font-style:italic; }
   .puntibox{ display:inline-flex; align-items:baseline; gap:9px; margin:2px 0 4px;
     border:1px solid var(--line); background:var(--panel2); border-radius:11px; padding:9px 16px; }
   .puntibox .pblab{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }

@@ -264,9 +264,32 @@ var PB_COSTO={ 8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9 };
 var PB_MIN=8, PB_MAX=15, PB_TOTALE=27;
 
 function statsDiPartenza(){
-  var o={ modo:"pointbuy", base:{}, bonus:{} };   // "modo" resta per compatibilita' con le schede gia' salvate
+  // "modo" resta per compatibilita' con le schede gia' salvate.
+  // formato/slots = il bonus di creazione al livello 1 (regola della casa):
+  //   formato "2+1" | "1+1+1" | "" (nessuno); slots = a quale caratteristica va
+  //   ogni voce, nell'ordine degli importi. Il "bonus" per caratteristica si
+  //   ricalcola da qui (non e' piu' un campo a mano).
+  var o={ modo:"pointbuy", base:{}, bonus:{}, formato:"", slots:[] };
   CARATT.forEach(function(c){ o.base[c.k]=PB_MIN; o.bonus[c.k]=0; });
   return o;
+}
+/* Gli importi di un formato, nell'ordine: +2/+1 -> [2,1]; +1/+1/+1 -> [1,1,1]. */
+function importiFormato(f){ return f==="2+1" ? [2,1] : (f==="1+1+1" ? [1,1,1] : []); }
+/* Ricalcola il bonus per caratteristica dal formato scelto e dagli slot. */
+function applicaBonusCreazione(){
+  CARATT.forEach(function(c){ state.stats.bonus[c.k]=0; });
+  var imp=importiFormato(state.stats.formato), sl=state.stats.slots||[];
+  for(var i=0;i<imp.length;i++){
+    var k=sl[i];
+    if(k && Object.prototype.hasOwnProperty.call(state.stats.bonus, k)) state.stats.bonus[k]+=imp[i];
+  }
+}
+/* Il bonus di creazione e' completo? (tutte le voci del formato assegnate) */
+function creazioneCompleta(){
+  var imp=importiFormato(state.stats.formato); if(!imp.length) return false;
+  var sl=state.stats.slots||[];
+  for(var i=0;i<imp.length;i++){ if(!sl[i]) return false; }
+  return true;
 }
 function totaleCar(k){
   var v=state.stats.base[k]+state.stats.bonus[k];
@@ -504,12 +527,60 @@ function renderStatsDialog(){
   punti.innerHTML='<span class="pblab">Punti rimasti</span><span class="pbnum">'+pbLiberi()+'</span><span class="pbtot">/ '+PB_TOTALE+'</span>';
   punti.className="puntibox"+(pbLiberi()===0?" finiti":"");
 
-  document.getElementById("statsNota").textContent =
-    "Sali e scendi con i pulsanti: la forma dell'esagono \u00E8 il tuo personaggio. Da 14 in su costa di pi\u00F9.";
-
   disegnaEsagono();
   disegnaFila();
+  disegnaCreazione();
 }
+
+/* La sezione "Bonus di creazione": scegli il formato (+2/+1 o +1/+1/+1) e
+   assegni ogni voce a una caratteristica DIVERSA. Il totale si aggiorna da solo
+   (base + bonus di creazione). Le voci gia' usate sono disattivate negli altri
+   menu', cosi' non puoi metterne due sulla stessa caratteristica. */
+function disegnaCreazione(){
+  var host=document.getElementById("statsCrea"); if(!host) return;
+  var f=state.stats.formato, imp=importiFormato(f), sl=state.stats.slots||[];
+  var html='<div class="creahd">Bonus di creazione</div>';
+  html+='<div class="crfmt">'
+    + '<button type="button" class="opt'+(f==="2+1"?" on":"")+'" data-crfmt="2+1">+2 / +1</button>'
+    + '<button type="button" class="opt'+(f==="1+1+1"?" on":"")+'" data-crfmt="1+1+1">+1 / +1 / +1</button>'
+    + (f ? '<button type="button" class="opt crnull" data-crfmt="">Nessuno</button>' : '')
+    + '</div>';
+  if(imp.length){
+    html+='<div class="crslots">';
+    imp.forEach(function(amt,i){
+      var scelto=sl[i]||"";
+      var opts='<option value="">—</option>'+CARATT.map(function(c){
+        var usataAltrove = sl.some(function(k,j){ return j!==i && k===c.k; });
+        return '<option value="'+c.k+'"'+(scelto===c.k?' selected':'')+(usataAltrove?' disabled':'')+'>'+esc(c.nome)+'</option>';
+      }).join("");
+      html+='<label class="crslot"><span class="cramt">'+segno(amt)+'</span>'
+        + '<select data-crslot="'+i+'">'+opts+'</select></label>';
+    });
+    html+='</div>';
+    if(!creazioneCompleta()) html+='<div class="crwarn">Assegna tutte le voci del bonus.</div>';
+  }
+  host.innerHTML=html;
+}
+/* Comandi del bonus di creazione (scelta formato + assegnazione alle stat). */
+(function(){
+  var ms=document.getElementById("modalStats"); if(!ms) return;
+  ms.addEventListener("click", function(e){
+    var fb=e.target.closest("[data-crfmt]"); if(!fb) return;
+    var f=fb.getAttribute("data-crfmt");
+    state.stats.formato = (f==="2+1"||f==="1+1+1") ? f : "";
+    state.stats.slots = importiFormato(state.stats.formato).map(function(){ return ""; });
+    applicaBonusCreazione(); renderAll(); aggiornaSalva();
+  });
+  ms.addEventListener("change", function(e){
+    var s=e.target.closest("[data-crslot]"); if(!s) return;
+    var i=parseInt(s.getAttribute("data-crslot"),10), val=s.value;
+    var sl=(state.stats.slots||[]).slice();
+    // caratteristiche diverse: se il valore e' gia' usato altrove, liberalo li'
+    if(val) sl.forEach(function(k,j){ if(j!==i && k===val) sl[j]=""; });
+    sl[i]=val; state.stats.slots=sl;
+    applicaBonusCreazione(); renderAll(); aggiornaSalva();
+  });
+})();
 
 var HEX_CX=150, HEX_CY=150, HEX_R=112;
 function hexPunto(idx, frazione){
@@ -648,9 +719,15 @@ function applicaDati(o){
     CARATT.forEach(function(c){
       var b = o.stats.base && o.stats.base[c.k];
       if(typeof b==="number" && isFinite(b)) state.stats.base[c.k]=Math.max(CAR_MIN, Math.min(CAR_MAX, Math.round(b)));
-      var x = o.stats.bonus && o.stats.bonus[c.k];
-      if(typeof x==="number" && isFinite(x)) state.stats.bonus[c.k]=Math.max(-10, Math.min(10, Math.round(x)));
     });
+    // bonus di creazione: si rilegge il formato e gli slot; il bonus per
+    // caratteristica si ricalcola da qui (il vecchio campo "bonus" a mano non
+    // esiste piu' e le schede vecchie che lo avevano ripartono senza).
+    state.stats.formato = (o.stats.formato==="2+1" || o.stats.formato==="1+1+1") ? o.stats.formato : "";
+    state.stats.slots = Array.isArray(o.stats.slots)
+      ? o.stats.slots.map(function(k){ return (typeof k==="string" && CARATT.some(function(c){return c.k===k;})) ? k : ""; })
+      : [];
+    applicaBonusCreazione();
   }
   state.statsEvid = (o.statsEvid!==false);   // acceso di default
   if(state.transizione!=="dissolvenza") state.transizione="morph";   // solo valori validi, default morph
@@ -754,10 +831,11 @@ function applicaDati(o){
   }
   state.morteS = (typeof o.morteS==="number" && o.morteS>0) ? Math.min(3, Math.round(o.morteS)) : 0;
   state.morteF = (typeof o.morteF==="number" && o.morteF>0) ? Math.min(3, Math.round(o.morteF)) : 0;
-  // ritocco a mano di CA / Iniziativa / Velocita': solo numeri, il resto si scarta
+  // ritocco a mano: ormai solo la CA (Iniziativa e Velocita' sono automatiche);
+  // gli eventuali vecchi ritocchi di iniz/vel si lasciano cadere.
   state.difScost={};
   if(o.difScost && typeof o.difScost==="object"){
-    ["ca","iniz","vel"].forEach(function(k){ var v=o.difScost[k]; if(typeof v==="number" && isFinite(v)) state.difScost[k]=Math.round(v); });
+    DIF_ORD.forEach(function(k){ if(!DIF_MANUALE[k]) return; var v=o.difScost[k]; if(typeof v==="number" && isFinite(v)) state.difScost[k]=Math.round(v); });
   }
   state.difIcoColor = (typeof o.difIcoColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.difIcoColor)) ? o.difIcoColor : "#E0B15E";
 
@@ -1064,7 +1142,12 @@ var DIF_VOCI={
    italiana e senza decimali inutili: 30→"9", 35→"10,5". */
 function metriDaPiedi(ft){ var m=Math.round(ft*0.3*100)/100; return (m%1===0?String(m):String(m).replace(".",",")); }
 var DIF_ORD=["ca","iniz","vel"];
-function ritoccoDif(k){ var m=state.difScost||{}, v=m[k]; return (typeof v==="number"&&isFinite(v))?Math.round(v):0; }
+/* Quali valori si possono ancora ritoccare a mano. Iniziativa e Velocità si
+   calcolano da sole (Destrezza / specie), quindi niente ritocco. La CA per ora
+   sì: è solo "senza armatura" finché non costruiamo l'equipaggiamento; quando
+   l'armatura la calcolerà da sola, basta mettere ca:false qui. */
+var DIF_MANUALE={ ca:true, iniz:false, vel:false };
+function ritoccoDif(k){ if(!DIF_MANUALE[k]) return 0; var m=state.difScost||{}, v=m[k]; return (typeof v==="number"&&isFinite(v))?Math.round(v):0; }
 function baseDif(k){ return DIF_VOCI[k].fn().reduce(function(s,x){ return s+(x.val||0); },0); }
 function valoreDif(k){ return baseDif(k)+ritoccoDif(k); }
 /* Formattazione per la vista: l'iniziativa col segno, la velocità coi piedi. */
@@ -4466,8 +4549,8 @@ function renderDif(){
 function renderDifDialog(){
   var host=document.getElementById("difDlgBody"); if(!host) return;
   var ro=soloLettura?" disabled":"", h="";
-  h+='<p class="hint">Questi valori si calcolano da soli da quello che sappiamo adesso (la Destrezza e le regole di base). Quando arriveranno specie, equipaggiamento e talenti si aggiorneranno da soli. Se intanto un caso particolare — o una regola della casa — chiede un altro numero, ritoccalo qui: si salva solo la differenza dal calcolo, così segue comunque i cambiamenti futuri.</p>';
-  DIF_ORD.forEach(function(k){
+  h+='<p class="hint">Iniziativa e Velocità si calcolano da sole (dalla Destrezza e dalla specie) e non si impostano a mano. La Classe Armatura per ora si può ritoccare qui — è solo quella “senza armatura” finché non arriverà l’equipaggiamento a calcolarla da solo — e si salva soltanto la differenza dal calcolo, così segue comunque i cambiamenti futuri.</p>';
+  DIF_ORD.filter(function(k){ return DIF_MANUALE[k]; }).forEach(function(k){
     var d=DIF_VOCI[k], base=baseDif(k), val=valoreDif(k), rit=ritoccoDif(k);
     h+='<div class="row"><span class="rowlab">'+d.nome+'</span>'
       +'<input class="hpin" type="number" id="dif_'+k+'_in" step="1" value="'+val+'"'+ro+' />'
@@ -4479,6 +4562,7 @@ function renderDifDialog(){
   montaSpinner(host);
 }
 function impostaDif(k, v){
+  if(!DIF_MANUALE[k]) return;   // Iniziativa e Velocità sono automatiche
   if(!isFinite(v)){ renderDifDialog(); return; }
   if(!state.difScost) state.difScost={};
   var s=Math.round(v)-baseDif(k);

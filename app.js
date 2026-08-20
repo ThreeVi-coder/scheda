@@ -957,6 +957,7 @@ function schedaVuota(){
   state.razza="";
   state.allineamento="";
   elName.textContent="";
+  if(typeof resetPagine==="function") resetPagine();   // ogni scheda si apre sul Fronte
 }
 
 function modoScheda(){
@@ -4582,6 +4583,54 @@ document.getElementById("modalDif").addEventListener("change", function(e){
   var m=e.target.id && e.target.id.match(/^dif_(ca|iniz|vel)_in$/);
   if(m){ impostaDif(m[1], parseInt(e.target.value,10)); }
 });
+
+/* ================= FOGLIO GIRABILE (pagine con flip) =================
+   La scheda è un foglio a più pagine: 0 Fronte (la scheda), 1 Retro (tratti e
+   talenti), 2 Terza (equipaggiamento). Si gira dagli ANGOLI in basso: destra =
+   avanti, sinistra = indietro. La pagina attiva NON si salva (è come la vista
+   del riquadro unito). Una guardia impedisce di girare mentre gira. */
+var PAGINE_FOGLIO=["pagFronte","pagRetro","pagTerza"];
+var paginaScheda=0, flipInCorso=false;
+function aggiornaAngoli(){
+  var sx=document.getElementById("angoloSx"), dx=document.getElementById("angoloDx");
+  if(sx) sx.hidden = (paginaScheda<=0) || flipInCorso;
+  if(dx) dx.hidden = (paginaScheda>=PAGINE_FOGLIO.length-1) || flipInCorso;
+}
+function resetPagine(){
+  flipInCorso=false; paginaScheda=0;
+  PAGINE_FOGLIO.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el) return;
+    el.hidden=(i!==0);
+    el.classList.remove("via-avanti","entra-avanti","via-indietro","entra-indietro");
+  });
+  aggiornaAngoli();
+}
+function giraPagina(dir){
+  if(flipInCorso) return;
+  var t=paginaScheda+dir;
+  if(t<0 || t>=PAGINE_FOGLIO.length) return;
+  var oldEl=document.getElementById(PAGINE_FOGLIO[paginaScheda]);
+  var newEl=document.getElementById(PAGINE_FOGLIO[t]);
+  if(!oldEl || !newEl) return;
+  flipInCorso=true; aggiornaAngoli();   // gli angoli spariscono durante il giro
+  var suf = dir>0 ? "avanti" : "indietro";
+  oldEl.classList.add("via-"+suf);
+  setTimeout(function(){
+    oldEl.hidden=true; oldEl.classList.remove("via-"+suf);
+    newEl.hidden=false; newEl.classList.add("entra-"+suf);
+    paginaScheda=t;
+    setTimeout(function(){
+      newEl.classList.remove("entra-"+suf);
+      flipInCorso=false; aggiornaAngoli();
+    }, 340);
+  }, 300);
+}
+(function(){
+  var dx=document.getElementById("angoloDx"), sx=document.getElementById("angoloSx");
+  if(dx) dx.addEventListener("click", function(){ giraPagina(1); });
+  if(sx) sx.addEventListener("click", function(){ giraPagina(-1); });
+  resetPagine();
+})();
 
 /* ============ CAMPI NUMERICI: freccette su misura e clic che seleziona ============
    Le freccette bianche native stanno appiccicate al numero e stonano: le

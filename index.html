@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=49">
+<link rel="stylesheet" href="styles.css?v=50">
 </head>
 <body>
   <div class="wrap">
@@ -64,6 +64,9 @@
     </div>
 
     <div id="paneScheda">
+
+    <div class="foglio" id="foglio">
+    <div class="pagina pag-fronte" id="pagFronte">
 
     <div class="header" id="header">
       <div class="eyebrow" id="eyebrow">Nome del personaggio</div>
@@ -204,6 +207,29 @@
       </div>
 
     </div>
+
+    </div><!-- /#pagFronte -->
+
+    <div class="pagina pag-retro" id="pagRetro" hidden>
+      <div class="pagina-seg">
+        <div class="pagseg-eyebrow">Retro</div>
+        <div class="pagseg-tit">Tratti &amp; Talenti</div>
+        <div class="pagseg-sub">Qui arriveranno talenti, tratti di razza, abilit&agrave; di classe e sottoclasse.</div>
+      </div>
+    </div>
+
+    <div class="pagina pag-terza" id="pagTerza" hidden>
+      <div class="pagina-seg">
+        <div class="pagseg-eyebrow">Terza pagina</div>
+        <div class="pagseg-tit">Equipaggiamento</div>
+        <div class="pagseg-sub">Qui arriveranno equipaggiamento, borsa e soldi.</div>
+      </div>
+    </div>
+
+    <button class="angolo angolo-sx" id="angoloSx" type="button" aria-label="Pagina precedente" title="Pagina precedente" hidden><span class="angolo-frec">&#8249;</span></button>
+    <button class="angolo angolo-dx" id="angoloDx" type="button" aria-label="Pagina successiva" title="Pagina successiva"><span class="angolo-frec">&#8250;</span></button>
+
+    </div><!-- /#foglio -->
 
     <div class="modal" id="modalName" hidden>
       <div class="backdrop" data-close="name"></div>
@@ -821,6 +847,6 @@
 
   </div>
 
-<script src="app.js?v=49"></script>
+<script src="app.js?v=50"></script>
 </body>
 </html>

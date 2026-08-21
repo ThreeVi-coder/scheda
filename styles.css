@@ -202,20 +202,25 @@
   .pagseg-tit{ font-family:'Cinzel',Georgia,serif; font-size:30px; font-weight:700; color:var(--ink); }
   .pagseg-sub{ font-size:14px; color:var(--muted); max-width:440px; line-height:1.6; font-style:italic; }
 
-  /* gli ANGOLI del foglio: si volta da qui */
-  .angolo{ position:absolute; bottom:-4px; width:60px; height:60px; padding:0; cursor:pointer;
-    border:none; background:transparent; z-index:6; color:var(--gold); }
-  .angolo::before{ content:""; position:absolute; inset:0; border:1px solid var(--line);
-    box-shadow:0 6px 16px rgba(0,0,0,.35); transition:transform .16s ease; }
-  .angolo-dx{ right:2px; }
-  .angolo-dx::before{ background:linear-gradient(135deg, transparent 46%, var(--panel2) 47%); border-radius:0 0 6px 0; }
-  .angolo-sx{ left:2px; }
-  .angolo-sx::before{ background:linear-gradient(225deg, transparent 46%, var(--panel2) 47%); border-radius:0 0 0 6px; }
-  .angolo:hover::before{ transform:translateY(-3px); }
-  .angolo:focus-visible{ outline:2px solid var(--violet); outline-offset:3px; }
-  .angolo-frec{ position:absolute; bottom:6px; font-size:19px; line-height:1; font-weight:700; z-index:1; }
-  .angolo-dx .angolo-frec{ right:9px; }
-  .angolo-sx .angolo-frec{ left:9px; }
+  /* gli ANGOLI del foglio: una vera PIEGA d'angolo (dog-ear), non un riquadro a
+     parte. La punta del foglio ripiegata: un triangolo con la sfumatura che la
+     "solleva" verso la punta e la crepa in diagonale; una piccola ombra la stacca
+     dalla pagina. La freccia sta sulla piega. */
+  .angolo{ position:absolute; bottom:0; width:54px; height:54px; padding:0; cursor:pointer;
+    border:none; background:transparent; z-index:6; transition:transform .16s ease;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+  .angolo::after{ content:""; position:absolute; inset:0; }
+  .angolo-dx{ right:0; }
+  .angolo-dx::after{ border-bottom-right-radius:16px;
+    background:linear-gradient(135deg, transparent 0 49.5%, #201e30 50%, #2c2942 76%, #3b3757 100%); }
+  .angolo-sx{ left:0; }
+  .angolo-sx::after{ border-bottom-left-radius:16px;
+    background:linear-gradient(225deg, transparent 0 49.5%, #201e30 50%, #2c2942 76%, #3b3757 100%); }
+  .angolo:hover{ transform:scale(1.07); }
+  .angolo:focus-visible{ outline:2px solid var(--violet); outline-offset:3px; border-radius:4px; }
+  .angolo-frec{ position:absolute; bottom:6px; font-size:15px; line-height:1; font-weight:700; color:var(--gold); z-index:2; }
+  .angolo-dx .angolo-frec{ right:8px; }
+  .angolo-sx .angolo-frec{ left:8px; }
   .angolo[hidden]{ display:none; }
 
   .prow{ display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; }

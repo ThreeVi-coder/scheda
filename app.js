@@ -2361,6 +2361,36 @@ function slotOrigine(){ return razzaUmano() ? 2 : 1; }
 /* un talento è già scelto (in una delle due sezioni)? */
 function talGiaScelto(id){ return state.talenti.origine.indexOf(id)>=0 || state.talenti.normali.indexOf(id)>=0; }
 
+/* sigla breve di una caratteristica (FOR/DES/...) */
+function siglaCar(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return CARATT[i].sigla; } return String(k||"").toUpperCase(); }
+
+/* ===== PREREQUISITI — controllo automatico (fase ibrida) =====
+   Leggo dal TESTO libero dei prerequisiti le sole cose che la scheda sa
+   verificare con certezza: il livello minimo ("Liv. N") e i punteggi minimi di
+   caratteristica ("For 13+", eventualmente in OR con "/"). Razza, talenti,
+   classe e capacità arriveranno come campi strutturati più avanti. */
+function analizzaPrereq(txt){
+  txt=String(txt||"");
+  // livello: riconosce "Liv. 4", "Liv 4", "Livello 4", "Lvl 4"
+  var liv=null, m=txt.match(/Liv(?:ello)?\.?\s*(\d+)/i) || txt.match(/\bLvl\.?\s*(\d+)/i);
+  if(m) liv=parseInt(m[1],10);
+  var stats=[], re=/(For|Des|Cos|Int|Sag|Car)\s*(\d+)\s*\+/gi, mm;
+  while((mm=re.exec(txt))) stats.push({ car:mm[1].toLowerCase(), min:parseInt(mm[2],10) });
+  return { liv:liv, stats:stats };
+}
+/* Prerequisiti NON soddisfatti che sappiamo controllare. Ritorna una lista di
+   scritte (vuota = a posto, per quel che la scheda sa). I punteggi in "/" sono
+   in OR: ne basta uno. Livello e caratteristiche vanno entrambi soddisfatti. */
+function prereqMancanti(t){
+  var a=analizzaPrereq(t && t.prerequisiti), out=[];
+  if(a.liv!=null && totalLevel() < a.liv) out.push("Livello "+a.liv);
+  if(a.stats.length){
+    var ok=a.stats.some(function(s){ return totaleCar(s.car) >= s.min; });
+    if(!ok) out.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));
+  }
+  return out;
+}
+
 function caricaTalenti(poi){
   sb.from("talenti").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
     if(!res.error && Array.isArray(res.data)) TALENTI=res.data;
@@ -2401,6 +2431,8 @@ function scegliTalento(id){
   var t=talentoById(id); if(!t) return;
   // un talento non ripetibile si prende una volta sola; quelli ripetibili sì
   if(!t.ripetibile && talGiaScelto(id)) return;
+  // prerequisiti: i player sono bloccati se non li soddisfano; lo staff può forzare
+  if(prereqMancanti(t).length && !puoToccareSchede()) return;
   if(talScopo==="origine"){
     if(state.talenti.origine.length >= slotOrigine()) return;   // caselle piene
     state.talenti.origine.push(id);
@@ -2474,8 +2506,19 @@ function cartaTalento(t){
     if(!t.ripetibile && talGiaScelto(t.id)){
       scelta = '<div class="tcard-scegli"><button class="btn-scegli gia" type="button" disabled>&#10003; Gi&agrave; in scheda</button></div>';
     } else {
+      var manca = prereqMancanti(t), staff = puoToccareSchede();
       var etich = talScopo==="origine" ? "Scegli come Talento Origine" : "Scegli questo talento";
-      scelta = '<div class="tcard-scegli"><button class="btn-scegli" type="button" data-talpick="'+escRz(t.id)+'">'+etich+'</button></div>';
+      if(manca.length && !staff){
+        // player: bloccato, spiego cosa manca
+        scelta = '<div class="tcard-scegli"><button class="btn-scegli no" type="button" disabled>Requisiti non soddisfatti</button>'
+          + '<div class="tcard-manca">Ti manca: '+escRz(manca.join(", "))+'</div></div>';
+      } else {
+        // ok, oppure staff che può forzare (con avviso)
+        var nota = (manca.length && staff)
+          ? '<div class="tcard-manca staff">Requisiti non soddisfatti ('+escRz(manca.join(", "))+') — puoi forzare come staff.</div>'
+          : '';
+        scelta = '<div class="tcard-scegli"><button class="btn-scegli" type="button" data-talpick="'+escRz(t.id)+'">'+etich+'</button>'+nota+'</div>';
+      }
     }
   }
   var staff = !puoToccareSchede() ? ''

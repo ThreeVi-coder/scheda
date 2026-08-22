@@ -8,5 +8,6 @@ CLAUDE.md
 RIASSUNTO_PROGETTO.md
 
 # Inserimento dei talenti: contiene i testi dei manuali (copyright). Il repo è
-# pubblico, quindi questo file resta SOLO in locale / da lanciare su Supabase.
+# pubblico, quindi questi file restano SOLO in locale / da lanciare su Supabase.
 sql/04_talenti_seed.sql
+sql/06_talenti_full.sql

@@ -2461,7 +2461,15 @@ function badgeAsi(t){
 
 /* disegna la carta attiva (e aggiorna contatore + frecce). Non ricostruisce la
    barra in alto: così la ricerca non perde il fuoco mentre si scrive. */
-function disegnaCarta(){
+/* una "slitta" = carte-fantasma dietro + la carta attiva. La finestra resta
+   ferma: quando si sfoglia, la slitta vecchia scivola via e la nuova entra dal
+   lato opposto (unica animazione). */
+function cartaSlotHtml(t, idx, lista){
+  var dietro=Math.min(2, lista.length-1-idx), stack="";
+  for(var s=dietro;s>=1;s--) stack+='<div class="tghost tghost-'+s+'"></div>';
+  return '<div class="tcard-slot">'+stack+cartaTalento(t)+'</div>';
+}
+function disegnaCarta(dir){
   var host=document.getElementById("talCarte"); if(!host) return;
   var lista=talentiFiltrati();
   var conta=document.getElementById("talConta");
@@ -2479,16 +2487,29 @@ function disegnaCarta(){
   }
   if(talIdx<0) talIdx=0; if(talIdx>lista.length-1) talIdx=lista.length-1;
   var t=lista[talIdx];
-  // carte-fantasma dietro (max 2), solo se il mazzo continua oltre l'attuale
-  var dietro=Math.min(2, lista.length-1-talIdx), stack="";
-  for(var s=dietro;s>=1;s--) stack+='<div class="tghost tghost-'+s+'"></div>';
-  host.innerHTML=stack+cartaTalento(t);
-  var card=host.querySelector(".tcard");
-  if(card && talAnimDir!==0){ void card.offsetWidth; card.classList.add(talAnimDir>0?"entra-dx":"entra-sx"); }
-  talAnimDir=0;
   if(conta) conta.textContent=(talIdx+1)+" / "+lista.length;
   if(prev) prev.disabled=(talIdx<=0);
   if(next) next.disabled=(talIdx>=lista.length-1);
+
+  var vecchio=host.querySelector(".tcard-slot");
+  var mobile = window.matchMedia && window.matchMedia("(max-width:720px)").matches;
+  if(dir && vecchio && !mobile){
+    // slide: la nuova slitta entra dal lato della freccia, la vecchia esce dall'altro
+    host.insertAdjacentHTML("beforeend", cartaSlotHtml(t, talIdx, lista));
+    var nuovo=host.lastElementChild;
+    nuovo.style.transform="translateX("+(dir>0?"100%":"-100%")+")";
+    void host.offsetWidth;                       // forza il punto di partenza
+    vecchio.classList.add("scivola"); nuovo.classList.add("scivola");
+    vecchio.style.transform="translateX("+(dir>0?"-100%":"100%")+")";
+    nuovo.style.transform="translateX(0)";
+    window.clearTimeout(disegnaCarta._t);
+    disegnaCarta._t=window.setTimeout(function(){
+      if(vecchio && vecchio.parentNode) vecchio.parentNode.removeChild(vecchio);
+      if(nuovo) nuovo.classList.remove("scivola");
+    }, 340);
+  } else {
+    host.innerHTML=cartaSlotHtml(t, talIdx, lista);   // cambio secco (apertura, ricerca, telefono)
+  }
 }
 
 /* la carta di UN talento: illustrazione + nome + badge +1 + prerequisiti +
@@ -2553,8 +2574,8 @@ function talVai(dir){
   var lista=talentiFiltrati(); if(!lista.length) return;
   var n=talIdx+dir;
   if(n<0 || n>lista.length-1) return;
-  talIdx=n; talAnimDir=dir; talDelId=null;
-  disegnaCarta();
+  talIdx=n; talDelId=null;
+  disegnaCarta(dir);
 }
 
 /* costruisce tutta la finestra: modulo (staff) oppure barra + scena + contatore */

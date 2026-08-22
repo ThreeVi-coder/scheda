@@ -1134,8 +1134,13 @@
     display:flex; align-items:center; justify-content:center; }
   .mazzo-frec:hover:not(:disabled){ color:var(--gold); border-color:var(--gold); box-shadow:0 0 16px rgba(224,177,94,.16); }
   .mazzo-frec:disabled{ opacity:.28; cursor:default; }
-  .mazzo-carte{ position:relative; flex:1 1 auto; width:auto; max-width:720px; min-width:0; min-height:360px;
-    display:flex; align-items:stretch; justify-content:center; }
+  /* la "scena" ha un'altezza FISSA: tutte le carte hanno la stessa dimensione, e
+     il di più del testo scorre dentro. overflow:hidden ritaglia lo scivolamento. */
+  .mazzo-carte{ position:relative; flex:1 1 auto; width:auto; max-width:720px; min-width:0;
+    height:min(78dvh,600px); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  /* la slitta (fantasmi + carta) riempie la scena; scivola quando si sfoglia */
+  .tcard-slot{ position:absolute; inset:0; display:flex; align-items:stretch; justify-content:center; }
+  .tcard-slot.scivola{ transition:transform .32s ease; }
   .mazzo-conta{ text-align:center; font-size:12px; letter-spacing:.08em; color:var(--muted); margin-top:8px; }
   .mazzo-vuoto{ align-self:center; margin:auto; text-align:center; color:var(--muted); font-size:14px; line-height:1.6;
     max-width:260px; }
@@ -1149,8 +1154,7 @@
   /* la carta attiva: ORIZZONTALE — illustrazione a sinistra, testo a destra (i
      talenti hanno testi lunghi, cosi' si scende molto meno). Su telefono torna
      verticale (piu' in basso, media query). */
-  .tcard{ position:relative; z-index:2; width:100%; max-width:720px; display:flex; flex-direction:row; overflow:hidden;
-    max-height:min(82dvh,660px);
+  .tcard{ position:relative; z-index:2; width:100%; max-width:720px; height:100%; display:flex; flex-direction:row; overflow:hidden;
     border-radius:16px; background:linear-gradient(165deg,#201f2e,#16151f); border:1px solid rgba(224,177,94,.4);
     box-shadow:0 18px 40px rgba(0,0,0,.5), inset 0 0 0 1px rgba(224,177,94,.08); }
   .tcard-cornice{ position:absolute; inset:7px; border:1px solid rgba(224,177,94,.28); border-radius:11px;
@@ -1194,11 +1198,6 @@
   .tcard-delbtns .danger{ border-color:rgba(229,104,109,.5); color:var(--danger); }
   .tcard-delbtns .danger:hover{ background:rgba(229,104,109,.14); }
 
-  /* l'ingresso di una carta quando si sfoglia (scivola dal lato della freccia) */
-  @keyframes tentraDx{ from{ transform:translateX(34px) rotate(2deg); opacity:0; } to{ transform:none; opacity:1; } }
-  @keyframes tentraSx{ from{ transform:translateX(-34px) rotate(-2deg); opacity:0; } to{ transform:none; opacity:1; } }
-  .tcard.entra-dx{ animation:tentraDx .26s ease-out; }
-  .tcard.entra-sx{ animation:tentraSx .26s ease-out; }
 
   /* Su TELEFONO la carta torna verticale (in orizzontale non c'e' spazio):
      immagine in cima, testo sotto, frecce piu' piccole. */
@@ -1206,8 +1205,9 @@
     .dialog.mazzo{ width:min(440px,96vw); }
     .mazzo-scena{ gap:6px; }
     .mazzo-frec{ width:38px; height:38px; font-size:22px; }
-    .mazzo-carte{ min-height:430px; }
-    .tcard{ flex-direction:column; max-height:none; }
+    .mazzo-carte{ height:auto; min-height:430px; overflow:visible; }
+    .tcard-slot{ position:static; inset:auto; }
+    .tcard{ flex-direction:column; height:auto; }
     .tcard-illu{ flex:0 0 auto; align-self:auto; height:170px; border-right:0;
       border-bottom:1px solid rgba(224,177,94,.22); }
     .tcard-scroll{ overflow-y:visible; margin-right:0; }

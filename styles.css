@@ -1138,9 +1138,14 @@
      il di più del testo scorre dentro. overflow:hidden ritaglia lo scivolamento. */
   .mazzo-carte{ position:relative; flex:1 1 auto; width:auto; max-width:720px; min-width:0;
     height:min(78dvh,600px); display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  /* la slitta (fantasmi + carta) riempie la scena; scivola quando si sfoglia */
+  /* la slitta (fantasmi + carta) riempie la scena */
   .tcard-slot{ position:absolute; inset:0; display:flex; align-items:stretch; justify-content:center; }
-  .tcard-slot.scivola{ transition:transform .32s ease; }
+  /* l'effetto carte: la carta ENTRA dal lato della freccia (la finestra resta
+     ferma e l'altezza è fissa, quindi niente più "ricarica"/salto) */
+  @keyframes tentraDx{ from{ transform:translateX(34px) rotate(2deg); opacity:0; } to{ transform:none; opacity:1; } }
+  @keyframes tentraSx{ from{ transform:translateX(-34px) rotate(-2deg); opacity:0; } to{ transform:none; opacity:1; } }
+  .tcard.entra-dx{ animation:tentraDx .26s ease-out; }
+  .tcard.entra-sx{ animation:tentraSx .26s ease-out; }
   .mazzo-conta{ text-align:center; font-size:12px; letter-spacing:.08em; color:var(--muted); margin-top:8px; }
   .mazzo-vuoto{ align-self:center; margin:auto; text-align:center; color:var(--muted); font-size:14px; line-height:1.6;
     max-width:260px; }

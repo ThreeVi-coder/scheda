@@ -2491,24 +2491,12 @@ function disegnaCarta(dir){
   if(prev) prev.disabled=(talIdx<=0);
   if(next) next.disabled=(talIdx>=lista.length-1);
 
-  var vecchio=host.querySelector(".tcard-slot");
-  var mobile = window.matchMedia && window.matchMedia("(max-width:720px)").matches;
-  if(dir && vecchio && !mobile){
-    // slide: la nuova slitta entra dal lato della freccia, la vecchia esce dall'altro
-    host.insertAdjacentHTML("beforeend", cartaSlotHtml(t, talIdx, lista));
-    var nuovo=host.lastElementChild;
-    nuovo.style.transform="translateX("+(dir>0?"100%":"-100%")+")";
-    void host.offsetWidth;                       // forza il punto di partenza
-    vecchio.classList.add("scivola"); nuovo.classList.add("scivola");
-    vecchio.style.transform="translateX("+(dir>0?"-100%":"100%")+")";
-    nuovo.style.transform="translateX(0)";
-    window.clearTimeout(disegnaCarta._t);
-    disegnaCarta._t=window.setTimeout(function(){
-      if(vecchio && vecchio.parentNode) vecchio.parentNode.removeChild(vecchio);
-      if(nuovo) nuovo.classList.remove("scivola");
-    }, 340);
-  } else {
-    host.innerHTML=cartaSlotHtml(t, talIdx, lista);   // cambio secco (apertura, ricerca, telefono)
+  // La finestra resta ferma e l'altezza è fissa (niente più "ricarica"): la
+  // carta si limita a ENTRARE dal lato della freccia (l'effetto carte di prima).
+  host.innerHTML=cartaSlotHtml(t, talIdx, lista);
+  if(dir){
+    var card=host.querySelector(".tcard");
+    if(card){ void card.offsetWidth; card.classList.add(dir>0 ? "entra-dx" : "entra-sx"); }
   }
 }
 

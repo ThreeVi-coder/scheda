@@ -2488,16 +2488,20 @@ function cartaTalento(t){
   return '<article class="tcard" data-cardid="'+escRz(t.id)+'">'
     + '<div class="tcard-cornice"></div>'
     + '<div class="tcard-illu">'+img+'</div>'
-    + '<div class="tcard-info">'
+    + '<div class="tcard-right">'
+    + '<div class="tcard-head">'
     +   '<h3 class="tcard-nome">'+escRz(t.nome||"Senza nome")+'</h3>'
     +   (badge ? '<div class="tcard-asi">'+escRz(badge)+'</div>' : '')
     +   (t.ripetibile ? '<div class="tcard-rip">Si pu&ograve; prendere pi&ugrave; volte</div>' : '')
     +   (pieno(t.prerequisiti) ? '<div class="tcard-prq"><span>Prerequisiti</span> '+escRz(t.prerequisiti)+'</div>' : '')
+    + '</div>'
+    + '<div class="tcard-scroll">'
     +   '<div class="tcard-ben">'+(pieno(t.benefici)?escRz(t.benefici):'<span class="tcard-vuoto">Nessun beneficio descritto.</span>')+'</div>'
     +   (pieno(t.fonte) ? '<div class="tcard-fonte">'+escRz(t.fonte)+'</div>' : '')
     + '</div>'
     + scelta
     + staff
+    + '</div>'
     + '</article>';
 }
 

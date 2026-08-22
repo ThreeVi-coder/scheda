@@ -1117,7 +1117,7 @@
   .retro-futuro{ font-size:12.5px; color:var(--muted); font-style:italic; text-align:center; max-width:420px; }
 
   /* --- la finestra del mazzo --- */
-  .dialog.mazzo{ top:50%; transform:translate(-50%,-50%); width:min(760px,94vw); max-height:calc(100dvh - 70px); }
+  .dialog.mazzo{ top:50%; transform:translate(-50%,-50%); width:min(1040px,95vw); max-height:calc(100dvh - 60px); }
   .mazzowrap{ display:flex; flex-direction:column; }
   .mazzo-top{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
   .mazzo-add{ border:1px dashed rgba(224,177,94,.55); background:transparent; color:var(--gold); border-radius:10px;
@@ -1134,7 +1134,7 @@
     display:flex; align-items:center; justify-content:center; }
   .mazzo-frec:hover:not(:disabled){ color:var(--gold); border-color:var(--gold); box-shadow:0 0 16px rgba(224,177,94,.16); }
   .mazzo-frec:disabled{ opacity:.28; cursor:default; }
-  .mazzo-carte{ position:relative; flex:0 0 auto; width:300px; min-height:430px;
+  .mazzo-carte{ position:relative; flex:1 1 auto; width:auto; max-width:720px; min-width:0; min-height:360px;
     display:flex; align-items:stretch; justify-content:center; }
   .mazzo-conta{ text-align:center; font-size:12px; letter-spacing:.08em; color:var(--muted); margin-top:8px; }
   .mazzo-vuoto{ align-self:center; margin:auto; text-align:center; color:var(--muted); font-size:14px; line-height:1.6;
@@ -1146,26 +1146,40 @@
   .tghost-1{ transform:translate(9px,7px) rotate(2.2deg); opacity:.55; }
   .tghost-2{ transform:translate(17px,13px) rotate(4.2deg); opacity:.3; }
 
-  /* la carta attiva: cornice dorata, illustrazione in alto, testo sotto */
-  .tcard{ position:relative; z-index:2; width:300px; display:flex; flex-direction:column; overflow:hidden;
+  /* la carta attiva: ORIZZONTALE — illustrazione a sinistra, testo a destra (i
+     talenti hanno testi lunghi, cosi' si scende molto meno). Su telefono torna
+     verticale (piu' in basso, media query). */
+  .tcard{ position:relative; z-index:2; width:100%; max-width:720px; display:flex; flex-direction:row; overflow:hidden;
+    max-height:min(82dvh,660px);
     border-radius:16px; background:linear-gradient(165deg,#201f2e,#16151f); border:1px solid rgba(224,177,94,.4);
     box-shadow:0 18px 40px rgba(0,0,0,.5), inset 0 0 0 1px rgba(224,177,94,.08); }
   .tcard-cornice{ position:absolute; inset:7px; border:1px solid rgba(224,177,94,.28); border-radius:11px;
     pointer-events:none; z-index:3; }
-  .tcard-illu{ height:170px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; overflow:hidden;
-    background:radial-gradient(120px 90px at 50% 40%, rgba(124,92,255,.16), transparent 70%); border-bottom:1px solid rgba(224,177,94,.22); }
+  .tcard-illu{ flex:0 0 264px; align-self:stretch; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:radial-gradient(140px 140px at 50% 40%, rgba(124,92,255,.16), transparent 70%); border-right:1px solid rgba(224,177,94,.22); }
   .tcard-illu img{ width:100%; height:100%; object-fit:cover; display:block; }
   .tcard-ph{ font-size:44px; color:rgba(224,177,94,.35); }
-  .tcard-info{ flex:1 1 auto; padding:14px 16px 4px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; }
-  .tcard-nome{ margin:0; font-family:'Cinzel',Georgia,serif; font-size:20px; font-weight:700; color:var(--ink);
-    text-align:center; line-height:1.2; }
-  .tcard-asi{ align-self:center; font-size:11px; font-weight:700; letter-spacing:.04em; color:var(--gold);
+  .tcard-right{ flex:1 1 auto; min-width:0; min-height:0; display:flex; flex-direction:column; }
+  /* TESTATA FISSA: nome, +1, ripetibile, prerequisiti — non scorre */
+  .tcard-head{ flex:0 0 auto; padding:16px 18px 12px; display:flex; flex-direction:column; gap:8px;
+    border-bottom:1px solid rgba(224,177,94,.16); }
+  /* SOLO i benefici (e la fonte) scorrono; la barra resta rientrata, dentro la cornice */
+  .tcard-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; margin-right:9px;
+    padding:13px 8px 12px 18px; display:flex; flex-direction:column; gap:9px; }
+  .tcard-scroll::-webkit-scrollbar{ width:8px; }
+  .tcard-scroll::-webkit-scrollbar-track{ background:transparent; }
+  .tcard-scroll::-webkit-scrollbar-thumb{ background:rgba(224,177,94,.28); border-radius:8px; }
+  .tcard-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(224,177,94,.5); }
+  .tcard-nome{ margin:0; font-family:'Cinzel',Georgia,serif; font-size:21px; font-weight:700; color:var(--ink);
+    text-align:left; line-height:1.2; overflow-wrap:anywhere; }
+  .tcard-asi{ align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.04em; color:var(--gold);
     border:1px solid rgba(224,177,94,.5); border-radius:99px; padding:3px 11px; background:rgba(224,177,94,.08); }
-  .tcard-prq{ font-size:12px; color:var(--muted); line-height:1.5; text-align:center; }
+  .tcard-prq{ font-size:12px; color:var(--muted); line-height:1.5; text-align:left; overflow-wrap:anywhere; }
   .tcard-prq span{ text-transform:uppercase; letter-spacing:.1em; font-size:10px; color:var(--violet); }
-  .tcard-ben{ font-size:13.5px; color:var(--ink); line-height:1.6; white-space:pre-wrap; }
+  .tcard-ben{ font-size:13.5px; color:var(--ink); line-height:1.6; white-space:pre-wrap;
+    overflow-wrap:anywhere; word-break:break-word; }
   .tcard-vuoto{ color:var(--muted); font-style:italic; }
-  .tcard-fonte{ font-size:11px; color:var(--muted); font-style:italic; text-align:center; margin-top:auto; padding-top:6px; }
+  .tcard-fonte{ font-size:11px; color:var(--muted); font-style:italic; text-align:left; margin-top:8px; padding-top:6px; }
   .tcard-staff{ flex:0 0 auto; display:flex; gap:14px; justify-content:center; padding:10px 16px 14px;
     border-top:1px solid rgba(224,177,94,.18); }
   .tcard-link{ border:0; background:none; color:var(--violet); font-family:var(--ui); font-size:12.5px; cursor:pointer; padding:0; }
@@ -1186,12 +1200,29 @@
   .tcard.entra-dx{ animation:tentraDx .26s ease-out; }
   .tcard.entra-sx{ animation:tentraSx .26s ease-out; }
 
+  /* Su TELEFONO la carta torna verticale (in orizzontale non c'e' spazio):
+     immagine in cima, testo sotto, frecce piu' piccole. */
+  @media (max-width:720px){
+    .dialog.mazzo{ width:min(440px,96vw); }
+    .mazzo-scena{ gap:6px; }
+    .mazzo-frec{ width:38px; height:38px; font-size:22px; }
+    .mazzo-carte{ min-height:430px; }
+    .tcard{ flex-direction:column; max-height:none; }
+    .tcard-illu{ flex:0 0 auto; align-self:auto; height:170px; border-right:0;
+      border-bottom:1px solid rgba(224,177,94,.22); }
+    .tcard-scroll{ overflow-y:visible; margin-right:0; }
+    .tcard-head{ align-items:center; }
+    .tcard-nome, .tcard-prq, .tcard-fonte{ text-align:center; }
+    .tcard-fonte{ margin-top:auto; }
+    .tcard-asi{ align-self:center; }
+  }
+
   /* la banda che spiega lo scopo quando stai scegliendo un talento */
   .mazzo-scopo{ margin-bottom:10px; padding:9px 14px; border-radius:10px; font-size:13px; line-height:1.5;
     color:var(--gold); background:rgba(224,177,94,.08); border:1px solid rgba(224,177,94,.35); text-align:center; }
   .mazzo-scopo b{ color:var(--ink); }
   /* il pulsante "Scegli" sulla carta */
-  .tcard-scegli{ flex:0 0 auto; padding:0 16px 14px; }
+  .tcard-scegli{ flex:0 0 auto; padding:12px 16px 14px; border-top:1px solid rgba(224,177,94,.16); }
   .btn-scegli{ width:100%; border:0; border-radius:9px; padding:10px 14px; font-family:var(--ui); font-size:13px;
     font-weight:700; cursor:pointer; color:#1a1410; background:linear-gradient(150deg,#e7c877,#c99a3f); transition:.13s; }
   .btn-scegli:hover{ filter:brightness(1.07); box-shadow:0 0 20px rgba(224,177,94,.25); }

@@ -1943,6 +1943,7 @@ function caricaRazze(poi){
     var nuova = RAZZE.map(function(r){ return r.id+":"+(r.modificato_il||r.nome||""); }).join("|");
     var cambiato = nuova!==razzeSig; razzeSig=nuova;
     renderRazzaPanel();
+    if(typeof renderRetro==="function") renderRetro();   // le razze appena caricate decidono le caselle Origine (Umano = 2)
     var mr=document.getElementById("modalRazze");
     if(mr && !mr.hidden && cambiato) renderGrimorio();
     if(typeof poi==="function") poi();
@@ -2778,7 +2779,9 @@ function renderRetro(){
 
   // --- sezione TALENTO ORIGINE ---
   html += '<div class="tt-sechead">Talento Origine</div>';
-  if(orig.length>maxO)
+  // avviso "troppi" solo se sappiamo DAVVERO la razza (razze caricate, o nessuna
+  // razza scelta): così non lampeggia all'apertura prima che le razze arrivino
+  if(orig.length>maxO && (razzeCaricate || !state.razza))
     html += '<div class="tt-avviso">Hai pi&ugrave; talenti d&rsquo;origine di quanti la tua razza ne consenta ('+maxO+'). Togline '+(orig.length-maxO)+'.</div>';
   for(var i=0;i<orig.length;i++) html += rigaTalentoRetro(orig[i],"origine",i);
   if(!soloLettura && orig.length<maxO)

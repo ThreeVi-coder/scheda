@@ -2215,9 +2215,10 @@ function formRazzaHtml(){
     + '<h3>'+(mod?'Modifica razza':'Aggiungi una razza')+'</h3>'
     + '<p class="frz-hint">Solo il <b>Nome</b> è obbligatorio. I campi lunghi (Abilità, Aspetto, Lore) non hanno limiti. '+(mod?'Le modifiche sono visibili a tutti.':'Una volta salvata, la razza compare nel grimorio per tutti.')+'</p>'
     + campoText("frz_nome","Nome razza","Es. Umano",true,r.nome)
-    + '<div class="frz-grid">'+campoText("frz_tipologia","Tipologia","Es. Umanoide",false,r.tipologia)+campoText("frz_eta","Età","Es. Maturi verso i 18 anni…",false,r.eta)+'</div>'
-    + '<div class="frz-grid">'+campoText("frz_dimensioni","Dimensioni","Es. Media (1,5–1,8 m)",false,r.dimensioni)+campoText("frz_velocita","Velocità di movimento","Es. 9 metri (30 piedi)",false,r.velocita)+'</div>'
-    + '<div class="frz-grid">'+campoText("frz_scurovisione","Scurovisione","Es. 18 metri — oppure lascia vuoto",false,r.scurovisione)+campoText("frz_lingue","Lingue","Es. Comune e una a scelta",false,r.lingue)+'</div>'
+    + '<div class="frz-grid">'+campoText("frz_famiglia","Famiglia (per i prerequisiti)","Es. elfo, nano, gnomo, tiefling…",false,r.famiglia)+campoText("frz_tipologia","Tipologia","Es. Umanoide",false,r.tipologia)+'</div>'
+    + '<div class="frz-grid">'+campoText("frz_eta","Età","Es. Maturi verso i 18 anni…",false,r.eta)+campoText("frz_dimensioni","Dimensioni","Es. Media (1,5–1,8 m)",false,r.dimensioni)+'</div>'
+    + '<div class="frz-grid">'+campoText("frz_velocita","Velocità di movimento","Es. 9 metri (30 piedi)",false,r.velocita)+campoText("frz_scurovisione","Scurovisione","Es. 18 metri — oppure lascia vuoto",false,r.scurovisione)+'</div>'
+    + campoText("frz_lingue","Lingue","Es. Comune e una a scelta",false,r.lingue)
     + campoText("frz_manuale","Manuale di riferimento","Es. Manuale del Giocatore 2024, p. 36",false,r.manuale)
     + campoArea("frz_abilita","Abilità di razza",false,r.abilita)
     + campoArea("frz_incantesimi","Incantesimi di razza",false,r.incantesimi)
@@ -2265,6 +2266,7 @@ function salvaRazza(){
   if(err) err.textContent="";
   var obj={
     nome:nome,
+    famiglia:(g("frz_famiglia").trim()||null) && g("frz_famiglia").trim().toLowerCase(),
     tipologia:g("frz_tipologia").trim()||null,
     eta:g("frz_eta").trim()||null,
     dimensioni:g("frz_dimensioni").trim()||null,
@@ -2379,17 +2381,75 @@ function analizzaPrereq(txt){
   while((mm=re.exec(txt))) stats.push({ car:mm[1].toLowerCase(), min:parseInt(mm[2],10) });
   return { liv:liv, stats:stats };
 }
-/* Prerequisiti NON soddisfatti che sappiamo controllare. Ritorna una lista di
-   scritte (vuota = a posto, per quel che la scheda sa). I punteggi in "/" sono
-   in OR: ne basta uno. Livello e caratteristiche vanno entrambi soddisfatti. */
+/* ===== Ciò che la scheda SA del personaggio (per i prerequisiti) ===== */
+var CLASSI_INCANTATORI=["bardo","chierico","druido","mago","stregone","warlock","paladino","ranger","artificere","artificiere"];
+function classiPossedute(){ return (state.classes||[]).map(function(c){ return c.key; }); }
+function razzaFamigliaPg(){ var r=state.razza?razzaById(state.razza):null; return (r && r.famiglia) ? String(r.famiglia).trim().toLowerCase() : null; }
+function tagliaPg(){ var r=state.razza?razzaById(state.razza):null; if(!r||!r.dimensioni) return null; var d=String(r.dimensioni).toLowerCase(); if(/piccol/.test(d))return"piccola"; if(/grande/.test(d))return"grande"; if(/medi/.test(d))return"media"; return null; }
+function talentiSceltiNomi(){ var ids=state.talenti.origine.concat(state.talenti.normali), out=[]; ids.forEach(function(id){ var t=talentoById(id); if(t&&t.nome) out.push(t.nome.toLowerCase()); }); return out; }
+function haMarchioDrago(){ return talentiSceltiNomi().some(function(n){ return /mark of|dragonmark|marchio del drago/.test(n); }); }
+function armaturaAllenataPg(tipo){
+  var t = tipo==="scudo" ? "scudi" : tipo;
+  var cl=classiPossedute(); if(!cl.length) return null;   // non lo so ancora
+  return cl.some(function(k){ var d=CLASSE_DATI[k]; return d && d.armature && d.armature.indexOf(t)>=0; });
+}
+/* valuta UNA condizione: true=soddisfatta, false=di sicuro NON soddisfatta,
+   null=non lo sappiamo (non blocca) */
+function condValuta(c){
+  if(!c || typeof c!=="object") return null;
+  if(c.stat) return totaleCar(c.stat[0]) >= c.stat[1];
+  if(c.razza){ var f=razzaFamigliaPg(); return f==null ? null : (f===String(c.razza).toLowerCase()); }
+  if(c.taglia){ var tg=tagliaPg(); return tg==null ? null : (tg===String(c.taglia).toLowerCase()); }
+  if(c.classe){ var cl=classiPossedute(); return cl.length ? (cl.indexOf(String(c.classe).toLowerCase())>=0) : null; }
+  if(c.talento){ var nm=String(c.talento).toLowerCase(); return talentiSceltiNomi().indexOf(nm)>=0; }
+  if(c.armatura) return armaturaAllenataPg(String(c.armatura).toLowerCase());
+  if(c.cap==="incantesimi"){ return classiPossedute().some(function(k){ return CLASSI_INCANTATORI.indexOf(k)>=0; }) ? true : null; }
+  if(c.cap==="magia_patti"){ var cl2=classiPossedute(); return cl2.length ? (cl2.indexOf("warlock")>=0) : null; }
+  if(c.cap==="armi_marziali"){ var cl3=classiPossedute(); if(!cl3.length) return null; return cl3.some(function(k){ return CLASSE_DATI[k] && /guerra/i.test(CLASSE_DATI[k].armi||""); }) ? true : null; }
+  if(c.marchio_qualsiasi) return haMarchioDrago();
+  if(c.senza_marchi) return !haMarchioDrago();
+  if(c.volante) return null;     // la razza volante non è ancora un dato strutturato
+  return null;                    // {nota:...} o sconosciuto: non blocca
+}
+/* un gruppo è in OR: fallisce SOLO se tutte le condizioni sono di sicuro false */
+function gruppoOk(g){ return (g||[]).some(function(c){ return condValuta(c)!==false; }); }
+function cap0(s){ s=String(s||""); return s.charAt(0).toUpperCase()+s.slice(1); }
+function descriviCond(c){
+  if(c.stat) return siglaCar(c.stat[0])+" "+c.stat[1]+"+";
+  if(c.razza) return cap0(c.razza)+(c.variante?" ("+c.variante+")":"");
+  if(c.taglia) return "taglia "+c.taglia;
+  if(c.classe) return cap0(c.classe);
+  if(c.talento) return c.talento;
+  if(c.armatura) return "addestramento con armatura "+c.armatura;
+  if(c.cap==="incantesimi") return "saper lanciare incantesimi";
+  if(c.cap==="magia_patti") return "magia dei patti";
+  if(c.cap==="armi_marziali") return "competenza con armi marziali";
+  if(c.marchio_qualsiasi) return "un Marchio del Drago";
+  if(c.senza_marchi) return "nessun Marchio del Drago";
+  if(c.volante) return "razza volante";
+  if(c.nota) return c.nota;
+  return "requisito";
+}
+
+/* Prerequisiti NON soddisfatti (lista di scritte; vuota = a posto per quel che la
+   scheda sa). Usa il PREREQ STRUTTURATO (colonna prereq); se assente, ripiega sul
+   testo libero (livello + caratteristiche). */
 function prereqMancanti(t){
-  var a=analizzaPrereq(t && t.prerequisiti), out=[];
-  if(a.liv!=null && totalLevel() < a.liv) out.push("Livello "+a.liv);
-  if(a.stats.length){
-    var ok=a.stats.some(function(s){ return totaleCar(s.car) >= s.min; });
-    if(!ok) out.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));
+  var P = t && t.prereq;
+  var strutturato = P && typeof P==="object" && (P.liv!=null || (P.and && P.and.length));
+  if(!strutturato){
+    var a=analizzaPrereq(t && t.prerequisiti), out=[];
+    if(a.liv!=null && totalLevel() < a.liv) out.push("Livello "+a.liv);
+    if(a.stats.length){
+      var ok=a.stats.some(function(s){ return totaleCar(s.car) >= s.min; });
+      if(!ok) out.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));
+    }
+    return out;
   }
-  return out;
+  var man=[];
+  if(P.liv!=null && totalLevel() < P.liv) man.push("Livello "+P.liv);
+  (P.and||[]).forEach(function(g){ if(!gruppoOk(g)) man.push(g.map(descriviCond).join(" o ")); });
+  return man;
 }
 
 function caricaTalenti(poi){

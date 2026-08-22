@@ -687,6 +687,12 @@
     box-shadow:0 8px 22px rgba(0,0,0,.45); }
   .infopop[hidden]{ display:none; }
   .infopop b{ color:var(--ink); font-weight:700; }
+  /* Le "i" del riquadro unito (Abilita' / Tiri salvezza) stavano in basso a destra,
+     dove pero' c'e' l'angolo che gira pagina, e ci finivano sopra. Le alzo sopra
+     l'angolo: sul lato destro c'e' spazio libero sia su desktop sia su telefono.
+     Il fumetto esce sopra, dentro il riquadro. */
+  #abilInfoBtn, #tsInfoBtn{ bottom:70px; top:auto; right:14px; left:auto; }
+  #abilHint, #tsHint{ bottom:104px; right:14px; top:auto; left:auto; }
   /* nella finestra: a cosa serve ogni tiro salvezza */
   .tscosa{ margin-top:18px; }
   .tscr{ font-size:12.5px; color:var(--muted); line-height:1.55; padding:7px 0;

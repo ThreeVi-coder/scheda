@@ -6,3 +6,7 @@ index.html.backup
 # Note di lavoro del progetto, tenute solo in locale.
 CLAUDE.md
 RIASSUNTO_PROGETTO.md
+
+# Inserimento dei talenti: contiene i testi dei manuali (copyright). Il repo è
+# pubblico, quindi questo file resta SOLO in locale / da lanciare su Supabase.
+sql/04_talenti_seed.sql

@@ -202,6 +202,7 @@ var state={
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
   razza:"",            // id (dal database) della razza scelta per il personaggio; "" = nessuna
+  talenti:{origine:[],normali:[]},   // talenti scelti: id in ordine di scelta (origine = creazione, normali = agli ASI)
   allineamento:"",     // codice dell'allineamento scelto (LB, N, CM, SA...); "" = nessuno
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
@@ -818,6 +819,16 @@ function applicaDati(o){
   // Razza: si salva solo l'id (una stringa) della razza scelta nel grimorio.
   // Se la scheda e' vecchia o il dato e' scritto male, resta "nessuna razza".
   state.razza = (typeof o.razza==="string") ? o.razza : "";
+  // Talenti scelti: due liste di id (stringhe), in ordine di scelta. Una scheda
+  // vecchia non ce le ha; una modificata a mano potrebbe avere di tutto, quindi
+  // si accettano solo stringhe.
+  state.talenti={origine:[],normali:[]};
+  if(o.talenti && typeof o.talenti==="object"){
+    ["origine","normali"].forEach(function(sez){
+      if(Array.isArray(o.talenti[sez]))
+        state.talenti[sez]=o.talenti[sez].filter(function(x){ return typeof x==="string" && x; });
+    });
+  }
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
 
   // Punti ferita: attuali, temporanei, ritocco del massimo, dadi vita spesi e
@@ -851,6 +862,7 @@ function datiDaSalvare(){
   o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
   o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
   o.difScost=state.difScost;
+  o.talenti=state.talenti;
   return o;
 }
 
@@ -955,6 +967,7 @@ function schedaVuota(){
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
   state.razza="";
+  state.talenti={origine:[],normali:[]};
   state.allineamento="";
   elName.textContent="";
   if(typeof resetPagine==="function") resetPagine();   // ogni scheda si apre sul Fronte
@@ -2320,6 +2333,401 @@ function eliminaRazza(id){
   }, function(){ console.warn("Eliminazione razza: rete assente"); });
 }
 
+/* ===== TALENTI — IL MAZZO DI CARTE (Retro) =====
+   I talenti vivono nel database (tabella "talenti"), come le razze: lo staff li
+   inserisce e tutti li leggono. Sul Retro un pulsante apre una finestra col
+   MAZZO: una carta al centro, frecce ai lati per sfogliare (ordine alfabetico),
+   ricerca in alto. Qui c'è solo lo SFOGLIO e la gestione staff (mattone 2); la
+   selezione con la bruciatura e il +1 in scheda arriveranno dopo (mattone 3).
+   (Riuso escRz e le classi del modulo grimform/frz-* nella loro versione scura.) */
+var TALENTI=[], talentiCaricate=false, talentiSig="";
+var talIdx=0;             // indice della carta attiva nella lista filtrata
+var talMode="view";       // "view" = sfoglio | "form" = modulo aggiungi/modifica
+var talFile=null;         // file immagine scelto (non ancora caricato)
+var talSalvando=false;    // sto salvando: blocco i pulsanti
+var talEditId=null;       // null = aggiungo; altrimenti l'id in modifica
+var talImgRemoved=false;  // in modifica: ho tolto l'immagine esistente
+var talDelId=null;        // id della carta in attesa di conferma d'eliminazione
+var talFiltro="";         // testo cercato
+var talAnimDir=0;         // -1 sx, +1 dx, 0: verso dell'animazione d'ingresso
+var talScopo=null;        // perché è aperto il mazzo: null=sfoglio | "origine" | "normale" (sto scegliendo)
+
+function nomeCaratt(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return CARATT[i].nome; } return ""; }
+
+/* la razza è ESATTAMENTE "Umano" (non una variante tra parentesi)? Allora ha
+   due talenti d'origine (regola della casa) */
+function razzaUmano(){ var r = state.razza ? razzaById(state.razza) : null; return !!(r && (r.nome||"").trim().toLowerCase()==="umano"); }
+function slotOrigine(){ return razzaUmano() ? 2 : 1; }
+/* un talento è già scelto (in una delle due sezioni)? */
+function talGiaScelto(id){ return state.talenti.origine.indexOf(id)>=0 || state.talenti.normali.indexOf(id)>=0; }
+
+function caricaTalenti(poi){
+  sb.from("talenti").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
+    if(!res.error && Array.isArray(res.data)) TALENTI=res.data;
+    else if(res.error) console.warn("Non riesco a leggere i talenti:", res.error.message);
+    talentiCaricate=true;
+    // firma dell'elenco: se il ricarico non cambia niente, non ridisegno
+    var nuova = TALENTI.map(function(t){ return t.id+":"+(t.modificato_il||t.nome||""); }).join("|");
+    var cambiato = nuova!==talentiSig; talentiSig=nuova;
+    var mt=document.getElementById("modalTalenti");
+    if(mt && !mt.hidden && cambiato) renderTalenti();
+    if(cambiato) renderRetro();   // i nomi/badge nella tabella del Retro possono essere cambiati
+    if(typeof poi==="function") poi();
+  }, function(e){ talentiCaricate=true; console.warn("Talenti:", e); if(typeof poi==="function") poi(); });
+}
+function talentoById(id){ for(var i=0;i<TALENTI.length;i++){ if(TALENTI[i].id===id) return TALENTI[i]; } return null; }
+
+/* la lista da sfogliare: tutti i talenti, filtrati per il testo cercato (nome) */
+function talentiFiltrati(){
+  var q=(talFiltro||"").trim().toLowerCase();
+  if(!q) return TALENTI.slice();
+  return TALENTI.filter(function(t){ return (t.nome||"").toLowerCase().indexOf(q)>=0; });
+}
+
+function openTalenti(scopo){
+  var mt=document.getElementById("modalTalenti"); if(!mt) return;
+  mt.hidden=false;
+  talScopo = (scopo==="origine"||scopo==="normale") ? scopo : null;
+  talMode="view"; talFile=null; talEditId=null; talImgRemoved=false; talDelId=null;
+  talIdx=0; talFiltro=""; talAnimDir=0;
+  renderTalenti();
+  caricaTalenti();   // e intanto rinfresco dal database
+}
+
+/* scelgo il talento della carta attiva → finisce nella sezione giusta del Retro,
+   in coda (ordine di scelta), e la scheda si "sporca" per il salvataggio */
+function scegliTalento(id){
+  if(soloLettura || !talScopo) return;
+  var t=talentoById(id); if(!t) return;
+  // un talento non ripetibile si prende una volta sola; quelli ripetibili sì
+  if(!t.ripetibile && talGiaScelto(id)) return;
+  if(talScopo==="origine"){
+    if(state.talenti.origine.length >= slotOrigine()) return;   // caselle piene
+    state.talenti.origine.push(id);
+  } else {
+    state.talenti.normali.push(id);
+  }
+  aggiornaSalva(); renderRetro();
+  closeAll();   // chiudo il mazzo: si torna al Retro con la carta registrata
+}
+/* tolgo un talento scelto da una sezione, per POSIZIONE (così i doppioni dei
+   talenti ripetibili si tolgono uno per volta) */
+function togliTalento(sez, idx){
+  if(soloLettura) return;
+  var arr = state.talenti[sez]; if(!arr) return;
+  idx=parseInt(idx,10); if(isNaN(idx) || idx<0 || idx>=arr.length) return;
+  arr.splice(idx,1);
+  aggiornaSalva(); renderRetro();
+}
+
+/* il badge del +1 sulla carta: fisso "+1 Forza", scelta "+1 a scelta", o niente */
+function badgeAsi(t){
+  if(t.tipo_asi==="fisso"){ var n=nomeCaratt(t.asi_caratteristica); return n ? ("+1 "+n) : "+1 a una caratteristica"; }
+  if(t.tipo_asi==="scelta") return "+1 a scelta";
+  return "";
+}
+
+/* disegna la carta attiva (e aggiorna contatore + frecce). Non ricostruisce la
+   barra in alto: così la ricerca non perde il fuoco mentre si scrive. */
+function disegnaCarta(){
+  var host=document.getElementById("talCarte"); if(!host) return;
+  var lista=talentiFiltrati();
+  var conta=document.getElementById("talConta");
+  var prev=document.querySelector("[data-talprev]"), next=document.querySelector("[data-talnext]");
+  if(!lista.length){
+    var msg = !talentiCaricate ? "Carico&hellip;"
+      : talFiltro ? "Nessun talento trovato."
+      : (puoToccareSchede()
+          ? "Il mazzo &egrave; ancora vuoto. Premi <b>+ Aggiungi talento</b> per creare la prima carta."
+          : "Quando lo staff avr&agrave; aggiunto i talenti, le carte compariranno qui.");
+    host.innerHTML='<div class="mazzo-vuoto">'+msg+'</div>';
+    if(conta) conta.textContent="0 / 0";
+    if(prev) prev.disabled=true; if(next) next.disabled=true;
+    return;
+  }
+  if(talIdx<0) talIdx=0; if(talIdx>lista.length-1) talIdx=lista.length-1;
+  var t=lista[talIdx];
+  // carte-fantasma dietro (max 2), solo se il mazzo continua oltre l'attuale
+  var dietro=Math.min(2, lista.length-1-talIdx), stack="";
+  for(var s=dietro;s>=1;s--) stack+='<div class="tghost tghost-'+s+'"></div>';
+  host.innerHTML=stack+cartaTalento(t);
+  var card=host.querySelector(".tcard");
+  if(card && talAnimDir!==0){ void card.offsetWidth; card.classList.add(talAnimDir>0?"entra-dx":"entra-sx"); }
+  talAnimDir=0;
+  if(conta) conta.textContent=(talIdx+1)+" / "+lista.length;
+  if(prev) prev.disabled=(talIdx<=0);
+  if(next) next.disabled=(talIdx>=lista.length-1);
+}
+
+/* la carta di UN talento: illustrazione + nome + badge +1 + prerequisiti +
+   benefici + fonte, e (per lo staff) Modifica/Elimina */
+function cartaTalento(t){
+  function pieno(v){ return v!=null && String(v).trim()!==""; }
+  var img = t.immagine_url
+    ? '<img src="'+escRz(t.immagine_url)+'" alt="'+escRz(t.nome||"")+'" loading="lazy">'
+    : '<div class="tcard-ph">&#10022;</div>';
+  var badge=badgeAsi(t);
+  // area di SCELTA: compare solo quando il mazzo è aperto per scegliere un
+  // talento (dal Retro) e non è in sola lettura
+  var scelta = '';
+  if(talScopo && !soloLettura){
+    if(!t.ripetibile && talGiaScelto(t.id)){
+      scelta = '<div class="tcard-scegli"><button class="btn-scegli gia" type="button" disabled>&#10003; Gi&agrave; in scheda</button></div>';
+    } else {
+      var etich = talScopo==="origine" ? "Scegli come Talento Origine" : "Scegli questo talento";
+      scelta = '<div class="tcard-scegli"><button class="btn-scegli" type="button" data-talpick="'+escRz(t.id)+'">'+etich+'</button></div>';
+    }
+  }
+  var staff = !puoToccareSchede() ? ''
+    : (talDelId===t.id
+        ? '<div class="tcard-delconf">Eliminare &laquo;'+escRz(t.nome||"questa carta")+'&raquo;? Non si pu&ograve; annullare.'
+          + '<div class="tcard-delbtns"><button type="button" data-taldelno>Annulla</button>'
+          + '<button type="button" class="danger" data-taldelyes="'+escRz(t.id)+'">Elimina</button></div></div>'
+        : '<div class="tcard-staff"><button class="tcard-link" type="button" data-taledit="'+escRz(t.id)+'">Modifica</button>'
+          + '<button class="tcard-link danger" type="button" data-taldel="'+escRz(t.id)+'">Elimina</button></div>');
+  return '<article class="tcard" data-cardid="'+escRz(t.id)+'">'
+    + '<div class="tcard-cornice"></div>'
+    + '<div class="tcard-illu">'+img+'</div>'
+    + '<div class="tcard-info">'
+    +   '<h3 class="tcard-nome">'+escRz(t.nome||"Senza nome")+'</h3>'
+    +   (badge ? '<div class="tcard-asi">'+escRz(badge)+'</div>' : '')
+    +   (t.ripetibile ? '<div class="tcard-rip">Si pu&ograve; prendere pi&ugrave; volte</div>' : '')
+    +   (pieno(t.prerequisiti) ? '<div class="tcard-prq"><span>Prerequisiti</span> '+escRz(t.prerequisiti)+'</div>' : '')
+    +   '<div class="tcard-ben">'+(pieno(t.benefici)?escRz(t.benefici):'<span class="tcard-vuoto">Nessun beneficio descritto.</span>')+'</div>'
+    +   (pieno(t.fonte) ? '<div class="tcard-fonte">'+escRz(t.fonte)+'</div>' : '')
+    + '</div>'
+    + scelta
+    + staff
+    + '</article>';
+}
+
+/* sfoglia il mazzo di una carta (con l'animazione dal lato giusto) */
+function talVai(dir){
+  var lista=talentiFiltrati(); if(!lista.length) return;
+  var n=talIdx+dir;
+  if(n<0 || n>lista.length-1) return;
+  talIdx=n; talAnimDir=dir; talDelId=null;
+  disegnaCarta();
+}
+
+/* costruisce tutta la finestra: modulo (staff) oppure barra + scena + contatore */
+function renderTalenti(){
+  var wrap=document.getElementById("talWrap"); if(!wrap) return;
+  var staff=puoToccareSchede();
+  if(talMode==="form"){
+    if(staff){ wrap.innerHTML=formTalentoHtml(); return; }
+    talMode="view";   // sicurezza: se non è più staff, niente modulo
+  }
+  var add = staff ? '<button class="mazzo-add" type="button" data-taladd>+ Aggiungi talento</button>' : '';
+  var cerca = TALENTI.length
+    ? '<div class="mazzo-cerca"><input id="talCerca" type="search" placeholder="Cerca un talento&hellip;" aria-label="Cerca un talento" autocomplete="off"></div>'
+    : '';
+  var banda = talScopo
+    ? '<div class="mazzo-scopo">Stai scegliendo un <b>'+(talScopo==="origine"?"Talento Origine":"Talento")+'</b> &mdash; sfoglia e premi <b>Scegli</b> sulla carta.</div>'
+    : '';
+  wrap.innerHTML =
+    banda
+    + '<div class="mazzo-top">'+add+cerca+'</div>'
+    + '<div class="mazzo-scena">'
+    +   '<button class="mazzo-frec sx" type="button" data-talprev aria-label="Carta precedente">&#8249;</button>'
+    +   '<div class="mazzo-carte" id="talCarte"></div>'
+    +   '<button class="mazzo-frec dx" type="button" data-talnext aria-label="Carta successiva">&#8250;</button>'
+    + '</div>'
+    + '<div class="mazzo-conta"><span id="talConta"></span></div>';
+  var inp=document.getElementById("talCerca"); if(inp) inp.value=talFiltro;
+  disegnaCarta();
+}
+
+/* ===== INSERIMENTO TALENTO (solo supporto/sviluppatore) =====
+   Stesso modulo scuro delle razze (grimform/frz-*), coi campi dei talenti. */
+function immagineCorrenteTal(){
+  if(talFile) return URL.createObjectURL(talFile);
+  if(talEditId && !talImgRemoved){ var t=talentoById(talEditId); if(t && t.immagine_url) return t.immagine_url; }
+  return null;
+}
+function formTalentoHtml(){
+  var t = talEditId ? (talentoById(talEditId) || {}) : {};
+  var mod=!!talEditId;
+  var src=immagineCorrenteTal();
+  var prev = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  var tipo = t.tipo_asi || "nessuno";
+  function opt(v,lab,cur){ return '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+lab+'</option>'; }
+  var selTipo = '<div class="frz-row"><label for="tf_tipoasi">Bonus +1 di caratteristica</label>'
+    + '<select class="frz-in" id="tf_tipoasi">'
+    +   opt("nessuno","Nessuno", tipo) + opt("fisso","+1 fisso su una caratteristica", tipo) + opt("scelta","+1 a scelta del giocatore", tipo)
+    + '</select></div>';
+  var caropts = CARATT.map(function(c){ return opt(c.k, c.nome, t.asi_caratteristica||"for"); }).join("");
+  var selCar = '<div class="frz-row" id="tf_carrow"'+(tipo==="fisso"?'':' hidden')+'><label for="tf_caratt">Quale caratteristica</label>'
+    + '<select class="frz-in" id="tf_caratt">'+caropts+'</select></div>';
+  return '<div class="grimform talform">'
+    + '<h3>'+(mod?'Modifica talento':'Aggiungi un talento')+'</h3>'
+    + '<p class="frz-hint">Solo il <b>Nome</b> è obbligatorio. I <b>Benefici</b> si scrivono a mano (nessun limite) e a capo dove vuoi. '+(mod?'Le modifiche sono visibili a tutti.':'Una volta salvato, il talento compare nel mazzo per tutti.')+'</p>'
+    + campoText("tf_nome","Nome talento","Es. Vigile",true,t.nome)
+    + '<div class="frz-grid">'+campoText("tf_prereq","Prerequisiti","Es. Livello 4 — oppure lascia vuoto",false,t.prerequisiti)+campoText("tf_fonte","Fonte","Es. Manuale del Giocatore 2024, p. 200",false,t.fonte)+'</div>'
+    + '<div class="frz-grid">'+selTipo+selCar+'</div>'
+    + '<div class="frz-row frz-check"><label for="tf_ripet"><input type="checkbox" id="tf_ripet"'+(t.ripetibile?' checked':'')+'> Si pu&ograve; prendere pi&ugrave; volte (ripetibile)</label></div>'
+    + campoArea("tf_benefici","Benefici", true, t.benefici)
+    + '<div class="frz-row"><label>Illustrazione</label>'
+    +   '<div class="frz-imgbox">'
+    +     '<div class="frz-preview" id="tf_prev">'+prev+'</div>'
+    +     '<div class="frz-imgbtns">'
+    +       '<input class="frz-file" id="tf_img" type="file" accept="image/*">'
+    +       '<button class="grimlink" type="button" id="tf_rm" data-talimgremove'+(src?'':' hidden')+'>Togli immagine</button>'
+    +       '<span class="frz-hint" style="margin:0">Consigliato un PNG <b>senza sfondo</b> (solo il soggetto): sulla carta sta senza cornice.</span>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="grimformbar">'
+    +   '<button class="btn-assegna" type="button" data-talsave'+(talSalvando?' disabled':'')+'>'+(talSalvando?'Salvo…':(mod?'Salva modifiche':'Salva talento'))+'</button>'
+    +   '<button class="btn-close" type="button" data-talcancel>Annulla</button>'
+    +   '<span class="frz-err" id="tf_err"></span>'
+    + '</div>'
+    + '</div>';
+}
+
+function apriFormTalento(id){
+  if(!puoToccareSchede()) return;
+  talEditId = id || null; talMode="form"; talFile=null; talImgRemoved=false; talDelId=null;
+  renderTalenti();
+}
+
+/* aggiorna solo l'anteprima immagine, senza ridisegnare il modulo (per non
+   perdere quello che si è già scritto) */
+function aggiornaAnteprimaImgTal(){
+  var prev=document.getElementById("tf_prev"); if(!prev) return;
+  var src=immagineCorrenteTal();
+  prev.innerHTML = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  var rm=document.getElementById("tf_rm"); if(rm) rm.hidden = !src;
+}
+
+function salvaTalento(){
+  if(!puoToccareSchede() || talSalvando) return;
+  var g=function(id){ var e=document.getElementById(id); return e ? e.value : ""; };
+  var err=document.getElementById("tf_err");
+  var nome=g("tf_nome").trim();
+  if(!nome){ if(err) err.textContent="Il nome è obbligatorio."; var n=document.getElementById("tf_nome"); if(n) n.focus(); return; }
+  if(err) err.textContent="";
+  var tipo=g("tf_tipoasi")||"nessuno";
+  var obj={
+    nome:nome,
+    prerequisiti:g("tf_prereq").trim()||null,
+    fonte:g("tf_fonte").trim()||null,
+    tipo_asi:tipo,
+    asi_caratteristica: tipo==="fisso" ? (g("tf_caratt")||null) : null,
+    ripetibile: !!((document.getElementById("tf_ripet")||{}).checked),
+    benefici:g("tf_benefici")||null
+  };
+  if(obj.benefici!=null && !obj.benefici.trim()) obj.benefici=null;
+
+  talSalvando=true;
+  var saveBtn=document.querySelector("[data-talsave]");
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent="Salvo…"; }
+  function fallito(msg){
+    talSalvando=false;
+    var b=document.querySelector("[data-talsave]"); if(b){ b.disabled=false; b.textContent=talEditId?"Salva modifiche":"Salva talento"; }
+    var e=document.getElementById("tf_err"); if(e) e.textContent=msg;
+  }
+  function scrivi(){
+    if(talEditId) obj.modificato_il = new Date().toISOString();
+    var op = talEditId
+      ? sb.from("talenti").update(obj).eq("id", talEditId).select()
+      : sb.from("talenti").insert(obj).select();
+    op.then(function(res){
+      if(res.error){ fallito("Non riesco a salvare: "+res.error.message); return; }
+      var row = res.data && res.data[0];
+      var idFatto = (row && row.id) || talEditId;
+      talSalvando=false; talFile=null; talImgRemoved=false; talEditId=null; talMode="view";
+      caricaTalenti(function(){
+        // dopo il salvataggio mi fermo sulla carta appena scritta
+        renderTalenti();
+        if(idFatto){ var lista=talentiFiltrati(); for(var i=0;i<lista.length;i++){ if(lista[i].id===idFatto){ talIdx=i; break; } } disegnaCarta(); }
+      });
+    }, function(){ fallito("Non riesco a salvare: la rete non ha risposto."); });
+  }
+  if(talFile){
+    var ext=((talFile.name||"").split(".").pop()||"png").toLowerCase().replace(/[^a-z0-9]/g,"") || "png";
+    var path=Date.now()+"_"+Math.random().toString(36).slice(2)+"."+ext;
+    sb.storage.from("talenti").upload(path, talFile, { cacheControl:"3600", upsert:false }).then(function(res){
+      if(res.error){ fallito("Immagine non caricata: "+res.error.message); return; }
+      var pub=sb.storage.from("talenti").getPublicUrl(path);
+      obj.immagine_url = (pub && pub.data && pub.data.publicUrl) || null;
+      scrivi();
+    }, function(){ fallito("Immagine non caricata: la rete non ha risposto."); });
+  } else if(talEditId){
+    if(talImgRemoved) obj.immagine_url=null;   // tolta senza sostituirla
+    scrivi();
+  } else {
+    obj.immagine_url=null;   // nuovo talento senza immagine
+    scrivi();
+  }
+}
+
+function eliminaTalento(id){
+  if(!puoToccareSchede() || !id) return;
+  sb.from("talenti").delete().eq("id", id).then(function(res){
+    if(res.error){ console.warn("Eliminazione talento:", res.error.message); talDelId=null; disegnaCarta(); return; }
+    talDelId=null;
+    caricaTalenti(function(){ renderTalenti(); renderRetro(); });   // la lista si accorcia; anche il Retro si riallinea
+  }, function(){ console.warn("Eliminazione talento: rete assente"); });
+}
+
+/* ===== LA TABELLA DEI TALENTI SCELTI (Retro) =====
+   Due sezioni: "Talento Origine" (1 casella, 2 se la razza è Umano) e "Talento"
+   (la lista che cresce a ogni ASI, in ordine di scelta). Si aggiunge scegliendo
+   dal mazzo, si toglie con la ✕. NB: qui NON si applica ancora il +1 (bloccato
+   per l'origine, subito per il normale) né la bruciatura: è il prossimo passo. */
+function rigaTalentoRetro(id, sez, idx){
+  var t=talentoById(id);
+  var togli = soloLettura ? '' : '<button class="tt-x" type="button" data-talrem="'+idx+'" data-talsez="'+sez+'" aria-label="Togli questo talento" title="Togli">&times;</button>';
+  if(!t){
+    var ghost = talentiCaricate ? "Talento non pi&ugrave; nel mazzo" : "&hellip;";
+    return '<div class="tt-row tt-ghost"><span class="tt-nome">'+ghost+'</span><span class="tt-asi"></span>'+togli+'</div>';
+  }
+  var badge=badgeAsi(t);
+  var rip = t.ripetibile ? ' <span class="tt-rip" title="Si pu&ograve; prendere pi&ugrave; volte">ripetibile</span>' : '';
+  return '<div class="tt-row" data-talview="'+escRz(id)+'" role="button" tabindex="0" title="Apri la carta">'
+    + '<span class="tt-nome">'+escRz(t.nome||"Senza nome")+rip+'</span>'
+    + '<span class="tt-asi">'+(badge?escRz(badge):'')+'</span>'
+    + togli + '</div>';
+}
+
+/* una riga con il pulsante per aggiungere (apre il mazzo con lo scopo giusto) */
+function rigaAggiungi(scopo, label){
+  return '<div class="tt-row tt-addrow"><button class="tt-add" type="button" data-taladdsez="'+scopo+'">+ '+label+'</button></div>';
+}
+
+function renderRetro(){
+  var host=document.getElementById("taltab"); if(!host) return;
+  var orig=state.talenti.origine, norm=state.talenti.normali, maxO=slotOrigine();
+  var html="";
+
+  // --- sezione TALENTO ORIGINE ---
+  html += '<div class="tt-sechead">Talento Origine</div>';
+  if(orig.length>maxO)
+    html += '<div class="tt-avviso">Hai pi&ugrave; talenti d&rsquo;origine di quanti la tua razza ne consenta ('+maxO+'). Togline '+(orig.length-maxO)+'.</div>';
+  for(var i=0;i<orig.length;i++) html += rigaTalentoRetro(orig[i],"origine",i);
+  if(!soloLettura && orig.length<maxO)
+    html += rigaAggiungi("origine", orig.length ? "Aggiungi un altro talento d&rsquo;origine" : "Scegli il talento d&rsquo;origine");
+  else if(soloLettura && !orig.length) html += '<div class="tt-row tt-empty">Nessun talento d&rsquo;origine.</div>';
+
+  // --- sezione TALENTO ---
+  html += '<div class="tt-sechead">Talento</div>';
+  for(var j=0;j<norm.length;j++) html += rigaTalentoRetro(norm[j],"normali",j);
+  if(!soloLettura) html += rigaAggiungi("normale", "Aggiungi un talento");
+  else if(!norm.length) html += '<div class="tt-row tt-empty">Nessun talento.</div>';
+
+  html += '<div class="tt-foot"><button class="tt-sfoglia" type="button" data-talbrowse>Sfoglia tutto il mazzo &rsaquo;</button></div>';
+  host.innerHTML=html;
+}
+
+/* apre il mazzo in sola consultazione, fermo sulla carta scelta */
+function apriCartaTalento(id){
+  openTalenti();   // sfoglio (nessuno scopo)
+  var lista=talentiFiltrati();
+  for(var i=0;i<lista.length;i++){ if(lista[i].id===id){ talIdx=i; break; } }
+  disegnaCarta();
+}
+
 /* ===== Il pannello nuovo della Classe =====
    Si sceglie l'elemento toccandolo nell'anteprima, e sotto compaiono solo i
    comandi che servono a quell'elemento. */
@@ -2589,7 +2997,7 @@ function applicaTesti(){
   aggiornaMortalita();   // e la sbiadita/il banner/il teschio se sei a terra
 }
 
-function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderAlign(); renderAlignDialog(); renderRazzaPanel(); renderLevel(); renderXpDialog();
+function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderAlign(); renderAlignDialog(); renderRazzaPanel(); renderRetro(); renderLevel(); renderXpDialog();
   renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
   renderHp(); renderHpDialog(); renderDif(); renderDifDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
@@ -2660,6 +3068,7 @@ function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidd
   var mal=document.getElementById("modalAlign"); if(mal) mal.hidden=true;
   var mrz=document.getElementById("modalRazze"); if(mrz) mrz.hidden=true;
   var mrza=document.getElementById("modalRazzaAsp"); if(mrza) mrza.hidden=true;
+  var mtl=document.getElementById("modalTalenti"); if(mtl) mtl.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
@@ -2710,7 +3119,7 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
       if(soloLettura) return;
       var id=as.getAttribute("data-assegna");
       state.razza = (state.razza===id) ? "" : id;
-      renderRazzaPanel(); renderGrimorio(); aggiornaSalva();
+      renderRazzaPanel(); renderRetro(); renderGrimorio(); aggiornaSalva();   // Umano cambia le caselle Origine
       return;
     }
   });
@@ -2725,6 +3134,77 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
   // la ricerca nell'indice: filtra le voci mentre si scrive
   mr.addEventListener("input", function(e){
     if(e.target && e.target.id==="grimCerca"){ grimFiltro=e.target.value; applicaFiltroGrimorio(); }
+  });
+})();
+
+// Il Retro: la tabella dei talenti scelti. Aggiungi (apre il mazzo per scegliere),
+// togli, apri la carta di un talento scelto, o sfoglia tutto il mazzo.
+(function(){
+  var pr=document.getElementById("pagRetro"); if(!pr) return;
+  pr.addEventListener("click", function(e){
+    var add=e.target.closest("[data-taladdsez]");
+    if(add){ openTalenti(add.getAttribute("data-taladdsez")); return; }
+    var rem=e.target.closest("[data-talrem]");
+    if(rem){ togliTalento(rem.getAttribute("data-talsez"), rem.getAttribute("data-talrem")); return; }
+    if(e.target.closest("[data-talbrowse]")){ openTalenti(); return; }
+    var vw=e.target.closest("[data-talview]");
+    if(vw){ apriCartaTalento(vw.getAttribute("data-talview")); return; }
+  });
+  pr.addEventListener("keydown", function(e){
+    if(e.key!=="Enter" && e.key!==" ") return;
+    var vw=e.target.closest && e.target.closest("[data-talview]");
+    if(vw){ e.preventDefault(); apriCartaTalento(vw.getAttribute("data-talview")); }
+  });
+})();
+// Dentro il mazzo: sfoglio (frecce), gestione staff (aggiungi/modifica/elimina),
+// modulo. La chiusura (data-close) la gestisce il click globale piu' in basso.
+(function(){
+  var mt=document.getElementById("modalTalenti"); if(!mt) return;
+  mt.addEventListener("click", function(e){
+    if(e.target.closest("[data-talprev]")){ talVai(-1); return; }
+    if(e.target.closest("[data-talnext]")){ talVai(1); return; }
+    var pick=e.target.closest("[data-talpick]");
+    if(pick){ scegliTalento(pick.getAttribute("data-talpick")); return; }
+    // comandi staff sulla carta
+    var ed=e.target.closest("[data-taledit]");
+    if(ed){ apriFormTalento(ed.getAttribute("data-taledit")); return; }
+    var del=e.target.closest("[data-taldel]");
+    if(del){ talDelId=del.getAttribute("data-taldel"); disegnaCarta(); return; }
+    if(e.target.closest("[data-taldelno]")){ talDelId=null; disegnaCarta(); return; }
+    var dy=e.target.closest("[data-taldelyes]");
+    if(dy){ eliminaTalento(dy.getAttribute("data-taldelyes")); return; }
+    // comandi del modulo
+    if(e.target.closest("[data-taladd]")){ apriFormTalento(); return; }
+    if(e.target.closest("[data-talcancel]")){ talMode="view"; talFile=null; talEditId=null; talImgRemoved=false; renderTalenti(); return; }
+    if(e.target.closest("[data-talsave]")){ salvaTalento(); return; }
+    if(e.target.closest("[data-talimgremove]")){
+      if(talFile){ talFile=null; var inp=document.getElementById("tf_img"); if(inp) inp.value=""; }
+      else { talImgRemoved=true; }
+      aggiornaAnteprimaImgTal(); return;
+    }
+  });
+  // la scelta del file immagine: aggiorno solo l'anteprima
+  mt.addEventListener("change", function(e){
+    if(e.target && e.target.id==="tf_img"){
+      talFile = (e.target.files && e.target.files[0]) ? e.target.files[0] : null;
+      if(talFile) talImgRemoved=false;
+      aggiornaAnteprimaImgTal();
+    }
+    // il tipo di +1: mostro/nascondo la scelta della caratteristica (senza ridisegnare)
+    if(e.target && e.target.id==="tf_tipoasi"){
+      var row=document.getElementById("tf_carrow"); if(row) row.hidden = (e.target.value!=="fisso");
+    }
+  });
+  // la ricerca: filtra il mazzo mentre si scrive (riparte dalla prima carta)
+  mt.addEventListener("input", function(e){
+    if(e.target && e.target.id==="talCerca"){ talFiltro=e.target.value; talIdx=0; talAnimDir=0; talDelId=null; disegnaCarta(); }
+  });
+  // le frecce della tastiera sfogliano, quando la finestra e' aperta e non sei nel modulo
+  document.addEventListener("keydown", function(e){
+    if(mt.hidden || talMode==="form") return;
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if(e.key==="ArrowLeft"){ talVai(-1); }
+    else if(e.key==="ArrowRight"){ talVai(1); }
   });
 })();
 // I Tiri salvezza ora sono la terza linguetta: la loro rotellina e' quella
@@ -4294,6 +4774,7 @@ function avvia(){
       salvato=foto();           // fotografia a comandi fermi: da qui ogni differenza accende il tasto
       aggiornaSalva();
       caricaRazze();            // l'indice delle razze dal database, per il pannello e il grimorio
+      caricaTalenti();          // il mazzo dei talenti dal database (pronto per il Retro)
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }

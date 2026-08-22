@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=51">
+<link rel="stylesheet" href="styles.css?v=52">
 </head>
 <body>
   <div class="wrap">
@@ -211,10 +211,13 @@
     </div><!-- /#pagFronte -->
 
     <div class="pagina pag-retro" id="pagRetro" hidden>
-      <div class="pagina-seg">
-        <div class="pagseg-eyebrow">Retro</div>
-        <div class="pagseg-tit">Tratti &amp; Talenti</div>
-        <div class="pagseg-sub">Qui arriveranno talenti, tratti di razza, abilit&agrave; di classe e sottoclasse.</div>
+      <div class="retro-wrap">
+        <div class="retro-head">
+          <div class="pagseg-eyebrow">Retro</div>
+          <div class="pagseg-tit">Tratti &amp; Talenti</div>
+        </div>
+        <div class="taltab" id="taltab"></div>
+        <div class="retro-futuro">Tratti di razza, abilit&agrave; di classe e sottoclasse arriveranno qui.</div>
       </div>
     </div>
 
@@ -754,6 +757,20 @@
       </div>
     </div>
 
+    <div class="modal" id="modalTalenti" hidden>
+      <div class="backdrop" data-close="talenti"></div>
+      <div class="dialog mazzo" id="dialogTalenti">
+        <div class="dlghead">
+          <h2>Talenti</h2>
+          <button class="dlgx" data-close="talenti" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody mazzowrap" id="talWrap"></div>
+        <div class="dlgbar">
+          <button class="btn-close" data-close="talenti">Chiudi</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalRazzaAsp" hidden>
       <div class="backdrop" data-close="razzaasp"></div>
       <div class="dialog centrata" id="dialogRazzaAsp">
@@ -847,6 +864,6 @@
 
   </div>
 
-<script src="app.js?v=51"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>

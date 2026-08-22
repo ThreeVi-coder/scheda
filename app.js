@@ -2491,12 +2491,31 @@ function disegnaCarta(dir){
   if(prev) prev.disabled=(talIdx<=0);
   if(next) next.disabled=(talIdx>=lista.length-1);
 
-  // La finestra resta ferma e l'altezza è fissa (niente più "ricarica"): la
-  // carta si limita a ENTRARE dal lato della freccia (l'effetto carte di prima).
-  host.innerHTML=cartaSlotHtml(t, talIdx, lista);
-  if(dir){
-    var card=host.querySelector(".tcard");
-    if(card){ void card.offsetWidth; card.classList.add(dir>0 ? "entra-dx" : "entra-sx"); }
+  // Effetto MAZZO: la finestra resta ferma (altezza fissa). Sfogliando, la carta
+  // nuova esce dalla pila dietro e viene avanti PASSANDO SOPRA la vecchia, che si
+  // ritira dietro. Le carte-fantasma restano lì come "resto del mazzo".
+  var vecchioSlot=host.querySelector(".tcard-slot");
+  var mobile = window.matchMedia && window.matchMedia("(max-width:720px)").matches;
+  if(dir && vecchioSlot && !mobile){
+    // slot nuovo con la SOLA carta (i fantasmi del vecchio restano come sfondo)
+    var nuovoSlot=document.createElement("div");
+    nuovoSlot.className="tcard-slot"; nuovoSlot.style.zIndex="4";
+    nuovoSlot.innerHTML=cartaTalento(t);
+    host.appendChild(nuovoSlot);
+    var nuovaCard=nuovoSlot.querySelector(".tcard");
+    var vecchiaCard=vecchioSlot.querySelector(".tcard");
+    var off = dir>0 ? 46 : -46;
+    // la nuova parte dalla posa "dietro" (dal mazzo): spostata, piccola, storta
+    nuovaCard.style.transform="translate("+off+"px,16px) scale(.9) rotate("+(dir>0?4:-4)+"deg)";
+    nuovaCard.style.opacity="0";
+    void host.offsetWidth;                     // fisso il punto di partenza
+    nuovaCard.classList.add("deck-anim"); if(vecchiaCard) vecchiaCard.classList.add("deck-anim");
+    nuovaCard.style.transform="none"; nuovaCard.style.opacity="1";
+    if(vecchiaCard){ vecchiaCard.style.transform="translate("+(-off/3)+"px,10px) scale(.93)"; vecchiaCard.style.opacity="0"; }
+    window.clearTimeout(disegnaCarta._t);
+    disegnaCarta._t=window.setTimeout(function(){ host.innerHTML=cartaSlotHtml(t, talIdx, lista); }, 350);
+  } else {
+    host.innerHTML=cartaSlotHtml(t, talIdx, lista);   // cambio secco (apertura, ricerca, telefono)
   }
 }
 

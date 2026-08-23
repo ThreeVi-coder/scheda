@@ -2354,6 +2354,7 @@ var talDelId=null;        // id della carta in attesa di conferma d'eliminazione
 var talFiltro="";         // testo cercato
 var talAnimDir=0;         // -1 sx, +1 dx, 0: verso dell'animazione d'ingresso
 var talScopo=null;        // perché è aperto il mazzo: null=sfoglio | "origine" | "normale" (sto scegliendo)
+var talElenco=false;      // l'elenco rapido è aperto?
 
 function nomeCaratt(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return CARATT[i].nome; } return ""; }
 
@@ -2388,6 +2389,15 @@ function razzaFamigliaPg(){ var r=state.razza?razzaById(state.razza):null; retur
 function tagliaPg(){ var r=state.razza?razzaById(state.razza):null; if(!r||!r.dimensioni) return null; var d=String(r.dimensioni).toLowerCase(); if(/piccol/.test(d))return"piccola"; if(/grande/.test(d))return"grande"; if(/medi/.test(d))return"media"; return null; }
 function talentiSceltiNomi(){ var ids=state.talenti.origine.concat(state.talenti.normali), out=[]; ids.forEach(function(id){ var t=talentoById(id); if(t&&t.nome) out.push(t.nome.toLowerCase()); }); return out; }
 function haMarchioDrago(){ return talentiSceltiNomi().some(function(n){ return /mark of|dragonmark|marchio del drago/.test(n); }); }
+/* la "linea" di marchio di un talento (per la regola "un solo Marchio del Drago"):
+   le versioni Greater dello stesso marchio hanno la stessa linea. null = non è un marchio. */
+function markLine(nome){
+  var n=String(nome||"").toLowerCase();
+  if(/aberrant/.test(n)) return "aberrant";
+  var m=n.match(/mark of ([a-zàèéìòù]+)/); if(m) return "mark:"+m[1];
+  if(/dragonmark|marchio del drago/.test(n)) return "generico";
+  return null;
+}
 function armaturaAllenataPg(tipo){
   var t = tipo==="scudo" ? "scudi" : tipo;
   var cl=classiPossedute(); if(!cl.length) return null;   // non lo so ancora
@@ -2398,13 +2408,25 @@ function armaturaAllenataPg(tipo){
 function condValuta(c){
   if(!c || typeof c!=="object") return null;
   if(c.stat) return totaleCar(c.stat[0]) >= c.stat[1];
-  if(c.razza){ var f=razzaFamigliaPg(); return f==null ? null : (f===String(c.razza).toLowerCase()); }
+  if(c.razza){
+    var r = state.razza ? razzaById(state.razza) : null;
+    if(!r) return null;                                  // nessuna razza scelta: non blocco
+    var fam=String(c.razza).toLowerCase();
+    if(r.famiglia) return String(r.famiglia).trim().toLowerCase()===fam;   // famiglia taggata = preciso
+    return (r.nome||"").toLowerCase().indexOf(fam)>=0;   // ripiego: il nome contiene la famiglia
+  }
   if(c.taglia){ var tg=tagliaPg(); return tg==null ? null : (tg===String(c.taglia).toLowerCase()); }
   if(c.classe){ var cl=classiPossedute(); return cl.length ? (cl.indexOf(String(c.classe).toLowerCase())>=0) : null; }
   if(c.talento){ var nm=String(c.talento).toLowerCase(); return talentiSceltiNomi().indexOf(nm)>=0; }
   if(c.armatura) return armaturaAllenataPg(String(c.armatura).toLowerCase());
-  if(c.cap==="incantesimi"){ return classiPossedute().some(function(k){ return CLASSI_INCANTATORI.indexOf(k)>=0; }) ? true : null; }
-  if(c.cap==="magia_patti"){ var cl2=classiPossedute(); return cl2.length ? (cl2.indexOf("warlock")>=0) : null; }
+  // incantesimi E magia dei patti: le classi magiche possono; Barbaro/Guerriero/
+  // Ladro/Monaco NO (bloccati). Senza classe: non lo so ancora. (Le sottoclassi
+  // magiche le gestiremo più avanti.)
+  if(c.cap==="incantesimi" || c.cap==="magia_patti"){
+    var cls=classiPossedute();
+    if(cls.some(function(k){ return CLASSI_INCANTATORI.indexOf(k)>=0; })) return true;
+    return cls.length ? false : null;
+  }
   if(c.cap==="armi_marziali"){ var cl3=classiPossedute(); if(!cl3.length) return null; return cl3.some(function(k){ return CLASSE_DATI[k] && /guerra/i.test(CLASSE_DATI[k].armi||""); }) ? true : null; }
   if(c.marchio_qualsiasi) return haMarchioDrago();
   if(c.senza_marchi) return !haMarchioDrago();
@@ -2435,20 +2457,29 @@ function descriviCond(c){
    scheda sa). Usa il PREREQ STRUTTURATO (colonna prereq); se assente, ripiega sul
    testo libero (livello + caratteristiche). */
 function prereqMancanti(t){
+  var man=[];
   var P = t && t.prereq;
   var strutturato = P && typeof P==="object" && (P.liv!=null || (P.and && P.and.length));
-  if(!strutturato){
-    var a=analizzaPrereq(t && t.prerequisiti), out=[];
-    if(a.liv!=null && totalLevel() < a.liv) out.push("Livello "+a.liv);
+  if(strutturato){
+    if(P.liv!=null && totalLevel() < P.liv) man.push("Livello "+P.liv);
+    (P.and||[]).forEach(function(g){ if(!gruppoOk(g)) man.push(g.map(descriviCond).join(" o ")); });
+  } else {
+    var a=analizzaPrereq(t && t.prerequisiti);
+    if(a.liv!=null && totalLevel() < a.liv) man.push("Livello "+a.liv);
     if(a.stats.length){
       var ok=a.stats.some(function(s){ return totaleCar(s.car) >= s.min; });
-      if(!ok) out.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));
+      if(!ok) man.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));
     }
-    return out;
   }
-  var man=[];
-  if(P.liv!=null && totalLevel() < P.liv) man.push("Livello "+P.liv);
-  (P.and||[]).forEach(function(g){ if(!gruppoOk(g)) man.push(g.map(descriviCond).join(" o ")); });
+  // regola "UN SOLO Marchio del Drago": un talento-marchio si può prendere solo se
+  // non ne hai già un altro di linea DIVERSA (le versioni Greater dello stesso ok)
+  var mia = t && markLine(t.nome);
+  if(mia){
+    var conflitto = state.talenti.origine.concat(state.talenti.normali).some(function(id){
+      var tt=talentoById(id); if(!tt) return false; var l=markLine(tt.nome); return l && l!==mia;
+    });
+    if(conflitto) man.push("un solo Marchio del Drago (ne hai già un altro)");
+  }
   return man;
 }
 
@@ -2480,7 +2511,7 @@ function openTalenti(scopo){
   mt.hidden=false;
   talScopo = (scopo==="origine"||scopo==="normale") ? scopo : null;
   talMode="view"; talFile=null; talEditId=null; talImgRemoved=false; talDelId=null;
-  talIdx=0; talFiltro=""; talAnimDir=0;
+  talIdx=0; talFiltro=""; talAnimDir=0; talElenco=false;
   renderTalenti();
   caricaTalenti();   // e intanto rinfresco dal database
 }
@@ -2655,6 +2686,7 @@ function renderTalenti(){
     talMode="view";   // sicurezza: se non è più staff, niente modulo
   }
   var add = staff ? '<button class="mazzo-add" type="button" data-taladd>+ Aggiungi talento</button>' : '';
+  var indice = TALENTI.length ? '<button class="mazzo-indice'+(talElenco?' on':'')+'" type="button" data-talindice>&#9776; Elenco</button>' : '';
   var cerca = TALENTI.length
     ? '<div class="mazzo-cerca"><input id="talCerca" type="search" placeholder="Cerca un talento&hellip;" aria-label="Cerca un talento" autocomplete="off"></div>'
     : '';
@@ -2663,14 +2695,40 @@ function renderTalenti(){
     : '';
   wrap.innerHTML =
     banda
-    + '<div class="mazzo-top">'+add+cerca+'</div>'
+    + '<div class="mazzo-top">'+add+indice+cerca+'</div>'
     + '<div class="mazzo-scena">'
     +   '<button class="mazzo-frec sx" type="button" data-talprev aria-label="Carta precedente">&#8249;</button>'
     +   '<div class="mazzo-carte" id="talCarte"></div>'
     +   '<button class="mazzo-frec dx" type="button" data-talnext aria-label="Carta successiva">&#8250;</button>'
+    +   '<div class="mazzo-elenco" id="talElencoBox" hidden></div>'
     + '</div>'
     + '<div class="mazzo-conta"><span id="talConta"></span></div>';
   var inp=document.getElementById("talCerca"); if(inp) inp.value=talFiltro;
+  disegnaCarta();
+  renderElenco();
+}
+
+/* l'elenco rapido: la lista dei talenti (filtrata dalla ricerca); cliccando un
+   nome si va dritti alla sua carta. */
+function renderElenco(){
+  var box=document.getElementById("talElencoBox"); if(!box) return;
+  box.hidden = !talElenco;
+  if(!talElenco) return;
+  var lista=talentiFiltrati();
+  if(!lista.length){ box.innerHTML='<div class="elenco-vuoto">'+(talFiltro?"Nessun talento trovato.":"Nessun talento.")+'</div>'; return; }
+  box.innerHTML = lista.map(function(t){
+    var badge=badgeAsi(t);
+    return '<button class="elenco-item" type="button" data-taljump="'+escRz(t.id)+'"><span>'+escRz(t.nome||"Senza nome")+'</span>'
+      + (badge?'<span class="elenco-asi">'+escRz(badge)+'</span>':'')+'</button>';
+  }).join("");
+}
+/* vai dritto alla carta di un talento (dal suo id) e chiudi l'elenco */
+function vaiATalento(id){
+  var lista=talentiFiltrati();
+  for(var i=0;i<lista.length;i++){ if(lista[i].id===id){ talIdx=i; break; } }
+  talElenco=false; talDelId=null;
+  renderElenco();
+  var b=document.querySelector(".mazzo-indice"); if(b) b.classList.remove("on");
   disegnaCarta();
 }
 
@@ -3303,6 +3361,10 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
     if(e.target.closest("[data-talnext]")){ talVai(1); return; }
     var pick=e.target.closest("[data-talpick]");
     if(pick){ scegliTalento(pick.getAttribute("data-talpick")); return; }
+    // elenco rapido: apri/chiudi, e salta alla carta scelta
+    if(e.target.closest("[data-talindice]")){ talElenco=!talElenco; var bi=e.target.closest("[data-talindice]"); bi.classList.toggle("on",talElenco); renderElenco(); return; }
+    var jp=e.target.closest("[data-taljump]");
+    if(jp){ vaiATalento(jp.getAttribute("data-taljump")); return; }
     // comandi staff sulla carta
     var ed=e.target.closest("[data-taledit]");
     if(ed){ apriFormTalento(ed.getAttribute("data-taledit")); return; }
@@ -3335,7 +3397,7 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
   });
   // la ricerca: filtra il mazzo mentre si scrive (riparte dalla prima carta)
   mt.addEventListener("input", function(e){
-    if(e.target && e.target.id==="talCerca"){ talFiltro=e.target.value; talIdx=0; talAnimDir=0; talDelId=null; disegnaCarta(); }
+    if(e.target && e.target.id==="talCerca"){ talFiltro=e.target.value; talIdx=0; talAnimDir=0; talDelId=null; disegnaCarta(); if(talElenco) renderElenco(); }
   });
   // le frecce della tastiera sfogliano, quando la finestra e' aperta e non sei nel modulo
   document.addEventListener("keydown", function(e){

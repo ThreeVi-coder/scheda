@@ -2458,14 +2458,23 @@ function descriviCond(c){
    testo libero (livello + caratteristiche). */
 function prereqMancanti(t){
   var man=[];
+  // Requisito di LIVELLO: scegliendo un Talento ORIGINE il "Liv. 4" è ignorato
+  // (i talenti di creazione si possono prendere anche senza il livello), ma i
+  // requisiti alti (es. Liv. 11) restano. Come Talento normale, invece, vale sempre.
+  var origine = (talScopo==="origine");
+  function livOk(liv){
+    if(liv==null) return true;
+    if(origine && liv<=4) return true;
+    return totalLevel() >= liv;
+  }
   var P = t && t.prereq;
   var strutturato = P && typeof P==="object" && (P.liv!=null || (P.and && P.and.length));
   if(strutturato){
-    if(P.liv!=null && totalLevel() < P.liv) man.push("Livello "+P.liv);
+    if(P.liv!=null && !livOk(P.liv)) man.push("Livello "+P.liv);
     (P.and||[]).forEach(function(g){ if(!gruppoOk(g)) man.push(g.map(descriviCond).join(" o ")); });
   } else {
     var a=analizzaPrereq(t && t.prerequisiti);
-    if(a.liv!=null && totalLevel() < a.liv) man.push("Livello "+a.liv);
+    if(a.liv!=null && !livOk(a.liv)) man.push("Livello "+a.liv);
     if(a.stats.length){
       var ok=a.stats.some(function(s){ return totaleCar(s.car) >= s.min; });
       if(!ok) man.push(a.stats.map(function(s){ return siglaCar(s.car)+" "+s.min+"+"; }).join(" o "));

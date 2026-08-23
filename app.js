@@ -2681,6 +2681,9 @@ function talVai(dir){
 function renderTalenti(){
   var wrap=document.getElementById("talWrap"); if(!wrap) return;
   var staff=puoToccareSchede();
+  // nel MODULO (modifica/inserimento) la finestra deve poter scorrere per
+  // arrivare in fondo e salvare; nello sfoglio no (barra inutile)
+  wrap.classList.toggle("modulo", talMode==="form" && staff);
   if(talMode==="form"){
     if(staff){ wrap.innerHTML=formTalentoHtml(); return; }
     talMode="view";   // sicurezza: se non è più staff, niente modulo
@@ -2697,9 +2700,9 @@ function renderTalenti(){
     banda
     + '<div class="mazzo-top">'+add+indice+cerca+'</div>'
     + '<div class="mazzo-scena">'
-    +   '<button class="mazzo-frec sx" type="button" data-talprev aria-label="Carta precedente">&#8249;</button>'
+    +   '<button class="mazzo-frec sx" type="button" data-talprev aria-label="Carta precedente"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 5 8 12 15 19"/></svg></button>'
     +   '<div class="mazzo-carte" id="talCarte"></div>'
-    +   '<button class="mazzo-frec dx" type="button" data-talnext aria-label="Carta successiva">&#8250;</button>'
+    +   '<button class="mazzo-frec dx" type="button" data-talnext aria-label="Carta successiva"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg></button>'
     +   '<div class="mazzo-elenco" id="talElencoBox" hidden></div>'
     + '</div>'
     + '<div class="mazzo-conta"><span id="talConta"></span></div>';
@@ -3356,9 +3359,26 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
 // modulo. La chiusura (data-close) la gestisce il click globale piu' in basso.
 (function(){
   var mt=document.getElementById("modalTalenti"); if(!mt) return;
+  // tieni premuta una freccia per scorrere RAPIDAMENTE le carte
+  var holdTimer=null, holdInt=null, holdOn=false;
+  function stopHold(){ if(holdTimer){clearTimeout(holdTimer);holdTimer=null;} if(holdInt){clearInterval(holdInt);holdInt=null;} }
+  function avanzaVeloce(dir){
+    var lista=talentiFiltrati(); if(!lista.length){ stopHold(); return; }
+    var n=talIdx+dir; if(n<0 || n>lista.length-1){ stopHold(); return; }
+    talIdx=n; talDelId=null; disegnaCarta();   // cambio secco = veloce
+  }
+  mt.addEventListener("mousedown", function(e){
+    var fr=e.target.closest("[data-talprev],[data-talnext]"); if(!fr || fr.disabled) return;
+    var dir = fr.hasAttribute("data-talnext") ? 1 : -1;
+    holdOn=false;
+    holdTimer=setTimeout(function(){ holdOn=true; holdInt=setInterval(function(){ avanzaVeloce(dir); }, 90); }, 320);
+  });
+  mt.addEventListener("mouseup", stopHold);
+  mt.addEventListener("mouseleave", stopHold);
+  document.addEventListener("mouseup", stopHold);
   mt.addEventListener("click", function(e){
-    if(e.target.closest("[data-talprev]")){ talVai(-1); return; }
-    if(e.target.closest("[data-talnext]")){ talVai(1); return; }
+    if(e.target.closest("[data-talprev]")){ if(holdOn){ holdOn=false; return; } talVai(-1); return; }
+    if(e.target.closest("[data-talnext]")){ if(holdOn){ holdOn=false; return; } talVai(1); return; }
     var pick=e.target.closest("[data-talpick]");
     if(pick){ scegliTalento(pick.getAttribute("data-talpick")); return; }
     // elenco rapido: apri/chiudi, e salta alla carta scelta
@@ -4394,8 +4414,14 @@ var CAMPI_MIEI = "username,nome,approvato,in_pausa,accesso_tolto_il";
 /* Le posizioni cambiano mentre uno sta usando il sito: il potere gliel'ha
    gia' tolto il database, ma il sito continuerebbe a disegnargli i pulsanti
    di prima finche' non ricarica. Qui si riconfigura da solo. */
+/* Il nav è visibile a tutti (serve il menù a tendina Scheda/Tratti/Equip. per
+   saltare tra le pagine); "Controllo" invece solo per lo staff. */
+function aggiornaNav(){
+  var nav=document.getElementById("nav"); if(nav) nav.hidden=false;
+  var tc=document.getElementById("tabControllo"); if(tc) tc.hidden=!ruoli.length;
+}
 function applicaRuoli(){
-  document.getElementById("nav").hidden = !ruoli.length;
+  aggiornaNav();
 
   // l'elenco del Controllo va riletto: con le posizioni nuove il database
   // risponde in modo diverso, e alcune colonne potrebbero non spettargli piu'
@@ -4775,7 +4801,7 @@ function rileggiRuoli(){
     disegnaRuoli();
     ruoli = (ruoliDi[utente.id]||[]).slice();   // se ho cambiato qualcosa a me stesso
     disegnaAuthbar();
-    document.getElementById("nav").hidden = !ruoli.length;
+    aggiornaNav();
   });
 }
 
@@ -4864,6 +4890,28 @@ document.getElementById("btnLogin").addEventListener("click", login);
 
 document.getElementById("tabScheda").addEventListener("click", function(){ mostraPane("scheda"); });
 document.getElementById("tabControllo").addEventListener("click", function(){ mostraPane("controllo"); });
+
+// Menù a tendina su "Scheda": compare passandoci sopra (con un attimo di sosta) e
+// salta alla pagina scelta del foglio (Fronte / Retro / Terza). Comodo per non
+// cercare le freccette d'angolo.
+(function(){
+  var drop=document.getElementById("navScheda"), menu=document.getElementById("navMenu"),
+      tab=document.getElementById("tabScheda");
+  if(!drop||!menu) return;
+  var apriT=null, chiudiT=null;
+  function apri(){ clearTimeout(chiudiT); menu.hidden=false; if(tab) tab.setAttribute("aria-expanded","true"); }
+  function chiudi(){ menu.hidden=true; if(tab) tab.setAttribute("aria-expanded","false"); }
+  drop.addEventListener("mouseenter", function(){ clearTimeout(chiudiT); apriT=setTimeout(apri, 260); });
+  drop.addEventListener("mouseleave", function(){ clearTimeout(apriT); chiudiT=setTimeout(chiudi, 180); });
+  // click sul tab: mostra la scheda e apre/chiude subito il menù (per il tocco)
+  if(tab) tab.addEventListener("click", function(){ if(menu.hidden) apri(); else chiudi(); });
+  menu.addEventListener("click", function(e){
+    var b=e.target.closest("[data-pagina]"); if(!b) return;
+    mostraPane("scheda");
+    vaiAPagina(parseInt(b.getAttribute("data-pagina"),10)||0);
+    chiudi();
+  });
+})();
 document.getElementById("btnCtrlReload").addEventListener("click", function(){
   ctrlCaricato=false; caricaControllo();
 });
@@ -4965,8 +5013,8 @@ function avvia(){
         bloccoAvvio("Non riesco a leggere la scheda: "+scheda.error.message);
         return;
       }
-      // la navigazione (e quindi la sezione Controllo) esiste solo per chi e' nello staff
-      if(ruoli.length) document.getElementById("nav").hidden = false;
+      // il nav è per tutti (menù pagine); "Controllo" solo per lo staff
+      aggiornaNav();
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
@@ -5285,6 +5333,18 @@ function resetPagine(){
     el.classList.remove("via-avanti","entra-avanti","via-indietro","entra-indietro");
   });
   aggiornaAngoli();
+}
+/* vai DIRETTAMENTE a una pagina del foglio (per il menù a tendina): salto secco
+   e istantaneo — semplice e veloce. L'animazione resta sulle freccette d'angolo. */
+function vaiAPagina(n){
+  if(flipInCorso) return;
+  n=Math.max(0, Math.min(PAGINE_FOGLIO.length-1, n));
+  if(n===paginaScheda) return;
+  PAGINE_FOGLIO.forEach(function(id,i){
+    var el=document.getElementById(id); if(!el) return;
+    el.hidden=(i!==n); el.classList.remove("via-avanti","entra-avanti","via-indietro","entra-indietro");
+  });
+  paginaScheda=n; aggiornaAngoli();
 }
 function giraPagina(dir){
   if(flipInCorso) return;

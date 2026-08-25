@@ -202,7 +202,7 @@ var state={
   classes:[],
   classeIniziale:"",   // quale classe e' la prima: da li' arrivano i tiri salvezza
   razza:"",            // id (dal database) della razza scelta per il personaggio; "" = nessuna
-  talenti:{origine:[],normali:[]},   // talenti scelti: id in ordine di scelta (origine = creazione, normali = agli ASI)
+  talenti:{origine:[],normali:[],asiOrigine:[],asiNormali:[],sbloccoOrigine:false},   // talenti scelti: id in ordine di scelta (origine = creazione, normali = agli ASI); asi* = caratteristica del +1 a scelta; sblocco = +1 d'origine confermato dallo staff
   allineamento:"",     // codice dell'allineamento scelto (LB, N, CM, SA...); "" = nessuno
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
@@ -293,7 +293,7 @@ function creazioneCompleta(){
   return true;
 }
 function totaleCar(k){
-  var v=state.stats.base[k]+state.stats.bonus[k];
+  var v=state.stats.base[k]+state.stats.bonus[k]+bonusCarTalenti(k);
   return Math.max(CAR_MIN, Math.min(CAR_MAX, v));
 }
 function modCar(k){ return Math.floor((totaleCar(k)-10)/2); }
@@ -615,9 +615,12 @@ function disegnaEsagono(){
 }
 
 function disegnaFila(){
-  var bonus=conBonus();
+  // mostro la riga di calcolo se c'è QUALSIASI bonus in gioco: quello di
+  // creazione o il +1 di un talento
+  var mostraCalc = conBonus() || CARATT.some(function(x){ return bonusCarTalenti(x.k)!==0; });
   document.getElementById("stFila").innerHTML = CARATT.map(function(c){
     var v=state.stats.base[c.k];
+    var bonC=state.stats.bonus[c.k], bonT=bonusCarTalenti(c.k);
     var giu = v<=PB_MIN;
     var su  = v>=PB_MAX || (pbCosto(v+1)-pbCosto(v))>pbLiberi();
     var comando = '<span class="pb">'
@@ -625,10 +628,13 @@ function disegnaFila(){
       + '<span class="pbv">'+v+'</span>'
       + '<button class="pbtn" data-car="'+c.k+'" data-verso="1"'+(su?' disabled':'')+'>+</button>'
       + '</span>';
-    var calc = bonus
-      ? '<div class="bcalc">'+v+' '+segno(state.stats.bonus[c.k])+' = '+totaleCar(c.k)+' <i>'+segno(modCar(c.k))+'</i></div>'
+    var somma=''+v;
+    if(bonC!==0) somma+=' '+segno(bonC);
+    if(bonT!==0) somma+=' <b class="bcalc-tal" title="dal talento">'+segno(bonT)+'</b>';
+    var calc = mostraCalc
+      ? '<div class="bcalc">'+somma+' = '+totaleCar(c.k)+' <i>'+segno(modCar(c.k))+'</i></div>'
       : '';
-    var cls="stbox"+(c.k===statAtt?" att":"")+(state.stats.bonus[c.k]!==0?" conbonus":"");
+    var cls="stbox"+(c.k===statAtt?" att":"")+((bonC!==0||bonT!==0)?" conbonus":"");
     return '<div class="'+cls+'" data-pick="'+c.k+'"><span class="bs">'+c.sigla+'</span>'
          + '<span class="bn">'+c.nome+'</span>'+comando+calc+'</div>';
   }).join("");
@@ -819,16 +825,11 @@ function applicaDati(o){
   // Razza: si salva solo l'id (una stringa) della razza scelta nel grimorio.
   // Se la scheda e' vecchia o il dato e' scritto male, resta "nessuna razza".
   state.razza = (typeof o.razza==="string") ? o.razza : "";
-  // Talenti scelti: due liste di id (stringhe), in ordine di scelta. Una scheda
-  // vecchia non ce le ha; una modificata a mano potrebbe avere di tutto, quindi
-  // si accettano solo stringhe.
-  state.talenti={origine:[],normali:[]};
-  if(o.talenti && typeof o.talenti==="object"){
-    ["origine","normali"].forEach(function(sez){
-      if(Array.isArray(o.talenti[sez]))
-        state.talenti[sez]=o.talenti[sez].filter(function(x){ return typeof x==="string" && x; });
-    });
-  }
+  // Talenti scelti: due liste di id (stringhe), in ordine di scelta, piu' le
+  // liste parallele delle caratteristiche scelte per i "+1 a scelta" e lo sblocco
+  // dell'origine. Una scheda vecchia non ce le ha; una modificata a mano potrebbe
+  // avere di tutto: si rimette tutto in forma (vedi normalizzaTalenti).
+  state.talenti = normalizzaTalenti(o.talenti);
   if(typeof o.xp==="number" && isFinite(o.xp) && o.xp>=0) state.xp=o.xp;
 
   // Punti ferita: attuali, temporanei, ritocco del massimo, dadi vita spesi e
@@ -967,7 +968,7 @@ function schedaVuota(){
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
   state.razza="";
-  state.talenti={origine:[],normali:[]};
+  state.talenti=talentiVuoti();
   state.allineamento="";
   elName.textContent="";
   if(typeof resetPagine==="function") resetPagine();   // ogni scheda si apre sul Fronte
@@ -2365,6 +2366,70 @@ function slotOrigine(){ return razzaUmano() ? 2 : 1; }
 /* un talento è già scelto (in una delle due sezioni)? */
 function talGiaScelto(id){ return state.talenti.origine.indexOf(id)>=0 || state.talenti.normali.indexOf(id)>=0; }
 
+/* ===== FORMA E NORMALIZZAZIONE DEI TALENTI SCELTI =====
+   Oltre alle due liste di id (origine/normali, in ordine di scelta) teniamo due
+   liste PARALLELE, allineate per posizione, con la caratteristica scelta per i
+   talenti "+1 a scelta" (null finché il player non sceglie), e un interruttore
+   di sblocco per il +1 del talento d'origine (lo mette lo staff dal Controllo). */
+function talentiVuoti(){ return { origine:[], normali:[], asiOrigine:[], asiNormali:[], sbloccoOrigine:false }; }
+function isCaratt(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return true; } return false; }
+/* rimette in forma un blocco talenti letto dal database (o scritto a mano):
+   liste di sole stringhe, liste asi allineate in lunghezza alle liste id (valori
+   solo se sono caratteristiche vere, altrimenti null), sblocco booleano. */
+function normalizzaTalenti(o){
+  var t=talentiVuoti();
+  if(o && typeof o==="object"){
+    ["origine","normali"].forEach(function(sez){
+      if(Array.isArray(o[sez])) t[sez]=o[sez].filter(function(x){ return typeof x==="string" && x; });
+    });
+    [["origine","asiOrigine"],["normali","asiNormali"]].forEach(function(par){
+      var src=Array.isArray(o[par[1]])?o[par[1]]:[];
+      t[par[1]]=t[par[0]].map(function(_,i){ return isCaratt(src[i]) ? src[i] : null; });
+    });
+    t.sbloccoOrigine = !!o.sbloccoOrigine;
+  }
+  return t;
+}
+
+/* ===== IL +1 DEI TALENTI CHE ENTRA NEI PUNTEGGI =====
+   Ogni talento può dare +1 a una caratteristica: FISSA (scritta sulla carta) o
+   A SCELTA (la sceglie il player). Regole della casa:
+   - Talento NORMALE: il +1 vale subito.
+   - Talento ORIGINE: il +1 è BLOCCATO finché lo staff non lo sblocca (missione di
+     lore), e vale SOLO per la prima casella; una seconda origine (Umano) non dà
+     mai il +1. */
+function asiScelta(sez, idx){
+  var arr = sez==="origine" ? state.talenti.asiOrigine : state.talenti.asiNormali;
+  return (Array.isArray(arr) && isCaratt(arr[idx])) ? arr[idx] : null;
+}
+/* quanto dà, alla caratteristica k, il talento in una data posizione */
+function asiDiTalento(id, sceltaK, k){
+  var t=talentoById(id); if(!t) return 0;
+  if(t.tipo_asi==="fisso")  return t.asi_caratteristica===k ? 1 : 0;
+  if(t.tipo_asi==="scelta") return sceltaK===k ? 1 : 0;
+  return 0;
+}
+/* somma di tutti i +1 dei talenti ATTIVI sulla caratteristica k.
+   NB: nome diverso da contribTalenti() (quello è il cassetto dei talenti per
+   CA/Iniziativa/Velocità, torna una lista): questo è il +1 ai PUNTEGGI. */
+function bonusCarTalenti(k){
+  var t=state.talenti; if(!t) return 0;
+  var tot=0;
+  (t.normali||[]).forEach(function(id,i){ tot += asiDiTalento(id, asiScelta("normali",i), k); });
+  if(t.sbloccoOrigine && (t.origine||[]).length)   // solo la PRIMA casella d'origine, e solo se sbloccata
+    tot += asiDiTalento(t.origine[0], asiScelta("origine",0), k);
+  return tot;
+}
+/* il player deve ancora scegliere la caratteristica di un "+1 a scelta" ATTIVO? */
+function asiDaScegliere(){
+  var t=state.talenti; if(!t) return false;
+  function manca(id, sceltaK){ var x=talentoById(id); return !!(x && x.tipo_asi==="scelta" && !sceltaK); }
+  var out=false;
+  (t.normali||[]).forEach(function(id,i){ if(manca(id, asiScelta("normali",i))) out=true; });
+  if(t.sbloccoOrigine && (t.origine||[]).length && manca(t.origine[0], asiScelta("origine",0))) out=true;
+  return out;
+}
+
 /* sigla breve di una caratteristica (FOR/DES/...) */
 function siglaCar(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return CARATT[i].sigla; } return String(k||"").toUpperCase(); }
 
@@ -2502,7 +2567,9 @@ function caricaTalenti(poi){
     var cambiato = nuova!==talentiSig; talentiSig=nuova;
     var mt=document.getElementById("modalTalenti");
     if(mt && !mt.hidden && cambiato) renderTalenti();
-    if(cambiato) renderRetro();   // i nomi/badge nella tabella del Retro possono essere cambiati
+    // i talenti possono cambiare nomi/badge sul Retro E il +1 che entra nei
+    // punteggi (e a valle: modificatori, TS, abilità, PF dalla Costituzione)
+    if(cambiato) renderAll();
     if(typeof poi==="function") poi();
   }, function(e){ talentiCaricate=true; console.warn("Talenti:", e); if(typeof poi==="function") poi(); });
 }
@@ -2537,10 +2604,12 @@ function scegliTalento(id){
   if(talScopo==="origine"){
     if(state.talenti.origine.length >= slotOrigine()) return;   // caselle piene
     state.talenti.origine.push(id);
+    state.talenti.asiOrigine.push(null);   // "+1 a scelta": da scegliere
   } else {
     state.talenti.normali.push(id);
+    state.talenti.asiNormali.push(null);
   }
-  aggiornaSalva(); renderRetro();
+  aggiornaSalva(); renderAll();   // il +1 può cambiare i punteggi: ridisegno tutto
   closeAll();   // chiudo il mazzo: si torna al Retro con la carta registrata
 }
 /* tolgo un talento scelto da una sezione, per POSIZIONE (così i doppioni dei
@@ -2550,7 +2619,19 @@ function togliTalento(sez, idx){
   var arr = state.talenti[sez]; if(!arr) return;
   idx=parseInt(idx,10); if(isNaN(idx) || idx<0 || idx>=arr.length) return;
   arr.splice(idx,1);
-  aggiornaSalva(); renderRetro();
+  var asiKey = sez==="origine" ? "asiOrigine" : "asiNormali";   // tolgo la scelta allineata
+  if(Array.isArray(state.talenti[asiKey])) state.talenti[asiKey].splice(idx,1);
+  aggiornaSalva(); renderAll();
+}
+
+/* il player sceglie a quale caratteristica va il "+1 a scelta" di un talento */
+function scegliAsiTalento(sez, idx, k){
+  if(soloLettura) return;
+  var asiKey = sez==="origine" ? "asiOrigine" : "asiNormali";
+  var arr = state.talenti[asiKey]; if(!Array.isArray(arr)) return;
+  idx=parseInt(idx,10); if(isNaN(idx) || idx<0 || idx>=arr.length) return;
+  arr[idx] = isCaratt(k) ? k : null;
+  aggiornaSalva(); renderAll();
 }
 
 /* il badge del +1 sulla carta: fisso "+1 Forza", scelta "+1 a scelta", o niente */
@@ -2880,8 +2961,39 @@ function eliminaTalento(id){
 /* ===== LA TABELLA DEI TALENTI SCELTI (Retro) =====
    Due sezioni: "Talento Origine" (1 casella, 2 se la razza è Umano) e "Talento"
    (la lista che cresce a ogni ASI, in ordine di scelta). Si aggiunge scegliendo
-   dal mazzo, si toglie con la ✕. NB: qui NON si applica ancora il +1 (bloccato
-   per l'origine, subito per il normale) né la bruciatura: è il prossimo passo. */
+   dal mazzo, si toglie con la ✕. Il +1 del talento si APPLICA qui: fisso in
+   automatico, a scelta con un menù (avviso rosso finché non si sceglie). Per il
+   talento d'origine resta BLOCCATO finché lo staff non lo sblocca dal Controllo,
+   e la seconda casella (Umano) non dà mai il +1. */
+
+/* la cella del +1 nella riga: menù di scelta, avviso rosso, "fisso", "bloccato"
+   o "nessun +1", a seconda del talento e della posizione */
+function cellaAsi(t, sez, idx){
+  if(!t || !t.tipo_asi || t.tipo_asi==="nessuno") return '<span class="tt-asi"></span>';
+  // seconda casella d'origine (solo Umano): non dà mai il +1
+  if(sez==="origine" && idx>=1)
+    return '<span class="tt-asi tt-asi-no" title="Il secondo talento d&rsquo;origine non porta il +1">nessun +1</span>';
+  // origine ancora bloccata: il +1 aspetta lo sblocco dello staff
+  if(sez==="origine" && !state.talenti.sbloccoOrigine)
+    return '<span class="tt-asi tt-asi-lock" title="Il +1 si sblocca quando lo staff conferma la missione di lore">&#128274; +1 bloccato</span>';
+  if(t.tipo_asi==="fisso"){
+    var n=nomeCaratt(t.asi_caratteristica);
+    return '<span class="tt-asi tt-asi-ok">+1 '+escRz(n||"a una caratteristica")+'</span>';
+  }
+  // "+1 a scelta": il player sceglie la caratteristica
+  var scelto = asiScelta(sez, idx) || "";
+  if(soloLettura)
+    return scelto
+      ? '<span class="tt-asi tt-asi-ok">+1 '+escRz(nomeCaratt(scelto))+'</span>'
+      : '<span class="tt-asi tt-asi-manca">+1 a scelta</span>';
+  var opts='<option value="">+1 a scelta&hellip;</option>'+CARATT.map(function(c){
+    return '<option value="'+c.k+'"'+(c.k===scelto?' selected':'')+'>'+escRz(c.nome)+'</option>';
+  }).join("");
+  var bang = scelto ? '' : '<span class="tt-asi-bang" aria-hidden="true">&#10071;</span>';
+  return '<span class="tt-asi tt-asi-pick '+(scelto?'tt-asi-ok':'tt-asi-manca')+'" data-talasi>'
+    + bang + '<select data-talasi-sez="'+sez+'" data-talasi-idx="'+idx+'" aria-label="Caratteristica del +1">'+opts+'</select></span>';
+}
+
 function rigaTalentoRetro(id, sez, idx){
   var t=talentoById(id);
   var togli = soloLettura ? '' : '<button class="tt-x" type="button" data-talrem="'+idx+'" data-talsez="'+sez+'" aria-label="Togli questo talento" title="Togli">&times;</button>';
@@ -2889,11 +3001,10 @@ function rigaTalentoRetro(id, sez, idx){
     var ghost = talentiCaricate ? "Talento non pi&ugrave; nel mazzo" : "&hellip;";
     return '<div class="tt-row tt-ghost"><span class="tt-nome">'+ghost+'</span><span class="tt-asi"></span>'+togli+'</div>';
   }
-  var badge=badgeAsi(t);
   var rip = t.ripetibile ? ' <span class="tt-rip" title="Si pu&ograve; prendere pi&ugrave; volte">ripetibile</span>' : '';
   return '<div class="tt-row" data-talview="'+escRz(id)+'" role="button" tabindex="0" title="Apri la carta">'
     + '<span class="tt-nome">'+escRz(t.nome||"Senza nome")+rip+'</span>'
-    + '<span class="tt-asi">'+(badge?escRz(badge):'')+'</span>'
+    + cellaAsi(t, sez, idx)
     + togli + '</div>';
 }
 
@@ -3350,6 +3461,7 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
 (function(){
   var pr=document.getElementById("pagRetro"); if(!pr) return;
   pr.addEventListener("click", function(e){
+    if(e.target.closest("[data-talasi]")) return;   // il menù del +1: non aprire la carta
     var add=e.target.closest("[data-taladdsez]");
     if(add){ openTalenti(add.getAttribute("data-taladdsez")); return; }
     var rem=e.target.closest("[data-talrem]");
@@ -3358,7 +3470,12 @@ document.getElementById("gearAlign").addEventListener("click", openAlign);
     var vw=e.target.closest("[data-talview]");
     if(vw){ apriCartaTalento(vw.getAttribute("data-talview")); return; }
   });
+  pr.addEventListener("change", function(e){
+    var sl=e.target.closest("select[data-talasi-sez]");
+    if(sl){ scegliAsiTalento(sl.getAttribute("data-talasi-sez"), sl.getAttribute("data-talasi-idx"), sl.value); }
+  });
   pr.addEventListener("keydown", function(e){
+    if(e.target.closest("[data-talasi]")) return;   // dentro il menù del +1: lascio fare al menù
     if(e.key!=="Enter" && e.key!==" ") return;
     var vw=e.target.closest && e.target.closest("[data-talview]");
     if(vw){ e.preventDefault(); apriCartaTalento(vw.getAttribute("data-talview")); }

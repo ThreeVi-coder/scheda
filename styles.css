@@ -1282,7 +1282,22 @@
   .tt-row[data-talview]:hover{ background:var(--panel2); }
   .tt-nome{ flex:1 1 auto; font-size:14.5px; color:var(--ink); }
   .tt-rip{ font-size:10.5px; color:var(--violet); font-style:italic; letter-spacing:.02em; }
-  .tt-asi{ flex:0 0 auto; min-width:96px; text-align:right; font-size:12px; color:var(--gold); }
+  .tt-asi{ flex:0 0 auto; min-width:96px; text-align:right; font-size:12px; color:var(--gold);
+    display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; }
+  /* +1 applicato davvero (verde = confermato) */
+  .tt-asi-ok{ color:#77c99a; font-weight:700; }
+  /* +1 a scelta ancora da scegliere: rosso con il punto esclamativo */
+  .tt-asi-manca{ color:var(--danger); }
+  .tt-asi-bang{ font-size:13px; line-height:1; }
+  /* origine non ancora sbloccata / seconda casella senza +1: spento */
+  .tt-asi-lock{ color:var(--muted); }
+  .tt-asi-no{ color:var(--muted); font-style:italic; }
+  /* il menù della caratteristica dentro la riga */
+  .tt-asi-pick select{ font-family:var(--ui); font-size:12px; color:inherit; background:var(--panel2);
+    border:1px solid var(--line); border-radius:6px; padding:3px 6px; cursor:pointer; max-width:130px; }
+  .tt-asi-pick.tt-asi-manca select{ border-color:var(--danger); color:var(--danger); }
+  .tt-asi-pick select:focus{ outline:none; border-color:var(--violet); }
+  .bcalc-tal{ color:#77c99a; font-style:normal; }
   .tt-ghost{ cursor:default; }
   .tt-ghost .tt-nome{ font-style:italic; color:var(--muted); }
   .tt-empty .tt-nome, .tt-empty{ color:var(--muted); font-style:italic; font-size:13.5px; }

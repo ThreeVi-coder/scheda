@@ -4844,10 +4844,12 @@ function disegnaPersonaggi(){
       ? '<span class="vuoto">la tua</span>'
       : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
     // l'interruttore dello sblocco del +1 d'origine: solo staff che tocca le
-    // schede, e MAI sulla propria — deve sempre essere un'altra persona ad
-    // approvare e sbloccare. Solo per chi ha un talento d'origine col +1.
+    // schede, per chi ha un talento d'origine col +1. Sulla PROPRIA riga il
+    // supporto non ce l'ha (deve sempre essere un'altra persona ad approvare e
+    // sbloccare); lo SVILUPPATORE invece può fare tutto, anche la propria.
     var sblocco = '';
-    if(puoToccareSchede() && p.user_id!==utente.id && haScheda && origineHaPiuUno(p.user_id)){
+    var suDiMe = (p.user_id===utente.id);
+    if(puoToccareSchede() && (!suDiMe || haRuolo("sviluppatore")) && origineHaPiuUno(p.user_id)){
       var sbl = !!sbloccoCache[p.user_id];
       sblocco = '<button class="chip c-sblocco'+(sbl?' on':'')+'" data-sblocca="'+esc(p.user_id)
         + '" title="'+(sbl?'Il +1 del talento d’origine è sbloccato — clic per ri-bloccarlo'
@@ -4861,11 +4863,14 @@ function disegnaPersonaggi(){
   }).join("");
 }
 
-/* la scheda (letta dal database) ha un talento d'origine che porta un +1 (fisso
-   o a scelta)? Se i talenti non sono ancora caricati mostro comunque il comando. */
+/* la scheda ha un talento d'origine che porta un +1 (fisso o a scelta)? Per la
+   MIA scheda aperta uso lo stato vivo (vale anche se non l'ho ancora salvata,
+   utile allo sviluppatore sulla propria riga); per gli altri l'elenco dal
+   database. Se i talenti non sono ancora caricati mostro comunque il comando. */
 function origineHaPiuUno(id){
-  var d=schedeCache[id];
-  var o=d && d.talenti && d.talenti.origine;
+  var o;
+  if(id===utente.id && !bersaglio) o = state.talenti.origine;
+  else { var d=schedeCache[id]; o = d && d.talenti && d.talenti.origine; }
   if(!Array.isArray(o) || !o.length) return false;
   var t=talentoById(o[0]);
   if(!t) return true;

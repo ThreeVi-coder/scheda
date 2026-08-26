@@ -863,7 +863,13 @@ function datiDaSalvare(){
   o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
   o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
   o.difScost=state.difScost;
-  o.talenti=state.talenti;
+  // NB: lo sblocco del +1 d'origine NON si salva qui: vive nella colonna
+  // schede.origine_sbloccata (roba dello staff), così il salvataggio del player
+  // non può azzerarlo. Salvo solo le liste scelte e le caratteristiche scelte.
+  o.talenti={
+    origine:state.talenti.origine, normali:state.talenti.normali,
+    asiOrigine:state.talenti.asiOrigine, asiNormali:state.talenti.asiNormali
+  };
   return o;
 }
 
@@ -997,12 +1003,13 @@ function apriScheda(id){
 function caricaScheda(id){
   var msg=document.getElementById("ctrlMsg");
   if(msg) msg.textContent="Apro la scheda\u2026";
-  sb.from("schede").select("dati").eq("user_id", id).maybeSingle().then(function(r){
+  sb.from("schede").select("dati,origine_sbloccata").eq("user_id", id).maybeSingle().then(function(r){
     if(r && r.error){ if(msg) msg.textContent="Non riesco ad aprirla: "+r.error.message; return; }
     if(msg) msg.textContent="";
     bersaglio=id;
     schedaVuota();
     if(r && r.data && r.data.dati) applicaDati(r.data.dati);
+    applicaSbloccoOrigine(r && r.data);
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
@@ -1019,10 +1026,11 @@ function tornaAllaMia(){
 }
 
 function caricaLaMia(){
-  sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle().then(function(r){
+  sb.from("schede").select("dati,origine_sbloccata").eq("user_id", utente.id).maybeSingle().then(function(r){
     bersaglio=null;
     schedaVuota();
     if(r && r.data && r.data.dati) applicaDati(r.data.dati);
+    applicaSbloccoOrigine(r && r.data);
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
@@ -2389,6 +2397,12 @@ function normalizzaTalenti(o){
     t.sbloccoOrigine = !!o.sbloccoOrigine;
   }
   return t;
+}
+/* lo sblocco del +1 d'origine NON sta nel blob dati: sta nella colonna
+   schede.origine_sbloccata (la accende lo staff). Lo si legge dalla riga della
+   scheda, subito dopo applicaDati, e diventa la verità in memoria. */
+function applicaSbloccoOrigine(rigaScheda){
+  state.talenti.sbloccoOrigine = !!(rigaScheda && rigaScheda.origine_sbloccata);
 }
 
 /* ===== IL +1 DEI TALENTI CHE ENTRA NEI PUNTEGGI =====
@@ -4674,7 +4688,7 @@ function caricaControllo(){
 
   var richieste=[
     sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa,ultimo_accesso"),
-    puoVedereSchede() ? sb.from("schede").select("user_id,dati") : Promise.resolve({ data:[], error:null }),
+    puoVedereSchede() ? sb.from("schede").select("user_id,dati,origine_sbloccata") : Promise.resolve({ data:[], error:null }),
     sb.from("ruoli").select("user_id,ruolo")
   ];
 
@@ -4690,8 +4704,8 @@ function caricaControllo(){
       return String(a.username||"").localeCompare(String(b.username||""));
     });
     mappaRuoli(r[2] ? (r[2].data||[]) : []);
-    schedeCache={};
-    (r[1].data||[]).forEach(function(x){ schedeCache[x.user_id]=x.dati||{}; });
+    schedeCache={}; sbloccoCache={};
+    (r[1].data||[]).forEach(function(x){ schedeCache[x.user_id]=x.dati||{}; sbloccoCache[x.user_id]=!!x.origine_sbloccata; });
     preparaOrdini();
     disegnaPersonaggi();
     if(puoStaff()){
@@ -4711,7 +4725,7 @@ function inAttesa(p){
   return !p.approvato && (ruoliDi[p.user_id]||[]).indexOf("sviluppatore")<0;
 }
 
-var schedeCache={}, cerca="", ordine="nick";
+var schedeCache={}, sbloccoCache={}, cerca="", ordine="nick";
 
 /* Le voci dell'ordinamento dipendono da cosa uno puo' vedere: a chi le schede
    sono chiuse non ha senso proporre "livello" o "XP", che non gli arrivano. */
@@ -4829,10 +4843,56 @@ function disegnaPersonaggi(){
     var apri = (p.user_id===utente.id)
       ? '<span class="vuoto">la tua</span>'
       : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
+    // l'interruttore dello sblocco del +1 d'origine: solo staff che tocca le
+    // schede, e MAI sulla propria — deve sempre essere un'altra persona ad
+    // approvare e sbloccare. Solo per chi ha un talento d'origine col +1.
+    var sblocco = '';
+    if(puoToccareSchede() && p.user_id!==utente.id && haScheda && origineHaPiuUno(p.user_id)){
+      var sbl = !!sbloccoCache[p.user_id];
+      sblocco = '<button class="chip c-sblocco'+(sbl?' on':'')+'" data-sblocca="'+esc(p.user_id)
+        + '" title="'+(sbl?'Il +1 del talento d’origine è sbloccato — clic per ri-bloccarlo'
+                          :'Sblocca il +1 del talento d’origine (missione di lore fatta)')+'">'
+        + (sbl?'🔓 +1 sbloccato':'🔒 +1 origine')+'</button>';
+    }
     return '<tr>'+prima+'<td class="pgname">'+pg+'</td>'
          + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td>'
-         + '<td>'+quando(p.ultimo_accesso)+'</td><td>'+apri+'</td></tr>';
+         + '<td>'+quando(p.ultimo_accesso)+'</td>'
+         + '<td><div class="ctrl-azioni">'+apri+sblocco+'</div></td></tr>';
   }).join("");
+}
+
+/* la scheda (letta dal database) ha un talento d'origine che porta un +1 (fisso
+   o a scelta)? Se i talenti non sono ancora caricati mostro comunque il comando. */
+function origineHaPiuUno(id){
+  var d=schedeCache[id];
+  var o=d && d.talenti && d.talenti.origine;
+  if(!Array.isArray(o) || !o.length) return false;
+  var t=talentoById(o[0]);
+  if(!t) return true;
+  return t.tipo_asi==="fisso" || t.tipo_asi==="scelta";
+}
+
+/* accende/spegne lo sblocco del +1 d'origine, scrivendo la colonna
+   schede.origine_sbloccata (non tocca il blob dati del personaggio) */
+function toggleSbloccoOrigine(id, btn){
+  if(!puoToccareSchede()) return;
+  var msg=document.getElementById("ctrlMsg"); if(msg) msg.textContent="";
+  btn.disabled=true;
+  var nuovo = !sbloccoCache[id];
+  sb.from("schede").update({ origine_sbloccata: nuovo }).eq("user_id", id).then(function(res){
+    if(res && res.error){
+      if(msg) msg.textContent="Non sono riuscito a cambiare lo sblocco: "+res.error.message;
+      btn.disabled=false; console.error(res.error); return;
+    }
+    sbloccoCache[id]=nuovo;
+    // se è la scheda aperta in questo momento (la mia o quella che sto guardando),
+    // aggiorno subito lo stato vivo e ridisegno: il +1 si vede senza ricaricare
+    if(id===(bersaglio||utente.id)){ state.talenti.sbloccoOrigine=nuovo; renderAll(); }
+    disegnaPersonaggi();
+  }).catch(function(e){
+    btn.disabled=false; if(msg) msg.textContent="Qualcosa non ha risposto: riprova.";
+    console.error(e);
+  });
 }
 
 
@@ -5054,7 +5114,9 @@ document.getElementById("btnCercaVia").addEventListener("click", function(){
 
 document.getElementById("tblBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest("[data-apri]") : null;
-  if(b) apriScheda(b.getAttribute("data-apri"));
+  if(b){ apriScheda(b.getAttribute("data-apri")); return; }
+  var s = e.target && e.target.closest ? e.target.closest("[data-sblocca]") : null;
+  if(s && !s.disabled){ toggleSbloccoOrigine(s.getAttribute("data-sblocca"), s); }
 });
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
@@ -5102,7 +5164,7 @@ function avvia(){
       // lo segnalo solo nella console, senza fermare niente
       if(prof && prof.error) console.warn("sync_profilo non ha risposto:", prof.error.message);
       return Promise.all([
-        sb.from("schede").select("dati").eq("user_id", utente.id).maybeSingle(),
+        sb.from("schede").select("dati,origine_sbloccata").eq("user_id", utente.id).maybeSingle(),
         sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
         sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
       ]);
@@ -5142,6 +5204,7 @@ function avvia(){
       // il nav è per tutti (menù pagine); "Controllo" solo per lo staff
       aggiornaNav();
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
+      applicaSbloccoOrigine(scheda.data);
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
       sincronizzaComandi();     // e solo dopo si misura il nome

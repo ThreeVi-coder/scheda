@@ -97,6 +97,10 @@
   .chip.on.c-stella{ color:var(--r-stella); border-color:rgba(207,211,224,.55); background:rgba(207,211,224,.14); }
   .chip.c-pausa{ border-color:rgba(229,104,109,.3); }
   .chip.on.c-pausa{ color:#fff; border-color:transparent; background:var(--danger); font-weight:600; }
+  /* sblocco del +1 d'origine: spento = ambra tratteggiata, acceso = verde confermato */
+  .chip.c-sblocco{ border-color:rgba(224,177,94,.4); color:var(--gold); white-space:nowrap; }
+  .chip.on.c-sblocco{ color:#77c99a; border-color:rgba(119,201,154,.55); background:rgba(119,201,154,.12); font-weight:600; }
+  .ctrl-azioni{ display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

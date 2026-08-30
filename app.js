@@ -2099,6 +2099,7 @@ function applicaFiltroGrimorio(){
 function renderGrimorio(){
   var list=document.getElementById("grimList"), page=document.getElementById("grimPage");
   if(!list||!page) return;
+  page.style.visibility="";   // non lascio mai la pagina invisibile da un'attesa precedente
   var staff=puoToccareSchede();
   // INDICE (colonna sinistra) — con il "+" in cima per chi può aggiungere
   var testa = staff ? '<button class="grimadd" type="button" data-grimadd>+ Aggiungi razza</button>' : '';
@@ -2138,8 +2139,28 @@ function renderGrimorio(){
   if(grimAnima){
     page.classList.remove("entra");
     page.innerHTML=paginaRazza(r);
-    void page.offsetWidth;        // forza il riavvio dell'animazione
-    page.classList.add("entra");
+    // Se c'è un'immagine, aspetto che sia caricata PRIMA di rivelare: così il
+    // layout è già a posto e i pulsanti non "saltano" quando l'immagine arriva.
+    // Intanto tengo la pagina invisibile (niente lampo di contenuto statico), e
+    // poi nome/righe/immagine/pulsanti compaiono tutti insieme.
+    var img=page.querySelector(".grimillu img");
+    var avvia=function(){
+      page.style.visibility="";
+      void page.offsetWidth;        // forza il riavvio dell'animazione
+      page.classList.add("entra");
+    };
+    if(img && !img.complete){
+      page.style.visibility="hidden";
+      var partito=false, go=function(){
+        if(partito || !page.contains(img)) return;   // già partito, o pagina già cambiata
+        partito=true; avvia();
+      };
+      img.addEventListener("load", go);
+      img.addEventListener("error", go);
+      setTimeout(go, 450);          // rete lenta: non aspetto all'infinito
+    } else {
+      avvia();
+    }
   } else {
     page.classList.remove("entra");
     page.innerHTML=paginaRazza(r);

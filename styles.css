@@ -1340,6 +1340,11 @@
   .grimpage.entra .grimrule{ transform-origin:left center; animation:inkRule .55s ease .6s both; }
   .grimpage.entra .grimriga{ animation:inkRow .42s ease both; }   /* ritardo inline: le righe seguono il nome */
   .grimpage.entra .grimillu img, .grimpage.entra .grimillu .ph{ animation:inkImg 1.9s ease .1s both; }
+  /* i pulsanti (Scegli / Modifica / Elimina) entrano INSIEME al resto della
+     rivelazione: prima invece spuntavano subito, mentre il testo arrivava dopo */
+  .grimpage.entra .grimass, .grimpage.entra .grimstaff{ animation:inkRow .5s ease both; }
+  .grimpage.entra .grimass{ animation-delay:.55s; }
+  .grimpage.entra .grimstaff{ animation-delay:.68s; }
   /* NB: il grimorio anima SEMPRE, anche con "riduci animazioni" attivo: è
      l'esperienza voluta. (Il resto della scheda continua a rispettare la
      preferenza.) Se in futuro serve un interruttore per-utente, si aggiunge. */

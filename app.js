@@ -2208,6 +2208,20 @@ function campoArea(id, lab, big, val){
   return '<div class="frz-row"><label for="'+id+'">'+lab+'</label>'
     + '<textarea class="frz-ta'+(big?' big':'')+'" id="'+id+'">'+escRz(val||"")+'</textarea></div>';
 }
+/* Il campo FAMIGLIA come scelta guidata: input con suggerimenti (datalist) presi
+   dalle famiglie che i prerequisiti dei talenti usano davvero, più un elenco sotto
+   per ricordarle. Resta testo libero (si può scrivere anche una famiglia nuova). */
+function campoFamigliaRazza(val){
+  var fams=famiglieRichieste();
+  var opts=fams.map(function(f){ return '<option value="'+escRz(f)+'"></option>'; }).join("");
+  var sugg = fams.length
+    ? '<div class="frz-hint" style="margin:5px 0 0">Famiglie usate dai prerequisiti: <b>'+escRz(fams.join(", "))+'</b>. Usane una di queste (es. Drow &rarr; <b>elfo</b>).</div>'
+    : '<div class="frz-hint" style="margin:5px 0 0">Scrivi la famiglia in minuscolo (es. elfo, nano). Serve ai prerequisiti dei talenti sulle varianti.</div>';
+  return '<div class="frz-row"><label for="frz_famiglia">Famiglia (per i prerequisiti)</label>'
+    + '<input class="frz-in" id="frz_famiglia" type="text" autocomplete="off" list="frz_fam_lista" placeholder="Es. elfo, nano, gnomo&hellip;" value="'+escRz(val||"")+'">'
+    + '<datalist id="frz_fam_lista">'+opts+'</datalist>'
+    + sugg + '</div>';
+}
 /* l'immagine da mostrare ora nell'anteprima del modulo: il nuovo file scelto,
    oppure (in modifica) quella già salvata se non è stata tolta */
 function immagineCorrente(){
@@ -2224,7 +2238,7 @@ function formRazzaHtml(){
     + '<h3>'+(mod?'Modifica razza':'Aggiungi una razza')+'</h3>'
     + '<p class="frz-hint">Solo il <b>Nome</b> è obbligatorio. I campi lunghi (Abilità, Aspetto, Lore) non hanno limiti. '+(mod?'Le modifiche sono visibili a tutti.':'Una volta salvata, la razza compare nel grimorio per tutti.')+'</p>'
     + campoText("frz_nome","Nome razza","Es. Umano",true,r.nome)
-    + '<div class="frz-grid">'+campoText("frz_famiglia","Famiglia (per i prerequisiti)","Es. elfo, nano, gnomo, tiefling…",false,r.famiglia)+campoText("frz_tipologia","Tipologia","Es. Umanoide",false,r.tipologia)+'</div>'
+    + '<div class="frz-grid">'+campoFamigliaRazza(r.famiglia)+campoText("frz_tipologia","Tipologia","Es. Umanoide",false,r.tipologia)+'</div>'
     + '<div class="frz-grid">'+campoText("frz_eta","Età","Es. Maturi verso i 18 anni…",false,r.eta)+campoText("frz_dimensioni","Dimensioni","Es. Media (1,5–1,8 m)",false,r.dimensioni)+'</div>'
     + '<div class="frz-grid">'+campoText("frz_velocita","Velocità di movimento","Es. 9 metri (30 piedi)",false,r.velocita)+campoText("frz_scurovisione","Scurovisione","Es. 18 metri — oppure lascia vuoto",false,r.scurovisione)+'</div>'
     + campoText("frz_lingue","Lingue","Es. Comune e una a scelta",false,r.lingue)
@@ -2465,6 +2479,21 @@ function analizzaPrereq(txt){
 var CLASSI_INCANTATORI=["bardo","chierico","druido","mago","stregone","warlock","paladino","ranger","artificere","artificiere"];
 function classiPossedute(){ return (state.classes||[]).map(function(c){ return c.key; }); }
 function razzaFamigliaPg(){ var r=state.razza?razzaById(state.razza):null; return (r && r.famiglia) ? String(r.famiglia).trim().toLowerCase() : null; }
+/* Le "famiglie" di razza che i prerequisiti dei talenti richiedono DAVVERO
+   (es. elfo, nano, tiefling…), ricavate dai dati caricati: così quando lo staff
+   tagga una razza sceglie una parola che combacia con ciò che i controlli cercano
+   (niente errori di battitura che farebbero fallire il controllo in silenzio).
+   In ordine alfabetico, senza doppioni. */
+function famiglieRichieste(){
+  var set={};
+  (TALENTI||[]).forEach(function(t){
+    var P=t && t.prereq; if(!P || !P.and) return;
+    P.and.forEach(function(g){ (g||[]).forEach(function(c){
+      if(c && c.razza) set[String(c.razza).trim().toLowerCase()]=1;
+    }); });
+  });
+  return Object.keys(set).sort();
+}
 function tagliaPg(){ var r=state.razza?razzaById(state.razza):null; if(!r||!r.dimensioni) return null; var d=String(r.dimensioni).toLowerCase(); if(/piccol/.test(d))return"piccola"; if(/grande/.test(d))return"grande"; if(/medi/.test(d))return"media"; return null; }
 function talentiSceltiNomi(){ var ids=state.talenti.origine.concat(state.talenti.normali), out=[]; ids.forEach(function(id){ var t=talentoById(id); if(t&&t.nome) out.push(t.nome.toLowerCase()); }); return out; }
 function haMarchioDrago(){ return talentiSceltiNomi().some(function(n){ return /mark of|dragonmark|marchio del drago/.test(n); }); }

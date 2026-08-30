@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=69">
+<link rel="stylesheet" href="styles.css?v=70">
 </head>
 <body>
   <div class="wrap">
@@ -223,8 +223,15 @@
           <div class="pagseg-eyebrow">Retro</div>
           <div class="pagseg-tit">Tratti &amp; Talenti</div>
         </div>
-        <div class="taltab" id="taltab"></div>
-        <div class="retro-futuro">Tratti di razza, abilit&agrave; di classe e sottoclasse arriveranno qui.</div>
+        <div class="retro-hub" id="retroHub">
+          <div class="hub-stage" id="hubStage">
+            <img class="hub-img" id="hubImg" alt="Illustrazione della classe" hidden>
+            <svg class="hub-lines" id="hubLines" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="hub-punti" id="hubPunti"></div>
+            <div class="hub-vuoto" id="hubVuoto">Scegli una classe per vederne l&rsquo;illustrazione e i privilegi.</div>
+          </div>
+          <div class="hub-mobile" id="hubMobile"></div>
+        </div>
       </div>
     </div>
 
@@ -778,6 +785,20 @@
       </div>
     </div>
 
+    <div class="modal" id="modalPriv" hidden>
+      <div class="backdrop" data-close="priv"></div>
+      <div class="dialog priv-dialog" id="dialogPriv">
+        <div class="dlghead">
+          <h2 id="privTit">Privilegi</h2>
+          <button class="dlgx" data-close="priv" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody" id="privBody"></div>
+        <div class="dlgbar">
+          <button class="btn-close" data-close="priv">Chiudi</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalRazzaAsp" hidden>
       <div class="backdrop" data-close="razzaasp"></div>
       <div class="dialog centrata" id="dialogRazzaAsp">
@@ -871,6 +892,6 @@
 
   </div>
 
-<script src="app.js?v=69"></script>
+<script src="app.js?v=70"></script>
 </body>
 </html>

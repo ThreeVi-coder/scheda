@@ -3077,31 +3077,265 @@ function rigaAggiungi(scopo, label){
   return '<div class="tt-row tt-addrow"><button class="tt-add" type="button" data-taladdsez="'+scopo+'">+ '+label+'</button></div>';
 }
 
-function renderRetro(){
-  var host=document.getElementById("taltab"); if(!host) return;
-  var orig=state.talenti.origine, norm=state.talenti.normali, maxO=slotOrigine();
-  var html="";
+/* ============ RETRO: HUB ILLUSTRATO + POP-UP DEI PRIVILEGI ============
+   La pagina 2 mostra l'illustrazione (a contorni) della classe scelta; da punti
+   scelti partono richiami (pallino → linea → parola) verso Talenti, Sottoclasse,
+   Razza, Classe. Cliccando un richiamo si apre un pop-up con l'elenco di quella
+   fonte; le voci si aprono a fisarmonica per la descrizione. Su schermi stretti i
+   richiami diventano quattro pulsanti sotto l'immagine. */
+/* nome del file immagine per ogni classe (stanno nella cartella scheda). La
+   maggior parte = Nome.png; l'unica eccezione è artificere → "Artefice". Manca
+   ancora "Mago.png": per quella classe si mostra lo stato "immagine in arrivo". */
+var IMG_CLASSE={
+  artificere:"Artefice", barbaro:"Barbaro", bardo:"Bardo", chierico:"Chierico",
+  druido:"Druido", guerriero:"Guerriero", ladro:"Ladro", mago:"Mago", monaco:"Monaco",
+  paladino:"Paladino", ranger:"Ranger", stregone:"Stregone", warlock:"Warlock"
+};
+function classePrimaria(){ return (state.classes && state.classes[0]) ? state.classes[0].key : null; }
+function immagineClasse(){ var c=classePrimaria(); if(!c) return null; var f=IMG_CLASSE[c]; return f ? (f+".png") : null; }
 
-  // --- sezione TALENTO ORIGINE ---
+// punti di richiamo: ax/ay = posizione in % SULL'IMMAGINE; lato = da che parte va la parola.
+// Sono PER CLASSE (le pose cambiano): per ora un default; Threevi riempirà le
+// posizioni vere di ogni classe in HUB_PUNTI_CLASSE (chiave = classe).
+var HUB_PUNTI_DEFAULT=[
+  { id:"talenti", label:"Talenti",             ax:23, ay:19, lato:"sx" },
+  { id:"estasi",  label:"Estasi ed Anedonie",  ax:57, ay:12, lato:"dx" },
+  { id:"razza",   label:"Tratti di Razza",     ax:54, ay:45, lato:"dx" },
+  { id:"classe",  label:"Classe", label2:"Sottoclasse", ax:83, ay:50, lato:"dx" }
+];
+var HUB_PUNTI_CLASSE={
+  artificere:[{id:"talenti",label:"Talenti",ax:26.5,ay:82.4,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:47.8,ay:50,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:60.3,ay:41.3,lato:"dx"},{id:"estasi",label:"Estasi ed Anedonie",ax:43.6,ay:17.2,lato:"sx"}],
+  barbaro:[{id:"talenti",label:"Talenti",ax:88,ay:53.3,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:62.3,ay:37.9,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:25.2,ay:53.8,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:74.8,ay:19.3,lato:"dx"}],
+  bardo:[{id:"talenti",label:"Talenti",ax:25,ay:49.3,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:47.5,ay:21.9,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:44.1,ay:36.4,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:34.8,ay:8.5,lato:"sx"}],
+  chierico:[{id:"talenti",label:"Talenti",ax:47.1,ay:52.3,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:50.7,ay:38.9,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:34.1,ay:34.8,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:50.7,ay:20.3,lato:"dx"}],
+  druido:[{id:"talenti",label:"Talenti",ax:11.8,ay:60.1,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:47.8,ay:34.3,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:83.1,ay:13.4,lato:"dx"},{id:"estasi",label:"Estasi ed Anedonie",ax:50.5,ay:17,lato:"dx"}],
+  guerriero:[{id:"talenti",label:"Talenti",ax:27.2,ay:26.5,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:47.3,ay:64.2,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:49.3,ay:47.9,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:51.2,ay:33.8,lato:"dx"}],
+  ladro:[{id:"talenti",label:"Talenti",ax:52,ay:50.8,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:45.1,ay:39.4,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:80.4,ay:63.7,lato:"dx"},{id:"estasi",label:"Estasi ed Anedonie",ax:35,ay:16.7,lato:"sx"}],
+  mago:[{id:"talenti",label:"Talenti",ax:22.3,ay:24.7,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:65,ay:40.8,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:81.1,ay:52.8,lato:"dx"},{id:"estasi",label:"Estasi ed Anedonie",ax:60.5,ay:13.1,lato:"dx"}],
+  monaco:[{id:"talenti",label:"Talenti",ax:37.3,ay:38.4,lato:"sx"},{id:"razza",label:"Tratti di Razza",ax:61.5,ay:24.3,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:77.9,ay:20.6,lato:"dx"},{id:"estasi",label:"Estasi ed Anedonie",ax:54.9,ay:4.7,lato:"dx"}],
+  paladino:[{id:"talenti",label:"Talenti",ax:71.8,ay:19.1,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:37.3,ay:32.5,lato:"sx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:11,ay:46.9,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:38.7,ay:8.8,lato:"sx"}],
+  ranger:[{id:"talenti",label:"Talenti",ax:61,ay:52.5,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:59.1,ay:35.5,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:38,ay:14.7,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:70.1,ay:10.1,lato:"dx"}],
+  stregone:[{id:"talenti",label:"Talenti",ax:82.9,ay:39.7,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:57.8,ay:28.9,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:28,ay:28.2,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:58.8,ay:14,lato:"dx"}],
+  warlock:[{id:"talenti",label:"Talenti",ax:76.9,ay:16.4,lato:"dx"},{id:"razza",label:"Tratti di Razza",ax:50.8,ay:43.5,lato:"dx"},{id:"classe",label:"Classe",label2:"Sottoclasse",ax:34.5,ay:33.1,lato:"sx"},{id:"estasi",label:"Estasi ed Anedonie",ax:48.4,ay:25.7,lato:"sx"}]
+};
+function puntiHub(){ var c=classePrimaria(); return (c && HUB_PUNTI_CLASSE[c]) || HUB_PUNTI_DEFAULT; }
+
+function renderRetro(){
+  renderRetroHub();
+  renderTaltab();   // se il pop-up Talenti è aperto, ne aggiorno il contenuto
+}
+
+function renderRetroHub(){
+  var img=document.getElementById("hubImg"), vuoto=document.getElementById("hubVuoto"),
+      punti=document.getElementById("hubPunti"), mob=document.getElementById("hubMobile");
+  if(!img||!punti) return;
+  var src=immagineClasse();   // l'immagine segue la classe scelta in pagina 1
+  if(!src){
+    // niente classe (o classe senza immagine): mostro il messaggio, niente richiami
+    img.hidden=true; img.removeAttribute("src");
+    if(vuoto){ vuoto.hidden=false; vuoto.textContent = (state.classes && state.classes.length)
+      ? "Immagine in arrivo per questa classe." : "Scegli una classe nella scheda per vederne l’illustrazione e i privilegi."; }
+    punti.style.display="none"; if(mob) mob.style.display="none";
+    var svg=document.getElementById("hubLines"); if(svg) svg.innerHTML="";
+    return;
+  }
+  if(img.getAttribute("src")!==src){
+    img.setAttribute("src", src);
+    img.onload=posizionaHub;
+    img.onerror=function(){ img.hidden=true; if(vuoto){ vuoto.hidden=false; vuoto.textContent="Immagine della classe non trovata ("+src+")."; } };
+  }
+  img.hidden=false; if(vuoto) vuoto.hidden=true;
+  punti.style.display=""; if(mob) mob.style.display="";
+  var pts=puntiHub(), sub=sottoclasseVisibile();
+  var h="";
+  pts.forEach(function(a,i){
+    h += '<button class="hub-punto" type="button" data-fonte="'+a.id+'" data-pt="'+i+'" aria-label="'+escRz(a.label)+'"><span class="hp-dot"></span></button>';
+    if(a.id==="classe" && a.label2 && sub){
+      // dal livello 3: due etichette separate (la linea si biforca)
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="0">'+escRz(a.label)+'</button>';
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="1">'+escRz(a.label2)+'</button>';
+    } else {
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="'+a.id+'" data-pt="'+i+'">'+escRz(a.label)+'</button>';
+    }
+  });
+  punti.innerHTML=h;
+  if(mob) mob.innerHTML = pts.map(function(a){
+    var t = (a.id==="classe" && a.label2) ? (sub ? escRz(a.label)+" / "+escRz(a.label2) : escRz(a.label)) : escRz(a.label);
+    return '<button class="hub-mbtn" type="button" data-fonte="'+a.id+'">'+t+'</button>';
+  }).join("");
+  posizionaHub();
+}
+/* la Sottoclasse compare solo dal livello 3 (della classe primaria) */
+function sottoclasseVisibile(){ var c=state.classes && state.classes[0]; return !!(c && (c.level||0)>=3); }
+/* un richiamo a GOMITO: dal pallino un tratto verticale fino all'altezza della
+   parola, poi orizzontale fino alla parola */
+function gomitoHtml(px,py,ex,ey,id){
+  return '<polyline points="'+px.toFixed(1)+','+py.toFixed(1)+' '+px.toFixed(1)+','+ey.toFixed(1)+' '+ex.toFixed(1)+','+ey.toFixed(1)+'" class="hub-linea" data-fonte="'+id+'"/>';
+}
+/* colloca pallini, parole e linee in base a dove sta DAVVERO l'immagine, così
+   restano incollati ai punti a qualsiasi dimensione (richiamato anche al resize).
+   La classe dal liv.3 ha DUE parole (Classe/Sottoclasse) e la linea si BIFORCA. */
+function posizionaHub(){
+  var stage=document.getElementById("hubStage"), img=document.getElementById("hubImg"),
+      svg=document.getElementById("hubLines"), punti=document.getElementById("hubPunti");
+  if(!stage||!img||!svg||!punti || img.hidden){ if(svg) svg.innerHTML=""; return; }
+  var sr=stage.getBoundingClientRect(), ir=img.getBoundingClientRect();
+  if(!ir.width || !ir.height) return;   // immagine non ancora misurabile
+  var ox=ir.left-sr.left, oy=ir.top-sr.top;
+  svg.setAttribute("viewBox","0 0 "+Math.round(sr.width)+" "+Math.round(sr.height));
+  var pts=puntiHub(), dots=punti.querySelectorAll(".hub-punto");
+  // pallini per punto
+  var dp=pts.map(function(a,i){
+    var px=ox+(a.ax/100)*ir.width, py=oy+(a.ay/100)*ir.height;
+    var dot=dots[i]; if(dot){ dot.style.left=px+"px"; dot.style.top=py+"px"; }
+    return { a:a, px:px, py:py };
+  });
+  // voci-etichetta (la classe dal liv.3 = due voci sullo stesso pallino)
+  var items=[];
+  pts.forEach(function(a,i){
+    if(a.id==="classe" && a.label2 && sottoclasseVisibile()){
+      var e0=punti.querySelector('.hub-et[data-pt="'+i+'"][data-sub="0"]');
+      var e1=punti.querySelector('.hub-et[data-pt="'+i+'"][data-sub="1"]');
+      var hh=(e0&&e0.offsetHeight)||30;
+      items.push({el:e0, side:a.lato, dp:dp[i], dy:dp[i].py-hh/2-3, fork:"top"});
+      items.push({el:e1, side:a.lato, dp:dp[i], dy:dp[i].py+hh/2+3, fork:"bot"});
+    } else {
+      items.push({el:punti.querySelector('.hub-et[data-pt="'+i+'"]'), side:a.lato, dp:dp[i], dy:dp[i].py, fork:null});
+    }
+  });
+  // diradamento per lato (le due della classe stanno vicine tra loro)
+  ["sx","dx"].forEach(function(lato){
+    var grp=items.filter(function(o){ return o.side===lato; });
+    grp.sort(function(A,B){ return A.dy-B.dy; });
+    var prevB=-1e9;
+    grp.forEach(function(o){
+      var h=(o.el&&o.el.offsetHeight)||30, gap=(o.fork==="bot"?4:16), y=o.dy;
+      if(y-h/2 < prevB+gap) y=prevB+gap+h/2;
+      y=Math.max(h/2+2, Math.min(sr.height-h/2-2, y));
+      o.ly=y; prevB=y+h/2;
+    });
+  });
+  // colloco le parole
+  items.forEach(function(o){ var e=o.el; if(!e) return; e.style.top=o.ly+"px";
+    if(o.side==="sx"){ e.style.left="0px"; e.style.right="auto"; } else { e.style.right="0px"; e.style.left="auto"; }
+  });
+  // disegno le linee (rileggo i rect dopo il collocamento)
+  var linee="", pair=[];
+  items.forEach(function(o){
+    if(o.fork){ pair.push(o); return; }
+    var e=o.el; if(!e) return; var er=e.getBoundingClientRect();
+    var ex=(o.side==="sx")?(er.right-sr.left):(er.left-sr.left);
+    var ey=(er.top-sr.top)+er.height/2;
+    linee += gomitoHtml(o.dp.px, o.dp.py, ex, ey, o.dp.a.id);
+  });
+  if(pair.length===2){
+    var T=pair[0].fork==="top"?pair[0]:pair[1], B=pair[0].fork==="bot"?pair[0]:pair[1];
+    var side=T.side, P=T.dp, rT=T.el.getBoundingClientRect(), rB=B.el.getBoundingClientRect();
+    var LX=(side==="sx")?(rT.right-sr.left):(rT.left-sr.left);
+    var y1=(rT.top-sr.top)+rT.height/2, y2=(rB.top-sr.top)+rB.height/2, midY=(y1+y2)/2;
+    var jx=LX+(side==="sx"?22:-22);   // giunzione della biforcazione, verso il pallino
+    function L(x1,yy1,x2,yy2){ return '<line x1="'+x1.toFixed(1)+'" y1="'+yy1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+yy2.toFixed(1)+'" class="hub-linea" data-fonte="classe"/>'; }
+    linee += L(jx,y1,jx,y2) + L(jx,y1,LX,y1) + L(jx,y2,LX,y2);           // graffa verticale + due stub
+    linee += '<polyline points="'+P.px.toFixed(1)+','+P.py.toFixed(1)+' '+P.px.toFixed(1)+','+midY.toFixed(1)+' '+jx.toFixed(1)+','+midY.toFixed(1)+'" class="hub-linea" data-fonte="classe"/>';
+  }
+  svg.innerHTML=linee;
+}
+function evidenziaFonte(id, on){
+  var punti=document.getElementById("hubPunti"), svg=document.getElementById("hubLines");
+  if(punti) punti.querySelectorAll('[data-fonte="'+id+'"]').forEach(function(el){ el.classList.toggle("acceso", on); });
+  if(svg) svg.querySelectorAll('[data-fonte="'+id+'"]').forEach(function(l){ l.classList.toggle("acceso", on); });
+}
+
+/* --- il pop-up di una fonte --- */
+var privFonte=null;
+function apriPriv(fonte){
+  var m=document.getElementById("modalPriv"), tit=document.getElementById("privTit"), body=document.getElementById("privBody");
+  if(!m||!body) return;
+  privFonte=fonte;
+  var titoli={ talenti:"Talenti", classe:"Classe e Sottoclasse", razza:"Tratti di Razza", estasi:"Estasi ed Anedonie" };
+  if(tit) tit.textContent=titoli[fonte]||"Privilegi";
+  if(fonte==="talenti"){
+    body.innerHTML='<div class="taltab" id="taltab"></div>';
+    renderTaltab();
+  } else {
+    body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
+  }
+  m.hidden=false;
+}
+function messaggioVuoto(fonte){
+  if(fonte==="classe") return (state.classes||[]).length
+    ? "I privilegi di classe compariranno qui, a scaglioni per livello. La Sottoclasse compare dal livello 3."
+    : "Scegli una classe per vederne i privilegi.";
+  if(fonte==="razza")  return state.razza ? "" : "Scegli una razza per vederne i tratti.";
+  if(fonte==="estasi") return "Estasi e Anedonie sono 4 slot legati ai lobi (frontale, parietale, temporale, occipitale). Le impostano solo i master.";
+  return "";
+}
+/* per ora una voce d'esempio, per far vedere la fisarmonica; i dati veri arriveranno
+   dalla tabella dello staff (classe/sottoclasse), dai tratti della razza, o dalle
+   Estasi/Anedonie messe dai master */
+function vociFonte(fonte){
+  if(fonte==="estasi") return [];   // solo master, in arrivo: mostro solo il messaggio
+  return [{ liv:1, nome:"Esempio di privilegio", desc:"Qui comparirà la descrizione.\nClicca la riga per aprirla o chiuderla.\n\nLe voci vere arriveranno nei prossimi passi." }];
+}
+function fisarmonicaHtml(voci, vuoto){
+  if(!voci || !voci.length) return '<div class="acc-vuoto">'+escRz(vuoto||"Ancora niente qui.")+'</div>';
+  var testa = vuoto ? '<div class="acc-nota">'+escRz(vuoto)+'</div>' : '';
+  return testa+'<div class="acc">'+voci.map(function(v){
+    var liv=v.liv?'<span class="acc-liv">'+escRz(String(v.liv))+'&deg;</span> ':'';
+    return '<div class="acc-riga">'
+      + '<button class="acc-cap" type="button">'+liv+'<span class="acc-nome">'+escRz(v.nome||"")+'</span><span class="acc-frec" aria-hidden="true">&rsaquo;</span></button>'
+      + '<div class="acc-corpo"><div class="acc-testo">'+escRz(v.desc||"")+'</div></div>'
+      + '</div>';
+  }).join("")+'</div>';
+}
+
+/* --- la tabella dei talenti (aggiungi/togli/+1), ora DENTRO il pop-up Talenti --- */
+function taltabHtml(){
+  var orig=state.talenti.origine, norm=state.talenti.normali, maxO=slotOrigine(), html="";
   html += '<div class="tt-sechead">Talento Origine</div>';
-  // avviso "troppi" solo se sappiamo DAVVERO la razza (razze caricate, o nessuna
-  // razza scelta): così non lampeggia all'apertura prima che le razze arrivino
   if(orig.length>maxO && (razzeCaricate || !state.razza))
     html += '<div class="tt-avviso">Hai pi&ugrave; talenti d&rsquo;origine di quanti la tua razza ne consenta ('+maxO+'). Togline '+(orig.length-maxO)+'.</div>';
   for(var i=0;i<orig.length;i++) html += rigaTalentoRetro(orig[i],"origine",i);
   if(!soloLettura && orig.length<maxO)
     html += rigaAggiungi("origine", orig.length ? "Aggiungi un altro talento d&rsquo;origine" : "Scegli il talento d&rsquo;origine");
   else if(soloLettura && !orig.length) html += '<div class="tt-row tt-empty">Nessun talento d&rsquo;origine.</div>';
-
-  // --- sezione TALENTO ---
   html += '<div class="tt-sechead">Talento</div>';
   for(var j=0;j<norm.length;j++) html += rigaTalentoRetro(norm[j],"normali",j);
   if(!soloLettura) html += rigaAggiungi("normale", "Aggiungi un talento");
   else if(!norm.length) html += '<div class="tt-row tt-empty">Nessun talento.</div>';
-
   html += '<div class="tt-foot"><button class="tt-sfoglia" type="button" data-talbrowse>Sfoglia tutto il mazzo &rsaquo;</button></div>';
-  host.innerHTML=html;
+  return html;
 }
+function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerHTML=taltabHtml(); }
+
+/* agganci: clic sui richiami dell'hub → apre la fonte; dentro il pop-up la
+   fisarmonica e la gestione dei talenti */
+(function(){
+  var retro=document.getElementById("pagRetro");
+  if(retro){
+    retro.addEventListener("click", function(e){
+      var f=e.target.closest(".hub-punto,.hub-et,.hub-mbtn"); if(f){ apriPriv(f.getAttribute("data-fonte")); }
+    });
+    retro.addEventListener("mouseover", function(e){ var f=e.target.closest(".hub-punto,.hub-et"); if(f) evidenziaFonte(f.getAttribute("data-fonte"), true); });
+    retro.addEventListener("mouseout",  function(e){ var f=e.target.closest(".hub-punto,.hub-et"); if(f) evidenziaFonte(f.getAttribute("data-fonte"), false); });
+  }
+  var m=document.getElementById("modalPriv");
+  if(m){
+    m.addEventListener("click", function(e){
+      var cap=e.target.closest(".acc-cap"); if(cap){ cap.parentNode.classList.toggle("aperta"); return; }
+      var add=e.target.closest("[data-taladdsez]"); if(add){ openTalenti(add.getAttribute("data-taladdsez")); return; }
+      var rem=e.target.closest("[data-talrem]"); if(rem){ togliTalento(rem.getAttribute("data-talsez"), rem.getAttribute("data-talrem")); return; }
+      if(e.target.closest("[data-talbrowse]")){ openTalenti(); return; }
+      var vw=e.target.closest("[data-talview]"); if(vw && !e.target.closest("[data-talasi]")){ apriCartaTalento(vw.getAttribute("data-talview")); }
+    });
+    m.addEventListener("change", function(e){
+      var sl=e.target.closest("select[data-talasi-sez]");
+      if(sl){ scegliAsiTalento(sl.getAttribute("data-talasi-sez"), sl.getAttribute("data-talasi-idx"), sl.value); }
+    });
+  }
+  window.addEventListener("resize", posizionaHub);
+})();
+
 
 /* apre il mazzo in sola consultazione, fermo sulla carta scelta */
 function apriCartaTalento(id){
@@ -3452,6 +3686,7 @@ function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidd
   var mrz=document.getElementById("modalRazze"); if(mrz) mrz.hidden=true;
   var mrza=document.getElementById("modalRazzaAsp"); if(mrza) mrza.hidden=true;
   var mtl=document.getElementById("modalTalenti"); if(mtl) mtl.hidden=true;
+  var mpv=document.getElementById("modalPriv"); if(mpv) mpv.hidden=true;
   document.getElementById("modalEsci").hidden=true; elHeader.classList.remove("raised"); }
 document.getElementById("gearName").addEventListener("click", openName);
 document.getElementById("gearClass").addEventListener("click", openClass);
@@ -5589,6 +5824,7 @@ function vaiAPagina(n){
     el.hidden=(i!==n); el.classList.remove("via-avanti","entra-avanti","via-indietro","entra-indietro");
   });
   paginaScheda=n; aggiornaAngoli();
+  if(PAGINE_FOGLIO[n]==="pagRetro" && typeof posizionaHub==="function") setTimeout(posizionaHub, 60);
 }
 function giraPagina(dir){
   if(flipInCorso) return;
@@ -5607,6 +5843,7 @@ function giraPagina(dir){
     setTimeout(function(){
       newEl.classList.remove("entra-"+suf);
       flipInCorso=false; aggiornaAngoli();
+      if(PAGINE_FOGLIO[t]==="pagRetro" && typeof posizionaHub==="function") posizionaHub();
     }, 340);
   }, 300);
 }

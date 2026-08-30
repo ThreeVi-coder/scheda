@@ -1317,6 +1317,67 @@
   .tt-foot{ padding:9px 16px; display:flex; justify-content:center; }
   .tt-sfoglia{ border:0; background:none; color:var(--muted); font-family:var(--ui); font-size:12.5px; cursor:pointer; transition:.12s; }
   .tt-sfoglia:hover{ color:var(--gold); }
+
+  /* ============ RETRO: HUB ILLUSTRATO ============
+     L'illustrazione (a contorni) della classe fa da mappa: da punti scelti partono
+     richiami (pallino → linea → parola) verso le quattro fonti. Clic → pop-up. */
+  .retro-hub{ position:relative; }
+  .hub-stage{ position:relative; width:100%; min-height:600px; display:flex; align-items:center; justify-content:center; padding:10px 0; }
+  /* le linee nere dell'immagine diventano contorni chiari/oro: le INVERTO (nere→
+     chiare) e con "lighten" i riempimenti bianchi (→neri) spariscono nel fondo scuro,
+     lasciando solo i contorni. Vale per qualsiasi immagine caricata. */
+  .hub-img{ position:relative; z-index:1; height:min(76vh,720px); width:auto; max-width:64%; object-fit:contain; display:block;
+    filter:invert(1) sepia(.3) saturate(1.6) hue-rotate(2deg) brightness(1.06) drop-shadow(0 0 10px rgba(224,177,94,.16));
+    mix-blend-mode:lighten; }
+  .hub-img[hidden]{ display:none; }
+  .hub-vuoto{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--muted); font-style:italic; font-size:14px; padding:20px; }
+  .hub-vuoto[hidden]{ display:none; }
+  .hub-lines{ position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none; overflow:visible; }
+  .hub-linea{ fill:none; stroke:rgba(224,177,94,.4); stroke-width:1.4; stroke-linejoin:round; stroke-linecap:round; transition:stroke .13s, stroke-width .13s; }
+  .hub-linea.acceso{ stroke:var(--gold); stroke-width:2; }
+  .hub-punti{ position:absolute; inset:0; z-index:3; }
+  .hub-punto{ position:absolute; transform:translate(-50%,-50%); width:26px; height:26px; padding:0; border:0; background:none; cursor:pointer; }
+  .hp-dot{ display:block; width:12px; height:12px; margin:7px; border-radius:50%; background:var(--gold);
+    box-shadow:0 0 0 4px rgba(224,177,94,.16), 0 0 10px rgba(224,177,94,.5); transition:transform .12s, box-shadow .12s;
+    animation:hubPulse 2.4s ease-in-out infinite; }
+  @keyframes hubPulse{ 0%,100%{ box-shadow:0 0 0 4px rgba(224,177,94,.16), 0 0 8px rgba(224,177,94,.4); } 50%{ box-shadow:0 0 0 6px rgba(224,177,94,.22), 0 0 16px rgba(224,177,94,.65); } }
+  .hub-punto:hover .hp-dot, .hub-punto.acceso .hp-dot{ transform:scale(1.3); box-shadow:0 0 0 6px rgba(224,177,94,.28), 0 0 18px rgba(224,177,94,.8); }
+  .hub-et{ position:absolute; transform:translateY(-50%); max-width:38%; border:1px solid var(--line); background:var(--panel2);
+    color:var(--ink); font-family:'Cinzel',Georgia,serif; font-size:14px; letter-spacing:.02em; padding:7px 15px; border-radius:9px;
+    cursor:pointer; transition:.13s; white-space:nowrap; }
+  .hub-et:hover, .hub-et.acceso{ border-color:var(--gold); color:var(--gold); box-shadow:0 0 18px rgba(224,177,94,.16); }
+  .hub-mobile{ display:none; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
+  .hub-mbtn{ border:1px solid var(--line); background:var(--panel2); color:var(--ink); font-family:'Cinzel',Georgia,serif;
+    font-size:14px; padding:9px 16px; border-radius:10px; cursor:pointer; transition:.13s; }
+  .hub-mbtn:hover{ border-color:var(--gold); color:var(--gold); }
+  @media (max-width:720px){
+    .hub-lines, .hub-punti{ display:none; }
+    .hub-img{ max-width:82%; height:min(46vh,360px); }
+    .hub-mobile{ display:flex; }
+  }
+  /* --- pop-up dei privilegi + fisarmonica --- */
+  .dialog.priv-dialog{ top:50%; transform:translate(-50%,-50%); width:min(560px,94vw); max-height:calc(100dvh - 40px); }
+  .priv-dialog .dlgbody{ overflow-y:auto; }
+  /* il mazzo dei talenti, aperto DAL pop-up dei privilegi, deve stare SOPRA di esso */
+  #modalTalenti .backdrop{ z-index:64; }
+  #modalTalenti .dialog{ z-index:66; }
+  .acc{ display:flex; flex-direction:column; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .acc-nota{ font-size:12.5px; color:var(--muted); font-style:italic; margin-bottom:12px; line-height:1.5; }
+  .acc-vuoto{ font-size:13.5px; color:var(--muted); font-style:italic; text-align:center; padding:20px; }
+  .acc-riga{ border-bottom:1px solid var(--line); }
+  .acc-riga:last-child{ border-bottom:0; }
+  .acc-cap{ width:100%; display:flex; align-items:center; gap:9px; text-align:left; background:none; border:0; cursor:pointer;
+    color:var(--ink); font-family:var(--ui); font-size:14.5px; padding:12px 14px; transition:background .12s; }
+  .acc-cap:hover{ background:var(--panel2); }
+  .acc-liv{ flex:0 0 auto; font-size:11.5px; font-weight:700; color:var(--gold); }
+  .acc-nome{ flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+  .acc-frec{ flex:0 0 auto; color:var(--gold); font-size:18px; line-height:1; transition:transform .18s; }
+  .acc-riga.aperta .acc-frec{ transform:rotate(90deg); }
+  .acc-corpo{ max-height:0; overflow:hidden; transition:max-height .24s ease; }
+  .acc-riga.aperta .acc-corpo{ max-height:1200px; }
+  .acc-testo{ padding:2px 14px 14px; font-size:13.5px; line-height:1.6; color:var(--ink); white-space:pre-wrap; overflow-wrap:anywhere; }
+
   /* la spunta nel modulo staff */
   .frz-check label{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--ink); cursor:pointer;
     text-transform:none; letter-spacing:normal; }

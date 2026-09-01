@@ -11,3 +11,6 @@ RIASSUNTO_PROGETTO.md
 # pubblico, quindi questi file restano SOLO in locale / da lanciare su Supabase.
 sql/04_talenti_seed.sql
 sql/06_talenti_full.sql
+
+# Inserimento dei privilegi di classe/sottoclasse: idem, testi dei manuali.
+sql/09_privilegi_seed.sql

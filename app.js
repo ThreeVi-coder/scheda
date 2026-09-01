@@ -2388,6 +2388,8 @@ function eliminaRazza(id){
    selezione con la bruciatura e il +1 in scheda arriveranno dopo (mattone 3).
    (Riuso escRz e le classi del modulo grimform/frz-* nella loro versione scura.) */
 var TALENTI=[], talentiCaricate=false, talentiSig="";
+var PRIVILEGI=[], privilegiCaricati=false, privilegiSig="";       // i privilegi di classe/sottoclasse (tabella staff)
+var SOTTOCLASSI=[], sottoclassiCaricate=false, sottoclassiSig=""; // l'elenco delle sottoclassi (tabella staff)
 var talIdx=0;             // indice della carta attiva nella lista filtrata
 var talMode="view";       // "view" = sfoglio | "form" = modulo aggiungi/modifica
 var talFile=null;         // file immagine scelto (non ancora caricato)
@@ -2638,6 +2640,260 @@ function caricaTalenti(poi){
   }, function(e){ talentiCaricate=true; console.warn("Talenti:", e); if(typeof poi==="function") poi(); });
 }
 function talentoById(id){ for(var i=0;i<TALENTI.length;i++){ if(TALENTI[i].id===id) return TALENTI[i]; } return null; }
+
+/* Le sottoclassi e i privilegi dal database (tabella staff). Servono al pop-up
+   "Classe e Sottoclasse" del Retro. Se il pop-up è aperto e i dati sono
+   cambiati, lo ridisegno; altrimenti basta che siano in memoria per la prossima
+   apertura. */
+function caricaSottoclassi(poi){
+  sb.from("sottoclassi").select("*").order("classe",{ascending:true}).order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
+    if(!res.error && Array.isArray(res.data)) SOTTOCLASSI=res.data;
+    else if(res.error) console.warn("Non riesco a leggere le sottoclassi:", res.error.message);
+    sottoclassiCaricate=true;
+    var nuova = SOTTOCLASSI.map(function(s){ return s.id+":"+(s.modificato_il||s.nome||""); }).join("|");
+    var cambiato = nuova!==sottoclassiSig; sottoclassiSig=nuova;
+    if(cambiato) aggiornaVistePriv();
+    if(typeof poi==="function") poi();
+  }, function(e){ sottoclassiCaricate=true; console.warn("Sottoclassi:", e); if(typeof poi==="function") poi(); });
+}
+function caricaPrivilegi(poi){
+  sb.from("privilegi").select("*").order("classe",{ascending:true}).order("livello",{ascending:true}).order("ordine",{ascending:true}).then(function(res){
+    if(!res.error && Array.isArray(res.data)) PRIVILEGI=res.data;
+    else if(res.error) console.warn("Non riesco a leggere i privilegi:", res.error.message);
+    privilegiCaricati=true;
+    var nuova = PRIVILEGI.map(function(p){ return p.id+":"+(p.modificato_il||p.nome||""); }).join("|");
+    var cambiato = nuova!==privilegiSig; privilegiSig=nuova;
+    if(cambiato) aggiornaVistePriv();
+    if(typeof poi==="function") poi();
+  }, function(e){ privilegiCaricati=true; console.warn("Privilegi:", e); if(typeof poi==="function") poi(); });
+}
+/* dati nuovi: ridipingo sia il pop-up del Retro (se aperto sui privilegi di
+   classe) sia il pannello di gestione nel Controllo (se visibile) */
+function aggiornaVistePriv(){
+  var m=document.getElementById("modalPriv");
+  if(m && !m.hidden && privFonte==="classe") apriPriv("classe");
+  var pb=document.getElementById("privBlock");
+  if(pb && !pb.hidden) renderPrivManage();
+}
+
+/* ===== GESTIONE STAFF DEI PRIVILEGI (sezione nel Controllo) =====
+   Solo supporto/sviluppatore. Si sceglie una classe da un menù e si gestiscono
+   le sue SOTTOCLASSI e i suoi PRIVILEGI (della classe base o di una sottoclasse).
+   Le scritture vanno sulle tabelle "sottoclassi" e "privilegi"; dopo ogni
+   salvataggio ricarico così tutti (anche il Retro) vedono la novità. */
+var privClasseSel="";     // chiave della classe scelta nel menù
+var privForm=null;        // null | {kind:"priv", id, sott} | {kind:"sott", id}
+var privDelId=null;       // privilegio in attesa di conferma d'eliminazione
+var privScDelId=null;     // sottoclasse in attesa di conferma d'eliminazione
+var privSalvando=false;
+
+function sottoclassiDi(k){ return SOTTOCLASSI.filter(function(s){ return s.classe===k; }); }
+function privBaseDi(k){ return PRIVILEGI.filter(function(p){ return p.classe===k && !p.sottoclasse_id; })
+  .sort(function(a,b){ return (a.livello||1)-(b.livello||1) || (a.ordine||0)-(b.ordine||0); }); }
+function privDiSott(id){ return PRIVILEGI.filter(function(p){ return p.sottoclasse_id===id; })
+  .sort(function(a,b){ return (a.livello||1)-(b.livello||1) || (a.ordine||0)-(b.ordine||0); }); }
+function sottoclasseById(id){ for(var i=0;i<SOTTOCLASSI.length;i++){ if(SOTTOCLASSI[i].id===id) return SOTTOCLASSI[i]; } return null; }
+function privilegioById(id){ for(var i=0;i<PRIVILEGI.length;i++){ if(PRIVILEGI[i].id===id) return PRIVILEGI[i]; } return null; }
+
+/* prepara il menù delle classi (una volta) e mostra il blocco allo staff */
+function initPrivBlock(){
+  var pb=document.getElementById("privBlock"); if(!pb) return;
+  if(!puoToccareSchede()){ pb.hidden=true; return; }
+  var sel=document.getElementById("privClasse");
+  if(sel && !sel.options.length){
+    sel.innerHTML = CLASSES.map(function(c){ return '<option value="'+escRz(c.key)+'">'+escRz(c.name)+'</option>'; }).join("");
+  }
+  if(!privClasseSel) privClasseSel = (CLASSES[0] && CLASSES[0].key) || "";
+  if(sel) sel.value=privClasseSel;
+  pb.hidden=false;
+  renderPrivManage();
+}
+
+function renderPrivManage(){
+  var box=document.getElementById("privManage"); if(!box) return;
+  var k=privClasseSel;
+  if(!k){ box.innerHTML=""; return; }
+  var nomeCl=(BY_KEY[k] && BY_KEY[k].name) || k;
+  var html="";
+
+  // --- SOTTOCLASSI ---
+  html += '<div class="privsec"><div class="privsec-tit">Sottoclassi di '+escRz(nomeCl)+'</div>';
+  if(privForm && privForm.kind==="sott" && !privForm.id) html += formSottoclasseHtml(null);
+  var scs=sottoclassiDi(k);
+  if(!scs.length && !(privForm && privForm.kind==="sott" && !privForm.id))
+    html += '<div class="priv-vuoto">Ancora nessuna sottoclasse.</div>';
+  scs.forEach(function(s){
+    if(privForm && privForm.kind==="sott" && privForm.id===s.id){ html += formSottoclasseHtml(s); return; }
+    html += '<div class="privsott">'
+      + '<div class="privsott-cap"><span class="privsott-nome">'+escRz(s.nome||"")+'</span>'
+      + '<span class="priv-liv">sceglie al '+escRz(String(s.livello_scelta||3))+'&deg; livello</span>'
+      + '<span class="priv-cmd"><button type="button" class="grimlink" data-scedit="'+escRz(s.id)+'">Modifica</button>'
+      + '<button type="button" class="grimlink danger" data-scdel="'+escRz(s.id)+'">Elimina</button></span></div>';
+    if(privScDelId===s.id)
+      html += '<div class="priv-delconf">Eliminare la sottoclasse «'+escRz(s.nome||"")+'» e tutti i suoi privilegi? Non si può annullare.'
+        + '<span class="priv-delbtns"><button type="button" data-scdelno>Annulla</button>'
+        + '<button type="button" class="danger" data-scdelyes="'+escRz(s.id)+'">Elimina</button></span></div>';
+    // privilegi di questa sottoclasse
+    html += '<div class="priv-list">';
+    if(privForm && privForm.kind==="priv" && !privForm.id && privForm.sott===s.id) html += formPrivilegioHtml(null, s.id);
+    privDiSott(s.id).forEach(function(p){ html += rigaPrivilegioHtml(p); });
+    html += '<button type="button" class="priv-add" data-privadd="'+escRz(s.id)+'">+ Aggiungi privilegio a questa sottoclasse</button>';
+    html += '</div></div>';
+  });
+  html += '<button type="button" class="priv-add" data-scadd>+ Aggiungi sottoclasse</button>';
+  html += '</div>';
+
+  // --- PRIVILEGI DELLA CLASSE BASE ---
+  html += '<div class="privsec"><div class="privsec-tit">Privilegi della classe base</div><div class="priv-list">';
+  if(privForm && privForm.kind==="priv" && !privForm.id && !privForm.sott) html += formPrivilegioHtml(null, null);
+  var base=privBaseDi(k);
+  if(!base.length && !(privForm && privForm.kind==="priv" && !privForm.id && !privForm.sott))
+    html += '<div class="priv-vuoto">Ancora nessun privilegio di classe.</div>';
+  base.forEach(function(p){ html += rigaPrivilegioHtml(p); });
+  html += '<button type="button" class="priv-add" data-privadd="">+ Aggiungi privilegio di classe</button>';
+  html += '</div></div>';
+
+  box.innerHTML=html;
+}
+
+/* una riga di privilegio (in modifica diventa il modulo) */
+function rigaPrivilegioHtml(p){
+  if(privForm && privForm.kind==="priv" && privForm.id===p.id) return formPrivilegioHtml(p, p.sottoclasse_id||null);
+  var s='<div class="privriga"><span class="priv-liv">'+escRz(String(p.livello||1))+'&deg;</span>'
+    + '<span class="priv-nome">'+escRz(p.nome||"")+'</span>'
+    + '<span class="priv-cmd"><button type="button" class="grimlink" data-priedit="'+escRz(p.id)+'">Modifica</button>'
+    + '<button type="button" class="grimlink danger" data-pridel="'+escRz(p.id)+'">Elimina</button></span></div>';
+  if(privDelId===p.id)
+    s += '<div class="priv-delconf">Eliminare «'+escRz(p.nome||"")+'»? Non si può annullare.'
+      + '<span class="priv-delbtns"><button type="button" data-pridelno>Annulla</button>'
+      + '<button type="button" class="danger" data-pridelyes="'+escRz(p.id)+'">Elimina</button></span></div>';
+  return s;
+}
+
+/* il modulo per aggiungere/modificare un privilegio */
+function formPrivilegioHtml(p, sottDefault){
+  p=p||{};
+  var k=privClasseSel;
+  var appartiene = (p.sottoclasse_id!==undefined ? p.sottoclasse_id : sottDefault) || "";
+  var opts='<option value="">— Classe base —</option>' + sottoclassiDi(k).map(function(s){
+    return '<option value="'+escRz(s.id)+'"'+(appartiene===s.id?' selected':'')+'>'+escRz(s.nome||"")+'</option>';
+  }).join("");
+  return '<div class="privform">'
+    + '<div class="frz-grid">'
+    +   '<div class="frz-row"><label for="prf_app">Appartiene a</label><select id="prf_app" class="frz-in">'+opts+'</select></div>'
+    +   '<div class="frz-row"><label for="prf_liv">Livello</label><input id="prf_liv" class="frz-in" type="number" min="1" max="20" value="'+escRz(String(p.livello||1))+'"></div>'
+    +   '<div class="frz-row"><label for="prf_ord">Ordine (a parità di livello)</label><input id="prf_ord" class="frz-in" type="number" value="'+escRz(String(p.ordine||0))+'"></div>'
+    + '</div>'
+    + '<div class="frz-row"><label for="prf_nome">Nome <span class="req">*</span></label><input id="prf_nome" class="frz-in" type="text" autocomplete="off" value="'+escRz(p.nome||"")+'"></div>'
+    + '<div class="frz-row"><label for="prf_desc">Descrizione</label><textarea id="prf_desc" class="frz-ta big">'+escRz(p.descrizione||"")+'</textarea></div>'
+    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-prisave="'+escRz(p.id||"")+'">'+(p.id?"Salva modifiche":"Salva privilegio")+'</button>'
+    + '<button type="button" class="grimlink" data-priannulla>Annulla</button>'
+    + '<span class="priv-err" id="prf_err"></span></div>'
+    + '</div>';
+}
+
+/* il modulo per aggiungere/modificare una sottoclasse */
+function formSottoclasseHtml(s){
+  s=s||{};
+  return '<div class="privform">'
+    + '<div class="frz-grid">'
+    +   '<div class="frz-row"><label for="scf_nome">Nome della sottoclasse <span class="req">*</span></label><input id="scf_nome" class="frz-in" type="text" autocomplete="off" value="'+escRz(s.nome||"")+'"></div>'
+    +   '<div class="frz-row"><label for="scf_liv">Si sceglie al livello</label><input id="scf_liv" class="frz-in" type="number" min="1" max="20" value="'+escRz(String(s.livello_scelta||3))+'"></div>'
+    +   '<div class="frz-row"><label for="scf_ord">Ordine</label><input id="scf_ord" class="frz-in" type="number" value="'+escRz(String(s.ordine||0))+'"></div>'
+    + '</div>'
+    + '<div class="frz-row"><label for="scf_desc">Descrizione (facoltativa)</label><textarea id="scf_desc" class="frz-ta">'+escRz(s.descrizione||"")+'</textarea></div>'
+    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-scsave="'+escRz(s.id||"")+'">'+(s.id?"Salva modifiche":"Salva sottoclasse")+'</button>'
+    + '<button type="button" class="grimlink" data-scannulla>Annulla</button>'
+    + '<span class="priv-err" id="scf_err"></span></div>'
+    + '</div>';
+}
+
+function salvaPrivilegio(id){
+  if(!puoToccareSchede() || privSalvando) return;
+  var g=function(i){ var e=document.getElementById(i); return e?e.value:""; };
+  var err=document.getElementById("prf_err");
+  var nome=g("prf_nome").trim();
+  if(!nome){ if(err) err.textContent="Il nome è obbligatorio."; var n=document.getElementById("prf_nome"); if(n) n.focus(); return; }
+  var liv=parseInt(g("prf_liv"),10); if(!isFinite(liv)||liv<1) liv=1; if(liv>20) liv=20;
+  var ord=parseInt(g("prf_ord"),10); if(!isFinite(ord)) ord=0;
+  var sott=g("prf_app")||null;
+  var obj={ classe:privClasseSel, sottoclasse_id:sott, livello:liv, ordine:ord, nome:nome,
+    descrizione:(g("prf_desc").trim()||null) ? g("prf_desc") : null };
+  privSalvando=true;
+  var op = id ? sb.from("privilegi").update(Object.assign({modificato_il:new Date().toISOString()},obj)).eq("id",id).select()
+              : sb.from("privilegi").insert(obj).select();
+  op.then(function(res){
+    privSalvando=false;
+    if(res.error){ if(err) err.textContent="Non riesco a salvare: "+res.error.message; return; }
+    privForm=null;
+    caricaPrivilegi();
+  }, function(){ privSalvando=false; if(err) err.textContent="Non riesco a salvare: la rete non ha risposto."; });
+}
+
+function eliminaPrivilegio(id){
+  if(!puoToccareSchede() || !id) return;
+  sb.from("privilegi").delete().eq("id",id).then(function(res){
+    privDelId=null;
+    if(res.error){ console.warn("Eliminazione privilegio:", res.error.message); renderPrivManage(); return; }
+    caricaPrivilegi();
+  }, function(){ console.warn("Eliminazione privilegio: rete assente"); });
+}
+
+function salvaSottoclasse(id){
+  if(!puoToccareSchede() || privSalvando) return;
+  var g=function(i){ var e=document.getElementById(i); return e?e.value:""; };
+  var err=document.getElementById("scf_err");
+  var nome=g("scf_nome").trim();
+  if(!nome){ if(err) err.textContent="Il nome è obbligatorio."; var n=document.getElementById("scf_nome"); if(n) n.focus(); return; }
+  var liv=parseInt(g("scf_liv"),10); if(!isFinite(liv)||liv<1) liv=3; if(liv>20) liv=20;
+  var ord=parseInt(g("scf_ord"),10); if(!isFinite(ord)) ord=0;
+  var obj={ classe:privClasseSel, nome:nome, livello_scelta:liv, ordine:ord,
+    descrizione:(g("scf_desc").trim()||null) ? g("scf_desc") : null };
+  privSalvando=true;
+  var op = id ? sb.from("sottoclassi").update(Object.assign({modificato_il:new Date().toISOString()},obj)).eq("id",id).select()
+              : sb.from("sottoclassi").insert(obj).select();
+  op.then(function(res){
+    privSalvando=false;
+    if(res.error){ if(err) err.textContent="Non riesco a salvare: "+res.error.message; return; }
+    privForm=null;
+    caricaSottoclassi();
+  }, function(){ privSalvando=false; if(err) err.textContent="Non riesco a salvare: la rete non ha risposto."; });
+}
+
+function eliminaSottoclasse(id){
+  if(!puoToccareSchede() || !id) return;
+  // i privilegi collegati se ne vanno da soli (on delete cascade nel database)
+  sb.from("sottoclassi").delete().eq("id",id).then(function(res){
+    privScDelId=null;
+    if(res.error){ console.warn("Eliminazione sottoclasse:", res.error.message); renderPrivManage(); return; }
+    caricaSottoclassi(function(){ caricaPrivilegi(); });
+  }, function(){ console.warn("Eliminazione sottoclasse: rete assente"); });
+}
+
+/* agganci del pannello di gestione (delega su #privBlock) */
+(function(){
+  var pb=document.getElementById("privBlock"); if(!pb) return;
+  var sel=document.getElementById("privClasse");
+  if(sel) sel.addEventListener("change", function(){ privClasseSel=sel.value; privForm=null; privDelId=null; privScDelId=null; renderPrivManage(); });
+  pb.addEventListener("click", function(e){
+    var t=e.target.closest("button"); if(!t) return;
+    var a=function(n){ return t.hasAttribute(n) ? t.getAttribute(n) : null; };
+    if(a("data-scadd")!==null){ privForm={kind:"sott",id:null}; privDelId=null; privScDelId=null; renderPrivManage(); return; }
+    if(a("data-scedit")){ privForm={kind:"sott",id:a("data-scedit")}; privDelId=null; privScDelId=null; renderPrivManage(); return; }
+    if(a("data-scannulla")!==null){ privForm=null; renderPrivManage(); return; }
+    if(a("data-scsave")!==null){ salvaSottoclasse(a("data-scsave")||null); return; }
+    if(a("data-scdel")){ privScDelId=a("data-scdel"); privDelId=null; renderPrivManage(); return; }
+    if(a("data-scdelno")!==null){ privScDelId=null; renderPrivManage(); return; }
+    if(a("data-scdelyes")){ eliminaSottoclasse(a("data-scdelyes")); return; }
+    if(a("data-privadd")!==null){ privForm={kind:"priv",id:null,sott:a("data-privadd")||null}; privDelId=null; privScDelId=null; renderPrivManage(); return; }
+    if(a("data-priedit")){ var p=privilegioById(a("data-priedit")); privForm={kind:"priv",id:a("data-priedit"),sott:p?p.sottoclasse_id:null}; privDelId=null; privScDelId=null; renderPrivManage(); return; }
+    if(a("data-priannulla")!==null){ privForm=null; renderPrivManage(); return; }
+    if(a("data-prisave")!==null){ salvaPrivilegio(a("data-prisave")||null); return; }
+    if(a("data-pridel")){ privDelId=a("data-pridel"); privScDelId=null; renderPrivManage(); return; }
+    if(a("data-pridelno")!==null){ privDelId=null; renderPrivManage(); return; }
+    if(a("data-pridelyes")){ eliminaPrivilegio(a("data-pridelyes")); return; }
+  });
+})();
 
 /* la lista da sfogliare: tutti i talenti, filtrati per il testo cercato (nome) */
 function talentiFiltrati(){
@@ -3263,19 +3519,63 @@ function apriPriv(fonte){
   m.hidden=false;
 }
 function messaggioVuoto(fonte){
-  if(fonte==="classe") return (state.classes||[]).length
-    ? "I privilegi di classe compariranno qui, a scaglioni per livello. La Sottoclasse compare dal livello 3."
-    : "Scegli una classe per vederne i privilegi.";
+  if(fonte==="classe"){
+    if(!(state.classes||[]).length) return "Scegli una classe per vederne i privilegi.";
+    // se ci sono già privilegi da mostrare NON metto nessuna nota (sarebbe sopra
+    // la fisarmonica); il messaggio serve solo quando la lista è vuota
+    if(vociClasse().length) return "";
+    return privilegiCaricati
+      ? "I privilegi di questa classe non sono ancora stati inseriti dallo staff."
+      : "Carico i privilegi…";
+  }
   if(fonte==="razza")  return state.razza ? "" : "Scegli una razza per vederne i tratti.";
   if(fonte==="estasi") return "Estasi e Anedonie sono 4 slot legati ai lobi (frontale, parietale, temporale, occipitale). Le impostano solo i master.";
   return "";
 }
-/* per ora una voce d'esempio, per far vedere la fisarmonica; i dati veri arriveranno
-   dalla tabella dello staff (classe/sottoclasse), dai tratti della razza, o dalle
-   Estasi/Anedonie messe dai master */
+/* le voci della fisarmonica per ogni fonte. La RAZZA legge i tratti veri dal
+   grimorio (razza scelta); CLASSE/SOTTOCLASSE aspettano ancora la loro tabella
+   dati dello staff; le ESTASI le mettono solo i master. */
 function vociFonte(fonte){
-  if(fonte==="estasi") return [];   // solo master, in arrivo: mostro solo il messaggio
-  return [{ liv:1, nome:"Esempio di privilegio", desc:"Qui comparirà la descrizione.\nClicca la riga per aprirla o chiuderla.\n\nLe voci vere arriveranno nei prossimi passi." }];
+  if(fonte==="razza")  return vociRazza();
+  if(fonte==="classe") return vociClasse();
+  return [];   // estasi: solo master → mostro il messaggio
+}
+/* I privilegi delle classi del personaggio, presi dalla tabella staff, fino al
+   livello raggiunto in ciascuna classe. Per ora solo la classe base (le capacità
+   di sottoclasse arrivano col prossimo mattone). Nel multiclasse prefisso il nome
+   della classe così si capisce da dove viene ogni voce. */
+function vociClasse(){
+  var cls = state.classes||[];
+  if(!cls.length) return [];
+  var multi = cls.length>1;
+  var voci=[];
+  cls.forEach(function(c){
+    var liv = c.level||1;
+    var priv = PRIVILEGI.filter(function(p){
+      return p.classe===c.key && !p.sottoclasse_id && (p.livello||1)<=liv;
+    }).sort(function(a,b){ return (a.livello||1)-(b.livello||1) || (a.ordine||0)-(b.ordine||0); });
+    var nomeCl = (BY_KEY[c.key] && BY_KEY[c.key].name) || c.key;
+    priv.forEach(function(p){
+      voci.push({ liv:p.livello, nome:(multi ? nomeCl+" — " : "")+(p.nome||""), desc:p.descrizione||"" });
+    });
+  });
+  return voci;
+}
+/* I tratti della razza scelta, presi dal grimorio: un pannello a fisarmonica per
+   ogni campo meccanico compilato. Niente livello (i tratti di razza non scalano). */
+function vociRazza(){
+  var r = state.razza ? razzaById(state.razza) : null;
+  if(!r) return [];
+  function pieno(v){ return (v!=null && String(v).trim()!==""); }
+  var voci=[];
+  if(pieno(r.velocita))     voci.push({ nome:"Velocità di movimento", desc:String(r.velocita) });
+  if(pieno(r.scurovisione)) voci.push({ nome:"Scurovisione",          desc:String(r.scurovisione) });
+  if(pieno(r.abilita))      voci.push({ nome:"Abilità di razza",       desc:String(r.abilita) });
+  if(pieno(r.incantesimi))  voci.push({ nome:"Incantesimi di razza",   desc:String(r.incantesimi) });
+  if(pieno(r.dimensioni))   voci.push({ nome:"Dimensioni",             desc:String(r.dimensioni) });
+  if(pieno(r.tipologia))    voci.push({ nome:"Tipologia",              desc:String(r.tipologia) });
+  if(pieno(r.lingue))       voci.push({ nome:"Lingue",                 desc:String(r.lingue) });
+  return voci;
 }
 function fisarmonicaHtml(voci, vuoto){
   if(!voci || !voci.length) return '<div class="acc-vuoto">'+escRz(vuoto||"Ancora niente qui.")+'</div>';
@@ -4997,6 +5297,7 @@ function caricaControllo(){
       disegnaRuoli();
       document.getElementById("ruoliBlock").hidden=false;
     }
+    initPrivBlock();   // gestione privilegi di classe (solo supporto/sviluppatore)
   }).catch(function(e){
     ctrlCaricato=false;
     body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
@@ -5502,6 +5803,8 @@ function avvia(){
       aggiornaSalva();
       caricaRazze();            // l'indice delle razze dal database, per il pannello e il grimorio
       caricaTalenti();          // il mazzo dei talenti dal database (pronto per il Retro)
+      caricaSottoclassi();      // le sottoclassi (tabella staff), per il pop-up Classe del Retro
+      caricaPrivilegi();        // i privilegi di classe/sottoclasse (tabella staff)
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }

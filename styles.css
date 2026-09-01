@@ -1618,3 +1618,36 @@
     #wheel .cn2{ font-size:13px; }
     .hubname{ font-size:17px; }
   }
+
+/* ===== GESTIONE STAFF DEI PRIVILEGI (sezione nel Controllo) ===== */
+  .privbar{ display:flex; align-items:center; gap:10px; margin:0 0 16px; }
+  .privbar label{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .privbar select{ flex:0 1 260px; }
+  .privsec{ margin:0 0 22px; }
+  .privsec-tit{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
+    margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .priv-vuoto{ font-size:13px; color:var(--muted); font-style:italic; padding:6px 2px 10px; }
+  .privsott{ border:1px solid var(--line); border-radius:12px; background:var(--panel);
+    padding:12px 14px; margin:0 0 12px; }
+  .privsott-cap{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .privsott-nome{ font-weight:600; font-size:15px; color:var(--ink); }
+  .privriga{ display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:8px 4px; border-bottom:1px dashed var(--line); }
+  .priv-list{ margin-top:10px; }
+  .priv-list .privriga:last-of-type{ border-bottom:0; }
+  .priv-liv{ flex:0 0 auto; min-width:26px; font-size:12px; color:var(--gold); font-weight:600; }
+  .priv-nome{ flex:1 1 auto; color:var(--ink); font-size:14px; }
+  .priv-cmd{ flex:0 0 auto; display:flex; gap:8px; margin-left:auto; }
+  .priv-add{ display:inline-block; margin-top:8px; border:1px dashed var(--line); background:transparent;
+    color:var(--violet); border-radius:9px; padding:7px 12px; font-size:12.5px; cursor:pointer; }
+  .priv-add:hover{ border-color:var(--violet); }
+  .priv-delconf{ font-size:13px; color:var(--ink); background:var(--panel2); border:1px solid var(--danger);
+    border-radius:9px; padding:9px 12px; margin:6px 0; }
+  .priv-delbtns{ display:inline-flex; gap:8px; margin-left:10px; }
+  .priv-delbtns button{ border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:7px; padding:5px 12px; font-size:12px; cursor:pointer; }
+  .priv-delbtns button.danger{ border-color:var(--danger); color:var(--danger); }
+  .privform{ border:1px solid var(--violet); border-radius:12px; background:var(--panel2);
+    padding:14px 16px; margin:8px 0 12px; }
+  .priv-formbar{ display:flex; align-items:center; gap:12px; margin-top:12px; }
+  .priv-err{ color:var(--danger); font-size:12.5px; }

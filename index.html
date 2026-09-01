@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=70">
+<link rel="stylesheet" href="styles.css?v=71">
 </head>
 <body>
   <div class="wrap">
@@ -886,12 +886,27 @@
         </div>
         <div class="ctrlerr" id="ruoliErr"></div>
       </div>
+
+      <div id="privBlock" hidden>
+        <hr class="sep">
+        <div class="ctrlhead">
+          <div>
+            <h2>Privilegi di classe</h2>
+            <span class="ctrlnote">Scegli una classe, poi gestisci le sue sottoclassi e i suoi privilegi. Li vedono tutti nel Retro, alla voce «Classe e Sottoclasse».</span>
+          </div>
+        </div>
+        <div class="privbar">
+          <label for="privClasse">Classe</label>
+          <select id="privClasse" class="frz-in"></select>
+        </div>
+        <div id="privManage"></div>
+      </div>
     </div>
 
     </div><!-- /#sheet -->
 
   </div>
 
-<script src="app.js?v=70"></script>
+<script src="app.js?v=71"></script>
 </body>
 </html>

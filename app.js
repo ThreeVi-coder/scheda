@@ -825,6 +825,14 @@ function applicaDati(o){
   // Razza: si salva solo l'id (una stringa) della razza scelta nel grimorio.
   // Se la scheda e' vecchia o il dato e' scritto male, resta "nessuna razza".
   state.razza = (typeof o.razza==="string") ? o.razza : "";
+  // Sottoclassi: una per classe, mappa chiave-classe -> id sottoclasse (stringhe).
+  // Una scheda vecchia non ce l'ha; una modificata a mano potrebbe avere di tutto.
+  state.sottoclassi={};
+  if(o.sottoclassi && typeof o.sottoclassi==="object"){
+    for(var _k in o.sottoclassi){
+      if(BY_KEY[_k] && typeof o.sottoclassi[_k]==="string" && o.sottoclassi[_k]) state.sottoclassi[_k]=o.sottoclassi[_k];
+    }
+  }
   // Talenti scelti: due liste di id (stringhe), in ordine di scelta, piu' le
   // liste parallele delle caratteristiche scelte per i "+1 a scelta" e lo sblocco
   // dell'origine. Una scheda vecchia non ce le ha; una modificata a mano potrebbe
@@ -857,6 +865,7 @@ function applicaDati(o){
 function datiDaSalvare(){
   var o={}; SAVE_FIELDS.forEach(function(k){ o[k]=state[k]; });
   o.classes=state.classes; o.classeIniziale=classeTs(); o.xp=state.xp; o.name=elName.textContent.trim();
+  o.sottoclassi=state.sottoclassi;
   o.abilita=abilitaDaSalvare();
   o.testi=state.testi; o.stats=state.stats;
   o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
@@ -974,6 +983,7 @@ function schedaVuota(){
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
   state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
   state.razza="";
+  state.sottoclassi={};
   state.talenti=talentiVuoti();
   state.allineamento="";
   elName.textContent="";
@@ -1408,7 +1418,14 @@ function buildWheel(){
 }
 function markWheel(){
   var sl=document.querySelectorAll("#wheel .slice");
-  for(var i=0;i<sl.length;i++) sl[i].classList.toggle("sel", has(sl[i].getAttribute("data-key")));
+  for(var i=0;i<sl.length;i++){
+    var k=sl[i].getAttribute("data-key");
+    sl[i].classList.toggle("sel", has(k));
+    // "canpick": classe scelta che ha raggiunto il livello per la sottoclasse → pulsa
+    sl[i].classList.toggle("canpick", !soloLettura && classeEleggibileSott(k));
+    // già scelta una sottoclasse per questa classe → segno discreto
+    sl[i].classList.toggle("hassub", !!(state.sottoclassi && state.sottoclassi[k]));
+  }
 }
 function setHub(key){
   var hub=document.getElementById("hub");
@@ -3349,6 +3366,7 @@ var IMG_CLASSE={
 };
 function classePrimaria(){ return (state.classes && state.classes[0]) ? state.classes[0].key : null; }
 function immagineClasse(){ var c=classePrimaria(); if(!c) return null; var f=IMG_CLASSE[c]; return f ? (f+".png") : null; }
+function immagineClasseKey(key){ var f=IMG_CLASSE[key]; return f ? (f+".png") : null; }
 
 // punti di richiamo: ax/ay = posizione in % SULL'IMMAGINE; lato = da che parte va la parola.
 // Sono PER CLASSE (le pose cambiano): per ora un default; Threevi riempirà le
@@ -3551,15 +3569,39 @@ function vociClasse(){
   var voci=[];
   cls.forEach(function(c){
     var liv = c.level||1;
+    var subId = state.sottoclassi && state.sottoclassi[c.key];
     var priv = PRIVILEGI.filter(function(p){
-      return p.classe===c.key && !p.sottoclasse_id && (p.livello||1)<=liv;
-    }).sort(function(a,b){ return (a.livello||1)-(b.livello||1) || (a.ordine||0)-(b.ordine||0); });
+      if(p.classe!==c.key || (p.livello||1)>liv) return false;
+      if(!p.sottoclasse_id) return true;                 // privilegio di classe base
+      return subId && p.sottoclasse_id===subId;          // privilegio della sottoclasse scelta
+    }).sort(function(a,b){
+      return (a.livello||1)-(b.livello||1)
+        || ((a.sottoclasse_id?1:0)-(b.sottoclasse_id?1:0))   // a parità di livello, prima la base
+        || (a.ordine||0)-(b.ordine||0);
+    });
     var nomeCl = (BY_KEY[c.key] && BY_KEY[c.key].name) || c.key;
     priv.forEach(function(p){
       voci.push({ liv:p.livello, nome:(multi ? nomeCl+" — " : "")+(p.nome||""), desc:p.descrizione||"" });
     });
   });
   return voci;
+}
+/* le sottoclassi di una classe (dalla tabella staff), ordinate */
+function sottoclassiClasse(key){
+  return SOTTOCLASSI.filter(function(s){ return s.classe===key; })
+    .sort(function(a,b){ return (a.ordine||0)-(b.ordine||0) || String(a.nome||"").localeCompare(String(b.nome||"")); });
+}
+/* a che livello questa classe sceglie la sottoclasse (dal dato; default 3) */
+function livelloScelta(key){
+  var s=sottoclassiClasse(key)[0];
+  return (s && s.livello_scelta) ? s.livello_scelta : 3;
+}
+/* una classe del personaggio può scegliere la sottoclasse ora? (livello raggiunto
+   e almeno una sottoclasse esiste nella tabella) */
+function classeEleggibileSott(key){
+  var c=(state.classes||[]).filter(function(x){ return x.key===key; })[0];
+  if(!c) return false;
+  return (c.level||0) >= livelloScelta(key) && sottoclassiClasse(key).length>0;
 }
 /* I tratti della razza scelta, presi dal grimorio: un pannello a fisarmonica per
    ogni campo meccanico compilato. Niente livello (i tratti di razza non scalano). */
@@ -3969,7 +4011,127 @@ function openName(){
 }
 /* Solo la finestra del Nome tiene la barra del nome nitida sopra la sfocatura:
    lì serve vedere le modifiche mentre si fanno. Le altre la lasciano sotto. */
-function openClass(){ modalClass.hidden=false; setHub(null); if(personalizza) sincronizzaClasse(); }
+function openClass(){ modalClass.hidden=false; chiudiSottoclassi(true); setHub(null); if(personalizza) sincronizzaClasse(); }
+
+/* ===== SCELTA DELLA SOTTOCLASSE — la ruota dentro la finestra della classe =====
+   Si entra cliccando la propria classe quando ha raggiunto il livello. La ruota
+   delle classi resta "parcheggiata" a sinistra (mini, classe scelta in evidenza);
+   al centro una ruota che gira con le sottoclassi (solo la in-primo-piano ha il
+   nome, al centro: niente sovrapposizioni); a destra i dettagli e "Scegli". */
+var subKey=null, subList=[], subFocus=0;
+var SUB_CX=200, SUB_CY=200, SUB_RO=180, SUB_RI=64;
+function subPolar(r,deg){ var a=deg*Math.PI/180; return [SUB_CX+r*Math.cos(a), SUB_CY+r*Math.sin(a)]; }
+function subSector(a0,a1){
+  var p0=subPolar(SUB_RO,a0), p1=subPolar(SUB_RO,a1), p2=subPolar(SUB_RI,a1), p3=subPolar(SUB_RI,a0);
+  var large=(a1-a0)>180?1:0;
+  return "M"+p0[0].toFixed(1)+" "+p0[1].toFixed(1)
+    +"A"+SUB_RO+" "+SUB_RO+" 0 "+large+" 1 "+p1[0].toFixed(1)+" "+p1[1].toFixed(1)
+    +"L"+p2[0].toFixed(1)+" "+p2[1].toFixed(1)
+    +"A"+SUB_RI+" "+SUB_RI+" 0 "+large+" 0 "+p3[0].toFixed(1)+" "+p3[1].toFixed(1)+"Z";
+}
+function livelliSott(id){
+  var lv={}; PRIVILEGI.forEach(function(p){ if(p.sottoclasse_id===id) lv[p.livello||0]=1; });
+  return Object.keys(lv).map(Number).sort(function(a,b){return a-b;});
+}
+function apriSottoclassi(key){
+  if(!classeEleggibileSott(key)) return;
+  subKey=key; subList=sottoclassiClasse(key);
+  var scelto=state.sottoclassi[key];
+  subFocus=0;
+  for(var i=0;i<subList.length;i++){ if(subList[i].id===scelto){ subFocus=i; break; } }
+  // sfondo illustrato della classe (idea 1)
+  var illo=document.getElementById("svIllo"), img=immagineClasseKey(key);
+  illo.style.backgroundImage = img ? ("url('"+img+"')") : "";
+  // ruota delle classi parcheggiata: copia della ruota vera, classe scelta in evidenza (idea 4)
+  var park=document.getElementById("svPark");
+  park.innerHTML=document.getElementById("wheel").innerHTML;
+  park.querySelectorAll(".slice").forEach(function(sl){
+    if(sl.getAttribute("data-key")===key) sl.classList.add("parkhi"); else sl.classList.add("parkdim");
+  });
+  document.getElementById("svParkLab").innerHTML='<b>'+escRz((BY_KEY[key]&&BY_KEY[key].name)||key)+'</b>la tua classe';
+  buildSubWheel();
+  renderSub();
+  document.getElementById("subView").hidden=false;
+}
+function chiudiSottoclassi(subito){
+  var sv=document.getElementById("subView"); if(!sv) return;
+  if(subito || sv.hidden){ sv.hidden=true; sv.classList.remove("chiudo"); subKey=null; return; }
+  sv.classList.add("chiudo");
+  setTimeout(function(){ sv.hidden=true; sv.classList.remove("chiudo"); subKey=null; }, 250);
+}
+function buildSubWheel(){
+  var n=subList.length, step=360/n, gap=n>1?1.2:0, out="";
+  var ico=ICONS[subKey]||"";   // l'emblema della classe: un simbolo in ogni cella (niente puntino)
+  out+='<g class="subspin" id="subspin">';
+  for(var i=0;i<n;i++){
+    var mid=-90+i*step, a0=mid-step/2+gap, a1=mid+step/2-gap;
+    var tk=subPolar((SUB_RO+SUB_RI)/2, mid), tx=tk[0].toFixed(1), ty=tk[1].toFixed(1);
+    out+='<g class="swslice" data-i="'+i+'">'
+      +'<path class="subwedge" d="'+subSector(a0,a1)+'"/>'
+      +'<g class="swem" data-i="'+i+'" style="transform-box:view-box;transform-origin:'+tx+'px '+ty+'px;">'
+      +'<g class="emico" transform="translate('+tx+','+ty+') scale(1.15) translate(-12,-12)">'+ico+'</g>'
+      +'</g>'
+      +'</g>';
+  }
+  out+='</g>';
+  // puntatore fisso in cima: indica lo slot "in primo piano"
+  out+='<path d="M200 8 L211 26 L189 26 Z" fill="var(--gold)"/>';
+  document.getElementById("subwheel").innerHTML=out;
+  document.getElementById("subwheel").querySelectorAll(".swslice").forEach(function(g){
+    g.addEventListener("click", function(){ subFocus=+g.getAttribute("data-i"); renderSub(); });
+  });
+}
+function renderSub(){
+  var n=subList.length; if(!n) return;
+  var step=360/n, s=subList[subFocus], chosen=state.sottoclassi[subKey];
+  var spin=document.getElementById("subspin");
+  if(spin) spin.style.transform="rotate("+(-subFocus*step)+"deg)";
+  var wh=document.getElementById("subwheel");
+  // contro-rotazione degli emblemi: la ruota gira, i simboli restano dritti
+  wh.querySelectorAll(".swem").forEach(function(e){ e.style.transform="rotate("+(subFocus*step)+"deg)"; });
+  var slices=wh.querySelectorAll(".swslice");
+  slices.forEach(function(g,i){
+    g.classList.toggle("foc", i===subFocus);
+    g.classList.toggle("chosen", subList[i].id===chosen);
+  });
+  // centro: nome in primo piano (sempre orizzontale e leggibile)
+  var lvls=livelliSott(s.id);
+  document.getElementById("svHub").innerHTML='<div class="svh-name">'+escRz(s.nome||"")+'</div>'
+    +'<div class="svh-lv">'+(lvls.length?("liv. "+lvls.join(" · ")):"—")+'</div>'
+    +'<div class="svh-count">'+(subFocus+1)+" / "+n+'</div>';
+  // frecce coi nomi dei vicini
+  var prev=subList[(subFocus-1+n)%n], next=subList[(subFocus+1)%n];
+  document.getElementById("svPrevN").textContent = n>1 ? (prev.nome||"") : "";
+  document.getElementById("svNextN").textContent = n>1 ? (next.nome||"") : "";
+  // dettaglio
+  var gia = chosen===s.id;
+  document.getElementById("svDetail").innerHTML=
+     '<h3>'+escRz(s.nome||"")+'</h3>'
+    +'<p class="svd-lv">'+(lvls.length?("Privilegi ai livelli "+lvls.join(" · ")):"Privilegi in arrivo")+'</p>'
+    +'<div class="svd-lore">'+escRz(s.descrizione||"Nessuna descrizione.")+'</div>'
+    +'<button class="svd-choose'+(gia?' gia':'')+'" data-subchoose>'+(gia?'&#10003; &Egrave; la tua sottoclasse — togli':'Scegli questa sottoclasse')+'</button>'
+    +'<div class="svd-done" id="svDone">Sottoclasse impostata: appare nel pop-up Classe del Retro.</div>';
+  // briciole
+  var cr=chosen ? (function(){ for(var i=0;i<subList.length;i++) if(subList[i].id===chosen) return subList[i].nome; return ""; })() : "";
+  document.getElementById("svCrumb").innerHTML='<b>'+escRz((BY_KEY[subKey]&&BY_KEY[subKey].name)||subKey)+'</b> &rsaquo; '+(cr?escRz(cr):'<i>scegli una sottoclasse</i>');
+}
+function scegliSottoclasse(){
+  if(!subKey || !subList.length) return;
+  var id=subList[subFocus].id;
+  if(state.sottoclassi[subKey]===id) delete state.sottoclassi[subKey];   // ri-clic = togli
+  else state.sottoclassi[subKey]=id;
+  renderAll();          // aggiorna ruota (segni), Retro, salvataggio
+  renderSub();          // riflette la scelta
+  if(state.sottoclassi[subKey]===id){ var d=document.getElementById("svDone"); if(d){ d.classList.add("on"); } }
+}
+(function(){
+  var sv=document.getElementById("subView"); if(!sv) return;
+  document.getElementById("svPrev").addEventListener("click", function(){ var n=subList.length; if(n){ subFocus=(subFocus-1+n)%n; renderSub(); } });
+  document.getElementById("svNext").addEventListener("click", function(){ var n=subList.length; if(n){ subFocus=(subFocus+1)%n; renderSub(); } });
+  document.getElementById("svBack").addEventListener("click", chiudiSottoclassi);
+  document.getElementById("svClose").addEventListener("click", function(){ closeAll(); });
+  document.getElementById("svDetail").addEventListener("click", function(e){ if(e.target.closest("[data-subchoose]")) scegliSottoclasse(); });
+})();
 function openStats(){ document.getElementById("modalStats").hidden=false; renderStatsDialog(); if(personalizza) sincronizzaSel("stats"); }
 function openXp(){ modalXp.hidden=false; renderXpDialog(); if(personalizza) sincronizzaSel("xp"); }
 function openProf(){ modalProf.hidden=false; renderProfDialog(); if(personalizza) sincronizzaSel("prof"); }
@@ -3977,6 +4139,7 @@ function openTs(){ document.getElementById("modalTs").hidden=false; renderTsDial
 function openAbil(){ document.getElementById("modalAbil").hidden=false; renderAbilDialog(); if(personalizza) sincronizzaSel("abil"); }
 function openHp(){ document.getElementById("modalHp").hidden=false; renderHpDialog(); if(personalizza) sincronizzaSel("hp"); }
 function closeAll(){ modalName.hidden=true; modalClass.hidden=true; modalXp.hidden=true; modalProf.hidden=true;
+  chiudiSottoclassi(true);
   document.getElementById("modalStats").hidden=true;
   document.getElementById("modalTs").hidden=true;
   document.getElementById("modalAbil").hidden=true;
@@ -5019,7 +5182,13 @@ document.addEventListener("click", function(e){
 });
 
 var wheel=document.getElementById("wheel");
-wheel.addEventListener("click", function(e){ var s=e.target.closest(".slice"); if(s) addClass(s.getAttribute("data-key")); });
+wheel.addEventListener("click", function(e){
+  var s=e.target.closest(".slice"); if(!s) return;
+  var key=s.getAttribute("data-key");
+  // classe già scelta che ha raggiunto il livello della sottoclasse → entra nella scelta
+  if(!soloLettura && classeEleggibileSott(key)){ apriSottoclassi(key); return; }
+  addClass(key);
+});
 wheel.addEventListener("mouseover", function(e){ var s=e.target.closest(".slice"); if(s) setHub(s.getAttribute("data-key")); });
 wheel.addEventListener("mouseleave", function(){ setHub(null); });
 

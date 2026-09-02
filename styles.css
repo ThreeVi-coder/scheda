@@ -1561,6 +1561,9 @@
   #wheel .cn2{ fill:var(--muted); font-family:var(--ui); font-size:12px; font-weight:500; text-anchor:middle; pointer-events:none; }
   #wheel .slice:hover .cn2{ fill:var(--ink); }
   #wheel .slice.sel .cn2{ fill:var(--gold); }
+  #wheel .slice.canpick .sl{ stroke:var(--gold); stroke-width:2.5; animation:cpk 1.6s ease-in-out infinite; }
+  @keyframes cpk{ 0%,100%{ stroke-width:2.5; filter:none; } 50%{ stroke-width:4.5; } }
+  #wheel .slice.canpick .cn2{ fill:var(--gold); }
   #wheel .hubring{ fill:none; stroke:var(--line); stroke-width:1.5; }
   .wheelhub{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:36%; text-align:center; pointer-events:none; }
   .hubname{ font-family:'Cinzel',Georgia,serif; font-size:19px; font-weight:700; line-height:1.15; }
@@ -1651,3 +1654,83 @@
     padding:14px 16px; margin:8px 0 12px; }
   .priv-formbar{ display:flex; align-items:center; gap:12px; margin-top:12px; }
   .priv-err{ color:var(--danger); font-size:12.5px; }
+
+/* ===== SCELTA DELLA SOTTOCLASSE (strato dentro la finestra della classe) ===== */
+  #subView{ position:absolute; inset:0; background:var(--panel); border-radius:16px; z-index:5;
+    display:flex; flex-direction:column; overflow:hidden; animation:svIn .3s ease both; }
+  #subView.chiudo{ animation:svOut .26s ease both; }
+  @keyframes svIn{ from{ opacity:0; transform:translateX(26px); } to{ opacity:1; transform:translateX(0); } }
+  @keyframes svOut{ from{ opacity:1; transform:translateX(0); } to{ opacity:0; transform:translateX(26px); } }
+  /* l'illustrazione della classe sta DIETRO la ruota, CENTRATA nella zona sinistra
+     (left + ruota), non al centro pagina. Ricolorata oro come sul Retro, molto tenue. */
+  .sv-illo{ position:absolute; inset:0; background-repeat:no-repeat; background-position:center;
+    background-size:contain; opacity:.2;
+    filter:invert(1) sepia(.5) saturate(1.7) hue-rotate(2deg) brightness(1.02); mix-blend-mode:lighten; pointer-events:none; }
+  /* niente rettangoli di focus qui dentro (danno fastidio) — in ogni caso */
+  #subView :focus, #subView :focus-visible, #subView *:focus, #subView *:focus-visible,
+  #subwheel:focus, #subwheel *:focus{ outline:none !important; box-shadow:none !important; }
+  .sv-head{ position:relative; z-index:2; display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); }
+  .sv-back{ background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:8px;
+    padding:7px 12px; font-size:13px; cursor:pointer; }
+  .sv-back:hover{ border-color:var(--violet); color:var(--ink); }
+  .sv-crumb{ flex:1 1 auto; text-align:center; font-size:13px; color:var(--muted); }
+  .sv-crumb b{ color:var(--gold); font-weight:600; }
+  .sv-body{ position:relative; z-index:1; flex:1 1 auto; display:flex; align-items:stretch; gap:18px;
+    padding:18px 22px; overflow-y:auto; }
+  .sv-stage{ position:relative; flex:1 1 auto; min-width:0; display:flex; align-items:center; justify-content:center; gap:18px; }
+  .sv-left{ position:relative; z-index:1; flex:0 0 auto; width:130px; text-align:center; }
+  .sv-center{ position:relative; z-index:1; }
+  .sv-parkwrap{ width:120px; height:120px; margin:0 auto 8px; opacity:.9; }
+  .sv-park{ width:100%; height:100%; display:block; }
+  .sv-park .sl{ fill:var(--panel2); stroke:var(--line); stroke-width:1.5; }
+  .sv-park .cn2, .sv-park .em{ display:none; }
+  .sv-park .parkdim{ opacity:.22; }
+  .sv-park .parkhi .sl{ fill:rgba(224,177,94,.28); stroke:var(--gold); stroke-width:3; }
+  .sv-park .parkhi .em{ display:block; }
+  .sv-parklab{ font-size:12px; color:var(--muted); line-height:1.3; }
+  .sv-parklab b{ display:block; color:var(--gold); font-size:14px; font-weight:600; margin-bottom:2px; }
+  .sv-center{ flex:0 0 auto; width:300px; display:flex; flex-direction:column; align-items:center; }
+  .sv-wheelwrap{ position:relative; width:280px; height:280px; }
+  #subwheel{ width:100%; height:100%; display:block; }
+  #subwheel .subspin{ transition:transform .5s cubic-bezier(.22,.61,.36,1); transform-box:view-box; transform-origin:200px 200px; }
+  #subwheel .subwedge{ fill:var(--panel2); stroke:var(--line); stroke-width:1.5; cursor:pointer; outline:none; transition:fill .18s, stroke .18s; }
+  #subwheel .swslice:hover .subwedge{ fill:rgba(224,177,94,.10); }
+  #subwheel .swslice.chosen .subwedge{ fill:rgba(224,177,94,.14); stroke:var(--gold); }
+  #subwheel .swslice.foc .subwedge{ fill:rgba(224,177,94,.28); stroke:var(--gold); stroke-width:2; }
+  #subwheel .swem{ transition:transform .5s cubic-bezier(.22,.61,.36,1); }
+  #subwheel .swem .emico{ color:var(--muted); fill:none; stroke:currentColor; stroke-width:1.6;
+    stroke-linecap:round; stroke-linejoin:round; opacity:.6; transition:color .18s, opacity .18s; }
+  #subwheel .swslice:hover .swem .emico{ opacity:.9; }
+  #subwheel .swslice.chosen .swem .emico{ color:var(--gold); opacity:.85; }
+  #subwheel .swslice.foc .swem .emico{ color:var(--gold); opacity:1; }
+  .sv-hub{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:150px; height:150px;
+    border-radius:50%; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:8px; box-sizing:border-box; }
+  .sv-hub .svh-name{ font-family:'Cinzel',Georgia,serif; font-size:17px; color:var(--gold); line-height:1.15; }
+  .sv-hub .svh-lv{ font-size:10.5px; color:var(--muted); margin-top:5px; letter-spacing:.04em; }
+  .sv-hub .svh-count{ font-size:10px; color:var(--muted); margin-top:6px; opacity:.7; }
+  .sv-arrows{ display:flex; gap:10px; margin-top:14px; width:100%; }
+  .sv-arr{ flex:1 1 0; display:flex; align-items:center; gap:6px; justify-content:center; background:var(--panel2);
+    border:1px solid var(--line); color:var(--muted); border-radius:9px; padding:8px 6px; font-size:12px; cursor:pointer; min-width:0; }
+  .sv-arr:hover{ border-color:var(--violet); color:var(--ink); }
+  .sv-arr .sv-ar{ font-size:17px; line-height:1; color:var(--gold); }
+  .sv-arr .sv-nb{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #svNext{ justify-content:flex-end; } #svPrev{ justify-content:flex-start; }
+  .sv-detail{ flex:0 1 320px; min-width:0; align-self:stretch; display:flex; flex-direction:column;
+    background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .sv-detail h3{ margin:0 0 4px; font-family:'Cinzel',Georgia,serif; font-size:20px; color:var(--ink); }
+  .sv-detail .svd-lv{ font-size:12px; color:var(--gold); margin:0 0 12px; }
+  .sv-detail .svd-lore{ flex:1 1 auto; font-size:13.5px; color:var(--muted); line-height:1.6; overflow-y:auto;
+    max-height:180px; margin:0 0 14px; white-space:pre-wrap; }
+  .sv-detail .svd-choose{ background:var(--gold); color:#2a2410; border:0; border-radius:9px; padding:11px 14px;
+    font-size:14px; font-weight:600; cursor:pointer; }
+  .sv-detail .svd-choose:hover{ filter:brightness(1.07); }
+  .sv-detail .svd-choose.gia{ background:transparent; border:1px solid var(--gold); color:var(--gold); }
+  .sv-detail .svd-done{ margin-top:10px; font-size:12.5px; color:var(--gold); text-align:center; opacity:0; transition:opacity .3s; }
+  .sv-detail .svd-done.on{ opacity:1; }
+  @media (max-width:760px){
+    .sv-body{ flex-direction:column; }
+    .sv-stage{ flex-direction:column; }
+    .sv-left{ width:auto; }
+    .sv-detail{ flex:1 1 auto; align-self:stretch; }
+  }

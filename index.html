@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=71">
+<link rel="stylesheet" href="styles.css?v=72">
 </head>
 <body>
   <div class="wrap">
@@ -447,6 +447,34 @@
           <span class="cfmtxt">Togliere tutte le classi scelte? I livelli tornano da assegnare. L'azione non si pu&ograve; annullare.</span>
           <button class="btn-no" data-cancel="Class">Annulla</button>
           <button class="btn-yes" data-yes="Class">Azzera</button>
+        </div>
+
+        <div id="subView" hidden>
+          <div class="sv-head">
+            <button class="sv-back" id="svBack" type="button">&lsaquo; Torna alle classi</button>
+            <div class="sv-crumb" id="svCrumb"></div>
+            <button class="dlgx" id="svClose" type="button" aria-label="Chiudi">&times;</button>
+          </div>
+          <div class="sv-body">
+            <div class="sv-stage">
+              <div class="sv-illo" id="svIllo" aria-hidden="true"></div>
+              <div class="sv-left">
+                <div class="sv-parkwrap"><svg class="sv-park" id="svPark" viewBox="0 0 500 500"></svg></div>
+                <div class="sv-parklab" id="svParkLab"></div>
+              </div>
+              <div class="sv-center">
+                <div class="sv-wheelwrap">
+                  <svg id="subwheel" viewBox="0 0 400 400"></svg>
+                  <div class="sv-hub" id="svHub"></div>
+                </div>
+                <div class="sv-arrows">
+                  <button class="sv-arr" id="svPrev" type="button" aria-label="Precedente"><span class="sv-ar">&lsaquo;</span><span class="sv-nb" id="svPrevN"></span></button>
+                  <button class="sv-arr" id="svNext" type="button" aria-label="Successiva"><span class="sv-nb" id="svNextN"></span><span class="sv-ar">&rsaquo;</span></button>
+                </div>
+              </div>
+            </div>
+            <div class="sv-detail" id="svDetail"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -907,6 +935,6 @@
 
   </div>
 
-<script src="app.js?v=71"></script>
+<script src="app.js?v=72"></script>
 </body>
 </html>

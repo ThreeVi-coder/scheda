@@ -181,7 +181,7 @@
   .emgroup.mirror{ transform:scaleX(-1); }
   .emb{ display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .emb svg{ width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
-  .embsep{ width:1.5px; background:currentColor; opacity:.4; transform:rotate(18deg); flex:0 0 auto; border-radius:2px; }
+  .embsep{ width:14px; height:3px; align-self:center; background:currentColor; opacity:.4; flex:0 0 auto; border-radius:2px; }
   .header.neon .emgroup{ color:#fff; filter:drop-shadow(0 0 3px var(--name-color)) drop-shadow(0 0 7px var(--name-color)); }
 
   /* ============ RIGA PANNELLI ============ */
@@ -264,6 +264,7 @@
   .prow .hpmax{ font-size:clamp(19px, 10cqi, 26px); }
   .prow .difval{ font-size:clamp(26px, 14cqi, 38px); }
   .prow .cn{ font-size:clamp(19px, 13cqi, 30px); }
+  .prow .csub{ font-size:clamp(11px, 6.5cqi, 15px); }
   .prow .alname{ font-size:clamp(15px, 9.5cqi, 24px); }
   .prow .ce{ width:clamp(26px, 17.5cqi, 40px); height:clamp(26px, 17.5cqi, 40px); }
   .prow .cl{ font-size:clamp(13px, 7.5cqi, 17px); }
@@ -280,9 +281,13 @@
   .cls{ display:inline-flex; align-items:center; gap:11px; }
   .ce{ width:40px; height:40px; color:var(--violet); flex:0 0 auto; }
   .ce svg{ width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  /* nome della classe e, sotto, la sottoclasse; min-width:0 lascia che la
+     colonna si restringa e mandi a capo invece di sfondare il riquadro */
+  .cnwrap{ display:inline-flex; flex-direction:column; justify-content:center; min-width:0; }
   .cn{ font-family:'Cinzel',Georgia,serif; font-size:30px; font-weight:700; line-height:1.1; }
+  .csub{ font-family:'Cinzel',Georgia,serif; font-size:15px; font-weight:600; line-height:1.15; margin-top:1px; opacity:.9; overflow-wrap:anywhere; }
   .cl{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:700; color:var(--gold); align-self:flex-start; margin-top:3px; }
-  .cdiv{ width:1.5px; height:30px; background:var(--line); transform:rotate(18deg); border-radius:2px; margin:0 3px; flex:0 0 auto; }
+  .cdiv{ width:16px; height:2px; align-self:center; background:var(--line); border-radius:2px; margin:0 8px; flex:0 0 auto; }
   .cempty{ font-size:15px; color:var(--muted); font-style:italic; padding:6px 0; }
 
   /* ============ PANNELLO ALLINEAMENTO ============ */
@@ -445,8 +450,8 @@
   /* ============ PANNELLO BONUS DI COMPETENZA ============ */
   .ppanel{
     background:var(--panel); border:1px solid var(--line); border-radius:16px; position:relative;
-    padding:16px 68px 18px 22px; width:fit-content; max-width:100%; min-width:200px;
-    display:flex; flex-direction:column; justify-content:center;
+    padding:16px 22px 18px 22px; width:fit-content; max-width:100%; min-width:200px;
+    display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
   }
   .profval{ font-family:'Cinzel',Georgia,serif; font-size:44px; font-weight:700; color:var(--gold); line-height:1; margin-top:2px; }
 
@@ -1469,8 +1474,10 @@
   .apone{ display:inline-flex; align-items:center; gap:4px; }
   .apce{ width:36px; height:36px; color:var(--violet); flex:0 0 auto; display:inline-flex; }
   .apce svg{ width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  .apcnwrap{ display:inline-flex; flex-direction:column; align-items:flex-start; min-width:0; }
   .apcn{ font-family:'Cinzel',Georgia,serif; font-size:23px; font-weight:700; color:var(--ink); line-height:1.15; }
-  .apcl{ font-family:ui-monospace,Consolas,monospace; font-size:15px; color:var(--gold); }
+  .apcsub{ font-family:'Cinzel',Georgia,serif; font-size:13px; font-weight:600; color:var(--ink); line-height:1.15; }
+  .apcl{ font-family:ui-monospace,Consolas,monospace; font-size:15px; color:var(--gold); align-self:flex-start; }
   .apdiv{ width:1px; height:24px; background:var(--line); flex:0 0 auto; }
   .apnone{ font-size:12.5px; color:var(--muted); }
   /* la cornice di selezione e' DENTRO il riquadro (inset): non sborda sui vicini */

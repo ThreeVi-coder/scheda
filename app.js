@@ -215,6 +215,7 @@ var state={
   tsCompColor:"#E0B15E",     // colore degli esagoni accesi dei tiri salvezza
   tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
   nomiClasse:{},   // stile del nome, per ogni classe (chiave = classe)
+  sottoStili:{},   // stile della sottoclasse, per ogni classe (font/colore/formato suoi)
   simboli:{},      // colore e neon del simbolo, per ogni classe
   pfAttuali:null,   // punti ferita attuali (null = pieni, non ancora toccati)
   pfTemp:0,         // punti ferita temporanei (riserva che si consuma per prima)
@@ -798,7 +799,7 @@ function applicaDati(o){
 
   // Nomi e simboli per-classe. Se mancano (scheda vecchia), si ricava lo stile
   // dal vecchio nome unico e dal vecchio colore simbolo, cosi' l'aspetto non cambia.
-  state.nomiClasse={}; state.simboli={};
+  state.nomiClasse={}; state.simboli={}; state.sottoStili={};
   function validaNomeCl(v){
     if(!v || typeof v!=="object") return null;
     var d={}; for(var kk in DEF_NOMECL) d[kk]=DEF_NOMECL[kk];
@@ -813,6 +814,8 @@ function applicaDati(o){
     var v = o.nomiClasse && o.nomiClasse[c.key];
     var d = validaNomeCl(v) || validaNomeCl(vecchioNome);
     if(d) state.nomiClasse[c.key]=d;
+    var ds = validaNomeCl(o.sottoStili && o.sottoStili[c.key]);
+    if(ds) state.sottoStili[c.key]=ds;
     var sv = o.simboli && o.simboli[c.key];
     if(sv && typeof sv==="object"){
       var col = (typeof sv.colore==="string" && /^#[0-9a-fA-F]{6}$/.test(sv.colore)) ? sv.colore : state.classSymColor;
@@ -868,7 +871,7 @@ function datiDaSalvare(){
   o.sottoclassi=state.sottoclassi;
   o.abilita=abilitaDaSalvare();
   o.testi=state.testi; o.stats=state.stats;
-  o.nomiClasse=state.nomiClasse; o.simboli=state.simboli;
+  o.nomiClasse=state.nomiClasse; o.sottoStili=state.sottoStili; o.simboli=state.simboli;
   o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
   o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
   o.difScost=state.difScost;
@@ -981,7 +984,7 @@ function schedaVuota(){
   for(var k in DEF_NAME) state[k]=DEF_NAME[k];
   for(var j in DEF_XP) state[j]=DEF_XP[j];
   state.classes=[]; state.xp=0; state.testi=testiDiPartenza(); state.stats=statsDiPartenza();
-  state.nomiClasse={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
+  state.nomiClasse={}; state.sottoStili={}; state.simboli={}; state.classSymColor="#a78bfa"; sel.class=null;
   state.razza="";
   state.sottoclassi={};
   state.talenti=talentiVuoti();
@@ -1304,11 +1307,13 @@ function positionEmblems(){
 }
 function setNameSize(px){
   elName.style.fontSize=px+"px";
-  var em=Math.round(px*1.45)+"px", sep=Math.round(px*1.05)+"px";
+  var em=Math.round(px*1.45)+"px", sep=Math.round(px*0.42)+"px";
   var embs=document.querySelectorAll(".emb");
   for(var i=0;i<embs.length;i++){ embs[i].style.width=em; embs[i].style.height=em; }
+  // il separatore tra i simboli e' un trattino orizzontale: scala in LARGHEZZA
+  // col nome, l'altezza (sottile) la tiene il CSS
   var seps=document.querySelectorAll(".embsep");
-  for(var j=0;j<seps.length;j++){ seps[j].style.height=sep; }
+  for(var j=0;j<seps.length;j++){ seps[j].style.width=sep; seps[j].style.height=""; }
 }
 function fitName(){
   var row=document.getElementById("namerow");
@@ -1825,19 +1830,34 @@ function renderAbilDialog(){
   }).join("");
 }
 
+/* Il nome della sottoclasse scelta per una classe (stringa vuota se non \u00e8 stata
+   scelta, o se l'elenco delle sottoclassi non \u00e8 ancora arrivato dal database:
+   in quel caso ricompare da solo appena i dati si caricano). */
+function nomeSottoclasse(key){
+  var id = state.sottoclassi && state.sottoclassi[key];
+  if(!id) return "";
+  var s = sottoclasseById(id);
+  return s ? (s.nome||"") : "";
+}
 function renderPanel(){
   var line=document.getElementById("classLine");
   if(!state.classes.length){
     line.innerHTML='<span class="cempty">Nessuna classe scelta \u2014 apri la rotellina</span>';
     return;
   }
-  // il livello totale non si ripete qui: lo mostra gia' il riquadro Livello
+  // il livello totale non si ripete qui: lo mostra gia' il riquadro Livello.
+  // Nome della classe e, sotto, la sottoclasse scelta (se c'\u00e8); il livello
+  // resta in alto, allineato al nome. Vale per mono/bi/tri-classe.
   line.innerHTML=state.classes.map(function(c){
+    var sub=nomeSottoclasse(c.key);
+    var blocco='<span class="cnwrap"><span class="cn" data-clskey="'+c.key+'">'+BY_KEY[c.key].name+'</span>'
+      + (sub ? '<span class="csub" data-clskey="'+c.key+'">'+esc(sub)+'</span>' : '')
+      + '</span>';
     return '<span class="cls"><span class="ce" data-clskey="'+c.key+'">'+emblemSVG(c.key)+'</span>'
-      +'<span class="cn" data-clskey="'+c.key+'">'+BY_KEY[c.key].name+'</span><span class="cl">'+c.level+'</span></span>';
+      + blocco + '<span class="cl">'+c.level+'</span></span>';
   }).join('<span class="cdiv"></span>');
   applicaTesti();     // etichetta e livello (condivisi)
-  applicaClassi();    // nomi e simboli, uno per classe
+  applicaClassi();    // nomi, sottoclassi e simboli, uno per classe
 }
 
 /* ================= ALLINEAMENTO =================
@@ -1902,6 +1922,12 @@ function simboloDi(key){
   if(!state.simboli[key]) state.simboli[key]={ colore:(state.classSymColor||"#a78bfa"), neon:false };
   return state.simboli[key];
 }
+/* stile della sottoclasse: ha il suo font/colore/formato, indipendente dal nome
+   della classe (nasce dal modello, così una scheda senza questi dati non cambia). */
+function stileSotto(key){
+  if(!state.sottoStili[key]){ var d={}; for(var k in DEF_NOMECL) d[k]=DEF_NOMECL[k]; state.sottoStili[key]=d; }
+  return state.sottoStili[key];
+}
 /* Risolve gli agganci al nome e restituisce i valori veri di una scritta */
 function risolviTesto(s){
   return {
@@ -1932,6 +1958,10 @@ function pitturaSimbolo(el, s){
 function applicaClassi(){
   var nomi=document.querySelectorAll("#classLine .cn");
   for(var i=0;i<nomi.length;i++){ var k=nomi[i].getAttribute("data-clskey"); if(k) pitturaTesto(nomi[i], stileNome(k)); }
+  // la sottoclasse ha il SUO stile (font/colore/formato), personalizzabile a
+  // parte dal nome della classe; è solo più piccola (misura dal CSS).
+  var sub=document.querySelectorAll("#classLine .csub");
+  for(var s=0;s<sub.length;s++){ var ks=sub[s].getAttribute("data-clskey"); if(ks) pitturaTesto(sub[s], stileSotto(ks)); }
   var simb=document.querySelectorAll("#classLine .ce");
   for(var j=0;j<simb.length;j++){ var q=simb[j].getAttribute("data-clskey"); if(q) pitturaSimbolo(simb[j], simboloDi(q)); }
 }
@@ -2669,7 +2699,7 @@ function caricaSottoclassi(poi){
     sottoclassiCaricate=true;
     var nuova = SOTTOCLASSI.map(function(s){ return s.id+":"+(s.modificato_il||s.nome||""); }).join("|");
     var cambiato = nuova!==sottoclassiSig; sottoclassiSig=nuova;
-    if(cambiato) aggiornaVistePriv();
+    if(cambiato){ aggiornaVistePriv(); if(document.getElementById("classLine")) renderPanel(); }
     if(typeof poi==="function") poi();
   }, function(e){ sottoclassiCaricate=true; console.warn("Sottoclassi:", e); if(typeof poi==="function") poi(); });
 }
@@ -3723,6 +3753,7 @@ function targetValido(dove,key){
   if(!key) return false;
   if(dove==="class"){
     if(key==="etClasse"||key==="lvCl") return true;
+    if(key.indexOf("sotto:")===0){ var ks=key.slice(6); return state.classes.some(function(c){ return c.key===ks; }) && !!nomeSottoclasse(ks); }
     var k=key.slice(5);
     if(key.indexOf("nome:")===0||key.indexOf("simb:")===0) return state.classes.some(function(c){ return c.key===k; });
     return false;
@@ -3736,6 +3767,7 @@ function primoTarget(dove){
 }
 function stileTarget(key){
   if(key.indexOf("nome:")===0) return stileNome(key.slice(5));
+  if(key.indexOf("sotto:")===0) return stileSotto(key.slice(6));
   if(key.indexOf("simb:")===0) return simboloDi(key.slice(5));
   return state.testi[key];
 }
@@ -3745,6 +3777,7 @@ function metaTarget(dove,key){
     if(key==="etClasse") return {nome:"Etichetta"};
     if(key==="lvCl") return {nome:"Livello", sub:"vale per tutte le classi"};
     if(key.indexOf("nome:")===0) return {nome:"Nome", sub:BY_KEY[key.slice(5)].name};
+    if(key.indexOf("sotto:")===0) return {nome:"Sottoclasse", sub:nomeSottoclasse(key.slice(6))};
     return {nome:"Simbolo", sub:BY_KEY[key.slice(5)].name, symkey:key.slice(5)};
   }
   return {nome: TESTO[key] ? TESTO[key].nome : key};
@@ -3761,7 +3794,7 @@ function stileInline(s){
 }
 /* Ridipinge il foglio in base al tipo di scritta toccata */
 function applicaModifiche(key){
-  if(key.indexOf("nome:")===0 || key.indexOf("simb:")===0) applicaClassi(); else applicaTesti();
+  if(key.indexOf("nome:")===0 || key.indexOf("sotto:")===0 || key.indexOf("simb:")===0) applicaClassi(); else applicaTesti();
 }
 function disegnaAntepSel(dove){
   var host=document.getElementById(ASP_CONT[dove].ant); if(!host) return;
@@ -3775,9 +3808,14 @@ function disegnaAntepSel(dove){
       state.classes.forEach(function(c,i){
         if(i) html+='<span class="apdiv"></span>';
         var sy=simboloDi(c.key);
+        var sub=nomeSottoclasse(c.key);
+        var nomeBlocco='<span class="apcnwrap">'
+          +'<span class="apcn apcls'+(sel.class==="nome:"+c.key?" sel":"")+'" data-ctarget="nome:'+c.key+'" style="'+stileInline(stileNome(c.key))+'">'+esc(BY_KEY[c.key].name)+'</span>'
+          +(sub?'<span class="apcsub apcls'+(sel.class==="sotto:"+c.key?" sel":"")+'" data-ctarget="sotto:'+c.key+'" style="'+stileInline(stileSotto(c.key))+'">'+esc(sub)+'</span>':'')
+          +'</span>';
         html+='<span class="apone">'
           +'<span class="apce apcls'+(sel.class==="simb:"+c.key?" sel":"")+'" data-ctarget="simb:'+c.key+'" style="color:'+sy.colore+';'+(sy.neon?"filter:drop-shadow(0 0 3px "+sy.colore+") drop-shadow(0 0 7px "+sy.colore+");":"")+'">'+emblemSVG(c.key)+'</span>'
-          +'<span class="apcn apcls'+(sel.class==="nome:"+c.key?" sel":"")+'" data-ctarget="nome:'+c.key+'" style="'+stileInline(stileNome(c.key))+'">'+esc(BY_KEY[c.key].name)+'</span>'
+          +nomeBlocco
           +'<span class="apcl apcls'+(sel.class==="lvCl"?" sel":"")+'" data-ctarget="lvCl" style="'+stileInline(state.testi.lvCl)+'">'+c.level+'</span>'
           +'</span>';
       });
@@ -3825,7 +3863,7 @@ function costruisciComandi(dove){
     return;
   }
 
-  var perClasse = key.indexOf("nome:")===0;
+  var perNome = key.indexOf("nome:")===0, perSotto = key.indexOf("sotto:")===0;
   var rF=document.createElement("div"); rF.className="cctl"+(s.legaFont?" locked":"");
   rF.innerHTML='<span class="clab">Font</span><select class="cfont"></select>'+lockBtn("font",s.legaFont); host.appendChild(rF);
   var fsel=rF.querySelector(".cfont");
@@ -3846,9 +3884,12 @@ function costruisciComandi(dove){
     +fmts.map(function(f){ return '<button type="button" data-cf="'+f[0]+'"'+(eff[f[0]]?' class="on"':'')+'>'+f[1]+'</button>'; }).join("")
     +'</span>'+lockBtn("fmt",s.legaFmt); host.appendChild(rM);
 
-  if(perClasse){
+  if(perNome){
     var rU=document.createElement("div"); rU.innerHTML='<button type="button" class="cbig" id="cUnifNomi">Uniforma tutti i nomi a questo</button>'; host.appendChild(rU);
     document.getElementById("cUnifNomi").onclick=function(){ state.classes.forEach(function(c){ var t=stileNome(c.key); for(var kk in DEF_NOMECL) t[kk]=s[kk]; }); applicaClassi(); disegnaAntepSel(dove); aggiornaSalva(); };
+  } else if(perSotto){
+    var rUs=document.createElement("div"); rUs.innerHTML='<button type="button" class="cbig" id="cUnifSotto">Uniforma tutte le sottoclassi a questa</button>'; host.appendChild(rUs);
+    document.getElementById("cUnifSotto").onclick=function(){ state.classes.forEach(function(c){ if(!nomeSottoclasse(c.key)) return; var t=stileSotto(c.key); for(var kk in DEF_NOMECL) t[kk]=s[kk]; }); applicaClassi(); disegnaAntepSel(dove); aggiornaSalva(); };
   }
 
   rM.querySelectorAll(".cfmt [data-cf]").forEach(function(b){

@@ -13,7 +13,7 @@ create table if not exists public.talenti (
   benefici           text,            -- cosa da' il talento (testo a mano)
   prerequisiti       text,            -- es. "livello 4", "Forza 13+"
   immagine_url       text,            -- illustrazione della carta
-  tipo_asi           text not null default 'nessuno',  -- 'nessuno' | 'fisso' | 'scelta'
+  tipo_asi           text not null default 'nessuno',  -- 'nessuno' | 'fisso' | 'scelta' | 'asi'
   asi_caratteristica text,            -- quale caratteristica se tipo_asi = 'fisso'
   fonte              text,            -- da quale manuale/homebrew viene
   ordine             integer     not null default 0,
@@ -37,11 +37,13 @@ alter table public.talenti add column if not exists creato_da          uuid     
 alter table public.talenti add column if not exists creato_il          timestamptz not null default now();
 alter table public.talenti add column if not exists modificato_il      timestamptz not null default now();
 
--- Un solo tipo di +1 ammesso: nessuno / fisso / scelta. Ricreo il
--- vincolo ad ogni lancio cosi' resta allineato anche se lo cambio.
+-- Tipi ammessi: nessuno / fisso (+1 su una stat scritta) / scelta (+1 su una
+-- stat scelta dal player) / asi (il talento "Aumento di Caratteristica": DUE
+-- punti, +2 su una o +1 su due). Ricreo il vincolo ad ogni lancio cosi' resta
+-- allineato anche se lo cambio.
 alter table public.talenti drop constraint if exists talenti_tipo_asi_valido;
 alter table public.talenti add  constraint talenti_tipo_asi_valido
-  check (tipo_asi in ('nessuno','fisso','scelta'));
+  check (tipo_asi in ('nessuno','fisso','scelta','asi'));
 
 -- ordina il mazzo in fretta (alfabetico, con l'ordine manuale come spareggio)
 create index if not exists talenti_nome_idx on public.talenti (ordine, nome);

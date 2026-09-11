@@ -14,3 +14,4 @@ sql/06_talenti_full.sql
 
 # Inserimento dei privilegi di classe/sottoclasse: idem, testi dei manuali.
 sql/09_privilegi_seed.sql
+sql/10_privilegi_base_seed.sql

@@ -1279,6 +1279,17 @@
 
   .tcard-rip{ align-self:center; font-size:11px; color:var(--violet); font-style:italic; }
 
+  /* riscontro breve "Aggiunto ✓" dentro il mazzo: appare e sparisce da solo,
+     senza chiudere la finestra (si può continuare a scegliere/sfogliare) */
+  .tal-toast{ position:fixed; left:50%; bottom:42px; transform:translate(-50%,12px);
+    z-index:200; pointer-events:none;
+    background:rgba(20,24,20,.94); color:#dff3e3; border:1px solid rgba(119,201,154,.55);
+    border-radius:999px; padding:9px 18px; font-family:var(--ui); font-size:13.5px; font-weight:600;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    opacity:0; transition:opacity .22s ease, transform .22s ease; }
+  .tal-toast.on{ opacity:1; transform:translate(-50%,0); }
+  .tal-toast-ok{ color:#77c99a; font-weight:800; margin-right:4px; }
+
   /* ============ TABELLA DEI TALENTI SCELTI (Retro) ============
      Volutamente SEMPLICE: un unico riquadro tabellare, righe divise da linee
      sottili, due intestazioni di sezione (Talento Origine / Talento). */
@@ -1306,6 +1317,15 @@
     border:1px solid var(--line); border-radius:6px; padding:3px 6px; cursor:pointer; max-width:130px; }
   .tt-asi-pick.tt-asi-manca select{ border-color:var(--danger); color:var(--danger); }
   .tt-asi-pick select:focus{ outline:none; border-color:var(--violet); }
+  /* talento ASI (+2/+1+1): quando è modificabile il selettore a due menù va su
+     una riga tutta sua SOTTO il nome, allineato a sinistra, così non sfora mai
+     il riquadro (né su schermo largo né stretto). Nome e ✕ restano in alto. */
+  .tt-row-asi{ flex-wrap:wrap; row-gap:9px; }
+  .tt-row-asi .tt-nome{ order:1; }
+  .tt-row-asi .tt-x{ order:2; }
+  .tt-row-asi .tt-asi{ order:3; flex-basis:100%; justify-content:flex-start; text-align:left; min-width:0; }
+  .tt-asi-multi{ flex-wrap:wrap; gap:6px 8px; }
+  .tt-asi-multi select{ flex:0 1 auto; min-width:0; max-width:100%; }
   .bcalc-tal{ color:#77c99a; font-style:normal; }
   .tt-ghost{ cursor:default; }
   .tt-ghost .tt-nome{ font-style:italic; color:var(--muted); }

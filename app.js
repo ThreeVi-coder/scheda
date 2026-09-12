@@ -99,8 +99,6 @@ var CLASSE_DATI={
     abilTra:["arcani","inganno","storia","intimidazione","indagini","natura","religione"],
     armi:"semplici", strumenti:"", multi:"armatura Leggera" }
 };
-function datiClasse(k){ return CLASSE_DATI[k] || null; }
-
 /* Soglie di esperienza per livello (manuale base) */
 var XP_TABLE=[0,300,900,2700,6500,14000,23000,34000,48000,64000,85000,100000,120000,140000,165000,195000,225000,265000,305000,355000];
 function levelFromXP(xp){
@@ -411,11 +409,6 @@ function pbUsati(){
   return t;
 }
 function pbLiberi(){ return PB_TOTALE - pbUsati(); }
-function pbValido(){
-  return CARATT.every(function(c){ var v=state.stats.base[c.k]; return v>=PB_MIN && v<=PB_MAX; })
-      && pbUsati()<=PB_TOTALE;
-}
-
 
 function statsWarn(t){
   var el=document.getElementById("statsWarn"); if(!el) return;
@@ -453,7 +446,6 @@ function statPiuAlta(){
   CARATT.forEach(function(c){ if(totaleCar(c.k)>val){ val=totaleCar(c.k); top=c.k; } });
   return top;
 }
-function slLato(){ return "sx"; }   // le stat stanno sui due lati: il parametro non serve piu\u0027
 
 function slVertice(idx, frazione){
   // l'esagono sta al centro; le etichette lo circondano su entrambi i lati
@@ -464,7 +456,7 @@ function slVertice(idx, frazione){
 
 function renderStats(){
   var host=document.getElementById("statsLine");
-  var lato=slLato(), out="", wires="", lbls="";
+  var out="", wires="", lbls="";
   var col=state.statsColor||"#7C5CFF";
   var alta=statPiuAlta();
 
@@ -2458,8 +2450,6 @@ function nomeCaratt(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) re
    due talenti d'origine (regola della casa) */
 function razzaUmano(){ var r = state.razza ? razzaById(state.razza) : null; return !!(r && (r.nome||"").trim().toLowerCase()==="umano"); }
 function slotOrigine(){ return razzaUmano() ? 2 : 1; }
-/* un talento è già scelto (in una delle due sezioni)? */
-function talGiaScelto(id){ return state.talenti.origine.indexOf(id)>=0 || state.talenti.normali.indexOf(id)>=0; }
 
 /* ===== FORMA E NORMALIZZAZIONE DEI TALENTI SCELTI =====
    Oltre alle due liste di id (origine/normali, in ordine di scelta) teniamo due
@@ -2580,21 +2570,6 @@ function spazioAsi(k, sez, idx){
   var altriTal = bonusCarTalenti(k) - contribSlot;        // talenti ESCLUSO questo slot
   return Math.max(0, 20 - (pre + altriTal));
 }
-/* il player deve ancora completare la scelta di un talento ATTIVO ("+1 a scelta"
-   o "asi")? */
-function asiDaScegliere(){
-  var t=state.talenti; if(!t) return false;
-  function manca(id, sez, idx){
-    var x=talentoById(id); if(!x) return false;
-    if(x.tipo_asi==="scelta") return !asiScelta(sez,idx);
-    if(x.tipo_asi==="asi")    return asiIncompleto(asiRaw(sez,idx));
-    return false;
-  }
-  var out=false;
-  (t.normali||[]).forEach(function(id,i){ if(manca(id, "normali", i)) out=true; });
-  if(t.sbloccoOrigine && (t.origine||[]).length && manca(t.origine[0], "origine", 0)) out=true;
-  return out;
-}
 
 /* sigla breve di una caratteristica (FOR/DES/...) */
 function siglaCar(k){ for(var i=0;i<CARATT.length;i++){ if(CARATT[i].k===k) return CARATT[i].sigla; } return String(k||"").toUpperCase(); }
@@ -2616,7 +2591,6 @@ function analizzaPrereq(txt){
 /* ===== Ciò che la scheda SA del personaggio (per i prerequisiti) ===== */
 var CLASSI_INCANTATORI=["bardo","chierico","druido","mago","stregone","warlock","paladino","ranger","artificere","artificiere"];
 function classiPossedute(){ return (state.classes||[]).map(function(c){ return c.key; }); }
-function razzaFamigliaPg(){ var r=state.razza?razzaById(state.razza):null; return (r && r.famiglia) ? String(r.famiglia).trim().toLowerCase() : null; }
 /* Le "famiglie" di razza che i prerequisiti dei talenti richiedono DAVVERO
    (es. elfo, nano, tiefling…), ricavate dai dati caricati: così quando lo staff
    tagga una razza sceglie una parola che combacia con ciò che i controlli cercano

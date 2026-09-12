@@ -211,6 +211,7 @@ var state={
   statsEvid:true,   // illumina la stat piu' alta sul grafico
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
   transizione:"morph",    // come si passa tra Caratteristiche e Abilita': "morph" | "dissolvenza"
+  retroVista:"hub",       // pagina Retro: "hub" (illustrazione con richiami) | "elenco" (immagine a lato + lista a tendina)
   classSymColor:"#a78bfa",   // colore di partenza dei simboli (seme per i nuovi)
   tsCompColor:"#E0B15E",     // colore degli esagoni accesi dei tiri salvezza
   tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
@@ -710,7 +711,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza","allineamento"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","retroVista","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza","allineamento"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -739,6 +740,7 @@ function applicaDati(o){
   }
   state.statsEvid = (o.statsEvid!==false);   // acceso di default
   if(state.transizione!=="dissolvenza") state.transizione="morph";   // solo valori validi, default morph
+  if(state.retroVista!=="elenco") state.retroVista="hub";            // solo valori validi, default hub
   if(typeof o.statsColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.statsColor)) state.statsColor=o.statsColor;
   else state.statsColor="#7C5CFF";
   if(typeof o.classSymColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.classSymColor)) state.classSymColor=o.classSymColor;
@@ -3656,9 +3658,155 @@ var HUB_PUNTI_CLASSE={
 };
 function puntiHub(){ var c=classePrimaria(); return (c && HUB_PUNTI_CLASSE[c]) || HUB_PUNTI_DEFAULT; }
 
+var retroAnimando=false;   // è in corso l'animazione di passaggio tra le due viste?
+/* accende il bottone giusto dell'interruttore in alto a sinistra */
+function aggiornaBtnRetro(){
+  var modo=document.getElementById("retroModo"); if(!modo) return;
+  Array.prototype.forEach.call(modo.querySelectorAll(".rm-btn"), function(b){
+    var on = b.getAttribute("data-retrovista")===state.retroVista;
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", on?"true":"false");
+  });
+}
 function renderRetro(){
-  renderRetroHub();
+  aggiornaBtnRetro();
+  // durante l'animazione NON tocco il layout (la sequenza lo gestisce da sé)
+  if(retroAnimando){ renderTaltab(); return; }
+  var hub=document.getElementById("retroHub");
+  var elenco = (state.retroVista==="elenco");
+  if(hub) hub.classList.toggle("modo-elenco", elenco);
+  renderRetroHub();                 // l'immagine serve in entrambe le viste
+  var box=document.getElementById("hubElenco");
+  if(box){ box.hidden=!elenco; if(elenco) box.innerHTML=elencoRetroHtml(); else box.innerHTML=""; }
   renderTaltab();   // se il pop-up Talenti è aperto, ne aggiorno il contenuto
+}
+/* cambia la vista della pagina Retro (illustrazione ⇄ elenco), ANIMATA, e la salva */
+function cambiaRetroVista(v){
+  v = (v==="elenco") ? "elenco" : "hub";
+  if(state.retroVista===v || retroAnimando) return;
+  state.retroVista=v; aggiornaBtnRetro();
+  var hub=document.getElementById("retroHub");
+  if(!hub){ renderRetro(); aggiornaSalva(); return; }
+  retroAnimando=true;
+  animaRetro(hub, v, function(){ retroAnimando=false; renderRetro(); });
+  aggiornaSalva();
+}
+/* ===== ANIMAZIONE del passaggio tra illustrazione ed elenco =====
+   Verso elenco: i richiami (linee/scritte/punti) si RITIRANO e spariscono
+   coordinati; poi l'immagine SCIVOLA a sinistra rimpicciolendosi (tecnica FLIP);
+   infine l'elenco compare a CASCATA. Verso hub: il contrario. */
+function animaRetro(hub, verso, done){
+  var img=document.getElementById("hubImg"), box=document.getElementById("hubElenco");
+  var haImg = !!(img && !img.hidden && img.getBoundingClientRect().width>2);
+  if(verso==="elenco"){
+    ritiraRichiami("out", function(){
+      var first = haImg ? img.getBoundingClientRect() : null;   // immagine grande (layout hub)
+      hub.classList.add("modo-elenco");
+      if(box){ box.hidden=false; box.innerHTML=elencoRetroHtml(); }
+      if(haImg){ flipImg(img, first, img.getBoundingClientRect()); }  // scivola+rimpicciolisce
+      var casc = box ? cascataElenco(box) : 0;                   // le voci compaiono a cascata
+      setTimeout(done, Math.max(560, casc+60));                  // fine dopo la cascata (per non tagliarla)
+    });
+  } else {
+    var first = haImg ? img.getBoundingClientRect() : null;     // immagine piccola (layout elenco)
+    if(box) box.classList.add("he-uscita");                     // la lista sfuma via
+    setTimeout(function(){
+      hub.classList.remove("modo-elenco");
+      if(box){ box.hidden=true; box.classList.remove("he-uscita"); box.innerHTML=""; }
+      renderRetroHub();                                         // ridisegna immagine + richiami (nella posa finale)
+      if(haImg){ flipImg(img, first, img.getBoundingClientRect()); }  // scivola a destra ingrandendosi
+      ritiraRichiami("set-out");                                // parto coi richiami ritirati…
+      setTimeout(function(){ ritiraRichiami("in"); }, 300);     // …e li disegno quando l'immagine è quasi arrivata
+      setTimeout(done, 800);                                    // dopo che i richiami si sono ridisegnati
+    }, 200);
+  }
+}
+/* FLIP: fa apparire l'immagine dov'era (first) e la anima fino a dov'è ora (last) */
+function flipImg(img, first, last){
+  if(!first || !last || !last.width) return;
+  var dx=first.left-last.left, dy=first.top-last.top, sx=first.width/last.width, sy=first.height/last.height;
+  img.style.transformOrigin="top left";
+  img.style.transition="none";
+  img.style.transform="translate("+dx+"px,"+dy+"px) scale("+sx+","+sy+")";
+  void img.offsetWidth;                                        // fisso la partenza
+  img.style.transition="transform .5s cubic-bezier(.22,.61,.36,1)";
+  img.style.transform="none";
+  setTimeout(function(){ img.style.transition=""; img.style.transform=""; img.style.transformOrigin=""; }, 540);
+}
+/* le voci dell'elenco entrano una dopo l'altra (cascata). Torna la durata totale. */
+function cascataElenco(box){
+  var els=box.querySelectorAll(".he-tit, .acc-riga, .acc-vuoto");
+  var step=34, dur=340, n=els.length;
+  Array.prototype.forEach.call(els, function(el,i){
+    el.style.animation="none"; el.style.opacity="0";
+    void el.offsetWidth;
+    el.style.animation="heCad "+dur+"ms ease "+(i*step)+"ms both";
+  });
+  return (n>0 ? (n-1)*step : 0) + dur;
+}
+/* ritira/disegna i richiami dell'hub (linee, scritte, punti), coordinati.
+   "out" = si ritirano e spariscono; "set-out" = stato ritirato istantaneo;
+   "in" = si ridisegnano. */
+function ritiraRichiami(mode, cb){
+  var svg=document.getElementById("hubLines"), punti=document.getElementById("hubPunti");
+  var linee = svg ? svg.querySelectorAll(".hub-linea") : [];
+  var ets   = punti ? punti.querySelectorAll(".hub-et") : [];
+  var dots  = punti ? punti.querySelectorAll(".hp-dot") : [];
+  var DUR=300;
+  function lung(l){ var v; try{ v=l.getTotalLength(); }catch(e){ v=500; } return v||500; }
+  function slitta(e){ return e.classList.contains("lato-sx") ? 18 : -18; }   // verso il pallino (centro)
+  if(mode==="out"){
+    Array.prototype.forEach.call(linee, function(l,i){ var L=lung(l); l.style.strokeDasharray=L; l.style.strokeDashoffset="0"; void l.getBoundingClientRect();
+      l.style.transition="stroke-dashoffset "+DUR+"ms ease "+(i*10)+"ms"; l.style.strokeDashoffset=L; });
+    Array.prototype.forEach.call(ets, function(e){ e.style.transition="opacity "+DUR+"ms ease, transform "+DUR+"ms ease";
+      e.style.opacity="0"; e.style.transform="translateX("+slitta(e)+"px)"; });
+    Array.prototype.forEach.call(dots, function(d,i){ d.style.animation="none";
+      d.style.transition="transform "+DUR+"ms ease "+(i*10)+"ms, opacity "+DUR+"ms ease "+(i*10)+"ms";
+      d.style.transform="scale(0)"; d.style.opacity="0"; });
+    if(cb) setTimeout(cb, DUR+50);
+  } else if(mode==="set-out"){
+    Array.prototype.forEach.call(linee, function(l){ var L=lung(l); l.style.transition="none"; l.style.strokeDasharray=L; l.style.strokeDashoffset=L; });
+    Array.prototype.forEach.call(ets, function(e){ e.style.transition="none"; e.style.opacity="0"; e.style.transform="translateX("+slitta(e)+"px)"; });
+    Array.prototype.forEach.call(dots, function(d){ d.style.transition="none"; d.style.animation="none"; d.style.transform="scale(0)"; d.style.opacity="0"; });
+  } else if(mode==="in"){
+    Array.prototype.forEach.call(linee, function(l,i){ var L=lung(l); l.style.strokeDasharray=L; l.style.strokeDashoffset=L; void l.getBoundingClientRect();
+      l.style.transition="stroke-dashoffset "+DUR+"ms ease "+(i*12)+"ms"; l.style.strokeDashoffset="0"; });
+    Array.prototype.forEach.call(ets, function(e,i){ void e.getBoundingClientRect();
+      e.style.transition="opacity "+DUR+"ms ease "+(80+i*12)+"ms, transform "+DUR+"ms ease "+(80+i*12)+"ms"; e.style.opacity="1"; e.style.transform="none"; });
+    Array.prototype.forEach.call(dots, function(d,i){ d.style.transition="transform "+DUR+"ms ease "+(i*12)+"ms, opacity "+DUR+"ms ease "+(i*12)+"ms"; d.style.transform="scale(1)"; d.style.opacity="1"; });
+    setTimeout(function(){   // ripulisco gli inline: tornano hover e pulsazione normali
+      Array.prototype.forEach.call(linee, function(l){ l.style.transition=""; l.style.strokeDasharray=""; l.style.strokeDashoffset=""; });
+      Array.prototype.forEach.call(ets,   function(e){ e.style.transition=""; e.style.opacity=""; e.style.transform=""; });
+      Array.prototype.forEach.call(dots,  function(d){ d.style.transition=""; d.style.transform=""; d.style.opacity=""; d.style.animation=""; });
+      if(cb) cb();
+    }, DUR+140);
+  }
+}
+/* le voci dei talenti scelti (origine + normali, in ordine): solo nome + benefici,
+   per l'elenco rapido della pagina Retro */
+function vociTalenti(){
+  var out=[], t=state.talenti||{};
+  (t.origine||[]).concat(t.normali||[]).forEach(function(id){
+    var x=talentoById(id); if(!x) return;
+    out.push({ nome:x.nome||"Senza nome", desc:x.benefici||"" });
+  });
+  return out;
+}
+/* l'ELENCO a tendina della pagina Retro: tutte le voci scelte, divise per fonte
+   (Razza, Talenti, Classe, Sottoclasse, Estasi). Riusa la fisarmonica dei pop-up. */
+function elencoRetroHtml(){
+  function gruppo(tit, voci, vuoto){
+    var n = voci ? voci.length : 0;
+    var corpo = n ? fisarmonicaHtml(voci) : '<div class="acc-vuoto">'+escRz(vuoto)+'</div>';
+    return '<section class="he-gruppo"><h3 class="he-tit">'+escRz(tit)+' <span class="he-cont">'+n+'</span></h3>'+corpo+'</section>';
+  }
+  var cls=vociClasse();
+  var base=cls.filter(function(v){ return !v.sub; });
+  var sub=cls.filter(function(v){ return v.sub; });
+  return gruppo("Tratti di Razza", vociRazza(), "Nessun tratto: scegli una razza nel Grimorio.")
+    + gruppo("Talenti", vociTalenti(), "Nessun talento scelto.")
+    + gruppo("Classe", base, "Scegli una classe nella scheda.")
+    + gruppo("Sottoclasse", sub, "Nessuna sottoclasse scelta (o non ancora al livello giusto).")
+    + gruppo("Estasi ed Anedonie", [], "In arrivo.");
 }
 
 function renderRetroHub(){
@@ -3843,7 +3991,7 @@ function vociClasse(){
     });
     var nomeCl = (BY_KEY[c.key] && BY_KEY[c.key].name) || c.key;
     priv.forEach(function(p){
-      voci.push({ liv:p.livello, nome:(multi ? nomeCl+" — " : "")+(p.nome||""), desc:p.descrizione||"" });
+      voci.push({ liv:p.livello, nome:(multi ? nomeCl+" — " : "")+(p.nome||""), desc:p.descrizione||"", sub:!!p.sottoclasse_id });
     });
   });
   return voci;
@@ -3922,6 +4070,10 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
   var retro=document.getElementById("pagRetro");
   if(retro){
     retro.addEventListener("click", function(e){
+      // l'interruttore Illustrazione/Elenco
+      var sw=e.target.closest("[data-retrovista]"); if(sw){ cambiaRetroVista(sw.getAttribute("data-retrovista")); return; }
+      // una tendina dell'elenco si apre/chiude
+      var cap=e.target.closest(".acc-cap"); if(cap && e.target.closest("#hubElenco")){ cap.parentNode.classList.toggle("aperta"); return; }
       var f=e.target.closest(".hub-punto,.hub-et,.hub-mbtn"); if(f){ apriPriv(f.getAttribute("data-fonte")); }
     });
     retro.addEventListener("mouseover", function(e){ var f=e.target.closest(".hub-punto,.hub-et"); if(f) evidenziaFonte(f.getAttribute("data-fonte"), true); });

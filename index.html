@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=74">
+<link rel="stylesheet" href="styles.css?v=75">
 </head>
 <body>
   <div class="wrap">
@@ -219,6 +219,14 @@
 
     <div class="pagina pag-retro" id="pagRetro" hidden>
       <div class="retro-wrap">
+        <div class="retro-modo" id="retroModo" role="group" aria-label="Vista della pagina">
+          <button type="button" class="rm-btn" data-retrovista="hub" aria-label="Illustrazione con i richiami" title="Illustrazione">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
+          </button>
+          <button type="button" class="rm-btn" data-retrovista="elenco" aria-label="Elenco delle voci scelte" title="Elenco">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="9" y1="7" x2="20" y2="7"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="17" x2="20" y2="17"/><circle cx="4.5" cy="7" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="17" r="1.2"/></svg>
+          </button>
+        </div>
         <div class="retro-head">
           <div class="pagseg-eyebrow">Retro</div>
           <div class="pagseg-tit">Tratti &amp; Talenti</div>
@@ -231,6 +239,7 @@
             <div class="hub-vuoto" id="hubVuoto">Scegli una classe per vederne l&rsquo;illustrazione e i privilegi.</div>
           </div>
           <div class="hub-mobile" id="hubMobile"></div>
+          <div class="hub-elenco" id="hubElenco" hidden></div>
         </div>
       </div>
     </div>
@@ -935,6 +944,6 @@
 
   </div>
 
-<script src="app.js?v=74"></script>
+<script src="app.js?v=75"></script>
 </body>
 </html>

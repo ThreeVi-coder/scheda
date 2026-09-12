@@ -1978,10 +1978,15 @@ var razzeSig="";          // "firma" dell'elenco: per non ridisegnare (e interro
 var grimStage="cover";    // "cover" = copertina del tomo | "aperto" = libro aperto (indice + pagina)
 var grimGirando=false;    // sto voltando pagina: non ripeto l'animazione
 
-/* piccolo scudo: i testi delle razze sono liberi, quindi vanno messi in pagina
-   senza che eventuali < > & rompano o iniettino HTML */
-function escRz(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
-  return c==="&"?"&amp;":c==="<"?"&lt;":c===">"?"&gt;":"&quot;"; }); }
+/* Piccolo scudo: qualsiasi testo libero (i nomi dei personaggi scritti dai
+   giocatori, i testi di razze e talenti inseriti dallo staff) va disinnescato
+   prima di finire nella pagina, così eventuali < > & " ' non rompono il layout
+   né iniettano HTML. È il disinnescatore UNICO di tutta la scheda. */
+function esc(s){
+  return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
 
 function caricaRazze(poi){
   sb.from("razze").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
@@ -2016,10 +2021,10 @@ function renderRazzaPanel(){
     // razza salvata ma non in cache: sto caricando, o è stata cancellata dal grimorio
     html = razzeCaricate ? '<span class="rzghost">Razza non più nel grimorio</span>' : '<span class="rzghost">…</span>';
   } else if(!r){
-    html = '<span class="rztag">'+escRz(RZ_FRASE)+'</span>';
+    html = '<span class="rztag">'+esc(RZ_FRASE)+'</span>';
   } else {
-    html = '<span class="rzname">'+escRz(r.nome||"Senza nome")+'</span>'
-         + (r.tipologia ? '<span class="rztipo">'+escRz(r.tipologia)+'</span>' : '');
+    html = '<span class="rzname">'+esc(r.nome||"Senza nome")+'</span>'
+         + (r.tipologia ? '<span class="rztipo">'+esc(r.tipologia)+'</span>' : '');
   }
   razzaRest = html;
   // se il mouse sta scrivendo l'invito, non gli scippo la scritta: aggiorno solo il "riposo"
@@ -2150,9 +2155,9 @@ function renderGrimorio(){
   } else {
     if(razzaVista && !razzaById(razzaVista)) razzaVista=null;   // NON forzo la prima: si può stare "a pagina vuota"
     list.innerHTML=cerca+testa+RAZZE.map(function(r){
-      return '<button class="grimitem'+((r.id===razzaVista && grimMode==="view")?' on':'')+'" type="button" data-razza="'+escRz(r.id)+'" data-nome="'+escRz((r.nome||"").toLowerCase())+'">'
-        + escRz(r.nome||"Senza nome")
-        + (r.tipologia?'<span class="git-tipo">'+escRz(r.tipologia)+'</span>':'')
+      return '<button class="grimitem'+((r.id===razzaVista && grimMode==="view")?' on':'')+'" type="button" data-razza="'+esc(r.id)+'" data-nome="'+esc((r.nome||"").toLowerCase())+'">'
+        + esc(r.nome||"Senza nome")
+        + (r.tipologia?'<span class="git-tipo">'+esc(r.tipologia)+'</span>':'')
         + '</button>';
     }).join('');
     // ripristino il testo cercato e riapplico il filtro dopo il ridisegno
@@ -2215,26 +2220,26 @@ function paginaRazza(r){
   // da solo, e la lore mantiene gli a-capo scritti grazie al pre-wrap)
   function riga(lab, val, delay){
     return '<li class="grimriga"'+(delay?' style="animation-delay:'+delay+'s"':'')+'>'
-      + '<span class="gl-lab">'+lab+':</span><span class="gl-val">'+escRz(val)+'</span></li>';
+      + '<span class="gl-lab">'+lab+':</span><span class="gl-val">'+esc(val)+'</span></li>';
   }
   function pieno(v){ return (v!=null && String(v).trim()!==""); }
   function tratt(v){ return pieno(v) ? v : "—"; }   // "—" quando il campo e' vuoto
 
   var img = r.immagine_url
-    ? '<img src="'+escRz(r.immagine_url)+'" alt="'+escRz(r.nome||"")+'" loading="lazy">'
+    ? '<img src="'+esc(r.immagine_url)+'" alt="'+esc(r.nome||"")+'" loading="lazy">'
     : '<div class="ph">Nessuna<br>illustrazione</div>';
   var scelta = (state.razza===r.id);
   var ass = soloLettura ? ''
-    : '<div class="grimass"><button class="btn-assegna'+(scelta?' gia':'')+'" type="button" data-assegna="'+escRz(r.id)+'">'
+    : '<div class="grimass"><button class="btn-assegna'+(scelta?' gia':'')+'" type="button" data-assegna="'+esc(r.id)+'">'
       + (scelta ? '✓ È la tua razza — togli' : 'Scegli questa razza') + '</button></div>';
   // comandi dello staff: Modifica / Elimina (con conferma per l'eliminazione)
   var staff = !puoToccareSchede() ? ''
     : (grimDelId===r.id
-        ? '<div class="grimstaff"><div class="grimdelconf">Eliminare «'+escRz(r.nome||"questa razza")+'» dal grimorio? Non si può annullare.'
+        ? '<div class="grimstaff"><div class="grimdelconf">Eliminare «'+esc(r.nome||"questa razza")+'» dal grimorio? Non si può annullare.'
           + '<div class="grimdelbtns"><button type="button" data-delno>Annulla</button>'
-          + '<button type="button" class="danger" data-delyes="'+escRz(r.id)+'">Elimina</button></div></div></div>'
-        : '<div class="grimstaff"><button class="grimlink" type="button" data-edit="'+escRz(r.id)+'">Modifica</button>'
-          + '<button class="grimlink danger" type="button" data-del="'+escRz(r.id)+'">Elimina</button></div>');
+          + '<button type="button" class="danger" data-delyes="'+esc(r.id)+'">Elimina</button></div></div></div>'
+        : '<div class="grimstaff"><button class="grimlink" type="button" data-edit="'+esc(r.id)+'">Modifica</button>'
+          + '<button class="grimlink danger" type="button" data-del="'+esc(r.id)+'">Elimina</button></div>');
 
   // Le sei "fisse" (attributi del bestiario) ci sono sempre, con "—" se vuote;
   // le "lunghe" compaiono solo se compilate.
@@ -2251,7 +2256,7 @@ function paginaRazza(r){
   // il ritardo serve solo quando è attiva la classe .entra, altrimenti è inerte
   var righe=voci.map(function(v,i){ return riga(v[0], v[1], (0.85 + i*0.07).toFixed(2)); }).join("");
 
-  return '<div class="grimtitle"><h3 class="grimnome">'+escRz(r.nome||"Senza nome")+'</h3><div class="grimrule"></div></div>'
+  return '<div class="grimtitle"><h3 class="grimnome">'+esc(r.nome||"Senza nome")+'</h3><div class="grimrule"></div></div>'
     + '<div class="grimcols">'
     +   '<div class="grimillu">'+img+ass+staff+'</div>'
     +   '<div class="grimtesto"><ul class="grimlista">'+righe+'</ul></div>'
@@ -2264,23 +2269,23 @@ function paginaRazza(r){
 function campoText(id, lab, ph, req, val){
   return '<div class="frz-row"><label for="'+id+'">'+lab+(req?' <span class="req">*</span>':'')+'</label>'
     + '<input class="frz-in" id="'+id+'" type="text" autocomplete="off"'+(ph?' placeholder="'+ph+'"':'')
-    + ' value="'+escRz(val||"")+'"></div>';
+    + ' value="'+esc(val||"")+'"></div>';
 }
 function campoArea(id, lab, big, val){
   return '<div class="frz-row"><label for="'+id+'">'+lab+'</label>'
-    + '<textarea class="frz-ta'+(big?' big':'')+'" id="'+id+'">'+escRz(val||"")+'</textarea></div>';
+    + '<textarea class="frz-ta'+(big?' big':'')+'" id="'+id+'">'+esc(val||"")+'</textarea></div>';
 }
 /* Il campo FAMIGLIA come scelta guidata: input con suggerimenti (datalist) presi
    dalle famiglie che i prerequisiti dei talenti usano davvero, più un elenco sotto
    per ricordarle. Resta testo libero (si può scrivere anche una famiglia nuova). */
 function campoFamigliaRazza(val){
   var fams=famiglieRichieste();
-  var opts=fams.map(function(f){ return '<option value="'+escRz(f)+'"></option>'; }).join("");
+  var opts=fams.map(function(f){ return '<option value="'+esc(f)+'"></option>'; }).join("");
   var sugg = fams.length
-    ? '<div class="frz-hint" style="margin:5px 0 0">Famiglie usate dai prerequisiti: <b>'+escRz(fams.join(", "))+'</b>. Usane una di queste (es. Drow &rarr; <b>elfo</b>).</div>'
+    ? '<div class="frz-hint" style="margin:5px 0 0">Famiglie usate dai prerequisiti: <b>'+esc(fams.join(", "))+'</b>. Usane una di queste (es. Drow &rarr; <b>elfo</b>).</div>'
     : '<div class="frz-hint" style="margin:5px 0 0">Scrivi la famiglia in minuscolo (es. elfo, nano). Serve ai prerequisiti dei talenti sulle varianti.</div>';
   return '<div class="frz-row"><label for="frz_famiglia">Famiglia (per i prerequisiti)</label>'
-    + '<input class="frz-in" id="frz_famiglia" type="text" autocomplete="off" list="frz_fam_lista" placeholder="Es. elfo, nano, gnomo&hellip;" value="'+escRz(val||"")+'">'
+    + '<input class="frz-in" id="frz_famiglia" type="text" autocomplete="off" list="frz_fam_lista" placeholder="Es. elfo, nano, gnomo&hellip;" value="'+esc(val||"")+'">'
     + '<datalist id="frz_fam_lista">'+opts+'</datalist>'
     + sugg + '</div>';
 }
@@ -2295,7 +2300,7 @@ function formRazzaHtml(){
   var r = grimEditId ? (razzaById(grimEditId) || {}) : {};
   var mod = !!grimEditId;
   var src = immagineCorrente();
-  var prev = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  var prev = src ? '<img src="'+esc(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
   return '<div class="grimform">'
     + '<h3>'+(mod?'Modifica razza':'Aggiungi una razza')+'</h3>'
     + '<p class="frz-hint">Solo il <b>Nome</b> è obbligatorio. I campi lunghi (Abilità, Aspetto, Lore) non hanno limiti. '+(mod?'Le modifiche sono visibili a tutti.':'Una volta salvata, la razza compare nel grimorio per tutti.')+'</p>'
@@ -2338,7 +2343,7 @@ function apriFormRazza(id){
 function aggiornaAnteprimaImg(){
   var prev=document.getElementById("frz_prev"); if(!prev) return;
   var src=immagineCorrente();
-  prev.innerHTML = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  prev.innerHTML = src ? '<img src="'+esc(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
   var rm=document.getElementById("frz_rm"); if(rm) rm.hidden = !src;
 }
 
@@ -2427,7 +2432,7 @@ function eliminaRazza(id){
    MAZZO: una carta al centro, frecce ai lati per sfogliare (ordine alfabetico),
    ricerca in alto. Qui c'è solo lo SFOGLIO e la gestione staff (mattone 2); la
    selezione con la bruciatura e il +1 in scheda arriveranno dopo (mattone 3).
-   (Riuso escRz e le classi del modulo grimform/frz-* nella loro versione scura.) */
+   (Riuso esc e le classi del modulo grimform/frz-* nella loro versione scura.) */
 var TALENTI=[], talentiCaricate=false, talentiSig="";
 var PRIVILEGI=[], privilegiCaricati=false, privilegiSig="";       // i privilegi di classe/sottoclasse (tabella staff)
 var SOTTOCLASSI=[], sottoclassiCaricate=false, sottoclassiSig=""; // l'elenco delle sottoclassi (tabella staff)
@@ -2790,7 +2795,7 @@ function initPrivBlock(){
   if(!puoToccareSchede()){ pb.hidden=true; return; }
   var menuClasse=document.getElementById("privClasse");
   if(menuClasse && !menuClasse.options.length){
-    menuClasse.innerHTML = CLASSES.map(function(c){ return '<option value="'+escRz(c.key)+'">'+escRz(c.name)+'</option>'; }).join("");
+    menuClasse.innerHTML = CLASSES.map(function(c){ return '<option value="'+esc(c.key)+'">'+esc(c.name)+'</option>'; }).join("");
   }
   if(!privClasseSel) privClasseSel = (CLASSES[0] && CLASSES[0].key) || "";
   if(menuClasse) menuClasse.value=privClasseSel;
@@ -2806,7 +2811,7 @@ function renderPrivManage(){
   var html="";
 
   // --- SOTTOCLASSI ---
-  html += '<div class="privsec"><div class="privsec-tit">Sottoclassi di '+escRz(nomeCl)+'</div>';
+  html += '<div class="privsec"><div class="privsec-tit">Sottoclassi di '+esc(nomeCl)+'</div>';
   if(privForm && privForm.kind==="sott" && !privForm.id) html += formSottoclasseHtml(null);
   var scs=sottoclassiDi(k);
   if(!scs.length && !(privForm && privForm.kind==="sott" && !privForm.id))
@@ -2814,19 +2819,19 @@ function renderPrivManage(){
   scs.forEach(function(s){
     if(privForm && privForm.kind==="sott" && privForm.id===s.id){ html += formSottoclasseHtml(s); return; }
     html += '<div class="privsott">'
-      + '<div class="privsott-cap"><span class="privsott-nome">'+escRz(s.nome||"")+'</span>'
-      + '<span class="priv-liv">sceglie al '+escRz(String(s.livello_scelta||3))+'&deg; livello</span>'
-      + '<span class="priv-cmd"><button type="button" class="grimlink" data-scedit="'+escRz(s.id)+'">Modifica</button>'
-      + '<button type="button" class="grimlink danger" data-scdel="'+escRz(s.id)+'">Elimina</button></span></div>';
+      + '<div class="privsott-cap"><span class="privsott-nome">'+esc(s.nome||"")+'</span>'
+      + '<span class="priv-liv">sceglie al '+esc(String(s.livello_scelta||3))+'&deg; livello</span>'
+      + '<span class="priv-cmd"><button type="button" class="grimlink" data-scedit="'+esc(s.id)+'">Modifica</button>'
+      + '<button type="button" class="grimlink danger" data-scdel="'+esc(s.id)+'">Elimina</button></span></div>';
     if(privScDelId===s.id)
-      html += '<div class="priv-delconf">Eliminare la sottoclasse «'+escRz(s.nome||"")+'» e tutti i suoi privilegi? Non si può annullare.'
+      html += '<div class="priv-delconf">Eliminare la sottoclasse «'+esc(s.nome||"")+'» e tutti i suoi privilegi? Non si può annullare.'
         + '<span class="priv-delbtns"><button type="button" data-scdelno>Annulla</button>'
-        + '<button type="button" class="danger" data-scdelyes="'+escRz(s.id)+'">Elimina</button></span></div>';
+        + '<button type="button" class="danger" data-scdelyes="'+esc(s.id)+'">Elimina</button></span></div>';
     // privilegi di questa sottoclasse
     html += '<div class="priv-list">';
     if(privForm && privForm.kind==="priv" && !privForm.id && privForm.sott===s.id) html += formPrivilegioHtml(null, s.id);
     privDiSott(s.id).forEach(function(p){ html += rigaPrivilegioHtml(p); });
-    html += '<button type="button" class="priv-add" data-privadd="'+escRz(s.id)+'">+ Aggiungi privilegio a questa sottoclasse</button>';
+    html += '<button type="button" class="priv-add" data-privadd="'+esc(s.id)+'">+ Aggiungi privilegio a questa sottoclasse</button>';
     html += '</div></div>';
   });
   html += '<button type="button" class="priv-add" data-scadd>+ Aggiungi sottoclasse</button>';
@@ -2848,14 +2853,14 @@ function renderPrivManage(){
 /* una riga di privilegio (in modifica diventa il modulo) */
 function rigaPrivilegioHtml(p){
   if(privForm && privForm.kind==="priv" && privForm.id===p.id) return formPrivilegioHtml(p, p.sottoclasse_id||null);
-  var s='<div class="privriga"><span class="priv-liv">'+escRz(String(p.livello||1))+'&deg;</span>'
-    + '<span class="priv-nome">'+escRz(p.nome||"")+'</span>'
-    + '<span class="priv-cmd"><button type="button" class="grimlink" data-priedit="'+escRz(p.id)+'">Modifica</button>'
-    + '<button type="button" class="grimlink danger" data-pridel="'+escRz(p.id)+'">Elimina</button></span></div>';
+  var s='<div class="privriga"><span class="priv-liv">'+esc(String(p.livello||1))+'&deg;</span>'
+    + '<span class="priv-nome">'+esc(p.nome||"")+'</span>'
+    + '<span class="priv-cmd"><button type="button" class="grimlink" data-priedit="'+esc(p.id)+'">Modifica</button>'
+    + '<button type="button" class="grimlink danger" data-pridel="'+esc(p.id)+'">Elimina</button></span></div>';
   if(privDelId===p.id)
-    s += '<div class="priv-delconf">Eliminare «'+escRz(p.nome||"")+'»? Non si può annullare.'
+    s += '<div class="priv-delconf">Eliminare «'+esc(p.nome||"")+'»? Non si può annullare.'
       + '<span class="priv-delbtns"><button type="button" data-pridelno>Annulla</button>'
-      + '<button type="button" class="danger" data-pridelyes="'+escRz(p.id)+'">Elimina</button></span></div>';
+      + '<button type="button" class="danger" data-pridelyes="'+esc(p.id)+'">Elimina</button></span></div>';
   return s;
 }
 
@@ -2865,17 +2870,17 @@ function formPrivilegioHtml(p, sottDefault){
   var k=privClasseSel;
   var appartiene = (p.sottoclasse_id!==undefined ? p.sottoclasse_id : sottDefault) || "";
   var opts='<option value="">— Classe base —</option>' + sottoclassiDi(k).map(function(s){
-    return '<option value="'+escRz(s.id)+'"'+(appartiene===s.id?' selected':'')+'>'+escRz(s.nome||"")+'</option>';
+    return '<option value="'+esc(s.id)+'"'+(appartiene===s.id?' selected':'')+'>'+esc(s.nome||"")+'</option>';
   }).join("");
   return '<div class="privform">'
     + '<div class="frz-grid">'
     +   '<div class="frz-row"><label for="prf_app">Appartiene a</label><select id="prf_app" class="frz-in">'+opts+'</select></div>'
-    +   '<div class="frz-row"><label for="prf_liv">Livello</label><input id="prf_liv" class="frz-in" type="number" min="1" max="20" value="'+escRz(String(p.livello||1))+'"></div>'
-    +   '<div class="frz-row"><label for="prf_ord">Ordine (a parità di livello)</label><input id="prf_ord" class="frz-in" type="number" value="'+escRz(String(p.ordine||0))+'"></div>'
+    +   '<div class="frz-row"><label for="prf_liv">Livello</label><input id="prf_liv" class="frz-in" type="number" min="1" max="20" value="'+esc(String(p.livello||1))+'"></div>'
+    +   '<div class="frz-row"><label for="prf_ord">Ordine (a parità di livello)</label><input id="prf_ord" class="frz-in" type="number" value="'+esc(String(p.ordine||0))+'"></div>'
     + '</div>'
-    + '<div class="frz-row"><label for="prf_nome">Nome <span class="req">*</span></label><input id="prf_nome" class="frz-in" type="text" autocomplete="off" value="'+escRz(p.nome||"")+'"></div>'
-    + '<div class="frz-row"><label for="prf_desc">Descrizione</label><textarea id="prf_desc" class="frz-ta big">'+escRz(p.descrizione||"")+'</textarea></div>'
-    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-prisave="'+escRz(p.id||"")+'">'+(p.id?"Salva modifiche":"Salva privilegio")+'</button>'
+    + '<div class="frz-row"><label for="prf_nome">Nome <span class="req">*</span></label><input id="prf_nome" class="frz-in" type="text" autocomplete="off" value="'+esc(p.nome||"")+'"></div>'
+    + '<div class="frz-row"><label for="prf_desc">Descrizione</label><textarea id="prf_desc" class="frz-ta big">'+esc(p.descrizione||"")+'</textarea></div>'
+    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-prisave="'+esc(p.id||"")+'">'+(p.id?"Salva modifiche":"Salva privilegio")+'</button>'
     + '<button type="button" class="grimlink" data-priannulla>Annulla</button>'
     + '<span class="priv-err" id="prf_err"></span></div>'
     + '</div>';
@@ -2886,12 +2891,12 @@ function formSottoclasseHtml(s){
   s=s||{};
   return '<div class="privform">'
     + '<div class="frz-grid">'
-    +   '<div class="frz-row"><label for="scf_nome">Nome della sottoclasse <span class="req">*</span></label><input id="scf_nome" class="frz-in" type="text" autocomplete="off" value="'+escRz(s.nome||"")+'"></div>'
-    +   '<div class="frz-row"><label for="scf_liv">Si sceglie al livello</label><input id="scf_liv" class="frz-in" type="number" min="1" max="20" value="'+escRz(String(s.livello_scelta||3))+'"></div>'
-    +   '<div class="frz-row"><label for="scf_ord">Ordine</label><input id="scf_ord" class="frz-in" type="number" value="'+escRz(String(s.ordine||0))+'"></div>'
+    +   '<div class="frz-row"><label for="scf_nome">Nome della sottoclasse <span class="req">*</span></label><input id="scf_nome" class="frz-in" type="text" autocomplete="off" value="'+esc(s.nome||"")+'"></div>'
+    +   '<div class="frz-row"><label for="scf_liv">Si sceglie al livello</label><input id="scf_liv" class="frz-in" type="number" min="1" max="20" value="'+esc(String(s.livello_scelta||3))+'"></div>'
+    +   '<div class="frz-row"><label for="scf_ord">Ordine</label><input id="scf_ord" class="frz-in" type="number" value="'+esc(String(s.ordine||0))+'"></div>'
     + '</div>'
-    + '<div class="frz-row"><label for="scf_desc">Descrizione (facoltativa)</label><textarea id="scf_desc" class="frz-ta">'+escRz(s.descrizione||"")+'</textarea></div>'
-    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-scsave="'+escRz(s.id||"")+'">'+(s.id?"Salva modifiche":"Salva sottoclasse")+'</button>'
+    + '<div class="frz-row"><label for="scf_desc">Descrizione (facoltativa)</label><textarea id="scf_desc" class="frz-ta">'+esc(s.descrizione||"")+'</textarea></div>'
+    + '<div class="priv-formbar"><button type="button" class="btn-apri" data-scsave="'+esc(s.id||"")+'">'+(s.id?"Salva modifiche":"Salva sottoclasse")+'</button>'
     + '<button type="button" class="grimlink" data-scannulla>Annulla</button>'
     + '<span class="priv-err" id="scf_err"></span></div>'
     + '</div>';
@@ -3081,7 +3086,7 @@ function flashTalAggiunto(nome){
   var vecchio=host.querySelector(".tal-toast"); if(vecchio) vecchio.remove();
   var el=document.createElement("div");
   el.className="tal-toast";
-  el.innerHTML='<span class="tal-toast-ok">&#10003;</span> '+(nome?'&laquo;'+escRz(nome)+'&raquo; ':'')+'impostato in questa riga';
+  el.innerHTML='<span class="tal-toast-ok">&#10003;</span> '+(nome?'&laquo;'+esc(nome)+'&raquo; ':'')+'impostato in questa riga';
   host.appendChild(el);
   void el.offsetWidth;            // forza il reflow, così la comparsa si anima
   el.classList.add("on");
@@ -3211,7 +3216,7 @@ function disegnaCarta(dir){
 function cartaTalento(t){
   function pieno(v){ return v!=null && String(v).trim()!==""; }
   var img = t.immagine_url
-    ? '<img src="'+escRz(t.immagine_url)+'" alt="'+escRz(t.nome||"")+'" loading="lazy">'
+    ? '<img src="'+esc(t.immagine_url)+'" alt="'+esc(t.nome||"")+'" loading="lazy">'
     : '<div class="tcard-ph">&#10022;</div>';
   var badge=badgeAsi(t);
   // area di SCELTA: compare solo quando il mazzo è aperto per scegliere un
@@ -3241,36 +3246,36 @@ function cartaTalento(t){
       if(manca.length && !staff){
         // player: bloccato, spiego cosa manca
         scelta = '<div class="tcard-scegli"><button class="btn-scegli no" type="button" disabled>Requisiti non soddisfatti</button>'
-          + '<div class="tcard-manca">Ti manca: '+escRz(manca.join(", "))+'</div></div>';
+          + '<div class="tcard-manca">Ti manca: '+esc(manca.join(", "))+'</div></div>';
       } else {
         // ok, oppure staff che può forzare (con avviso)
         var nota = (manca.length && staff)
-          ? '<div class="tcard-manca staff">Requisiti non soddisfatti ('+escRz(manca.join(", "))+') — puoi forzare come staff.</div>'
+          ? '<div class="tcard-manca staff">Requisiti non soddisfatti ('+esc(manca.join(", "))+') — puoi forzare come staff.</div>'
           : '';
-        scelta = '<div class="tcard-scegli"><button class="btn-scegli" type="button" data-talpick="'+escRz(t.id)+'">'+etich+'</button>'+nota+'</div>';
+        scelta = '<div class="tcard-scegli"><button class="btn-scegli" type="button" data-talpick="'+esc(t.id)+'">'+etich+'</button>'+nota+'</div>';
       }
     }
   }
   var staff = !puoToccareSchede() ? ''
     : (talDelId===t.id
-        ? '<div class="tcard-delconf">Eliminare &laquo;'+escRz(t.nome||"questa carta")+'&raquo;? Non si pu&ograve; annullare.'
+        ? '<div class="tcard-delconf">Eliminare &laquo;'+esc(t.nome||"questa carta")+'&raquo;? Non si pu&ograve; annullare.'
           + '<div class="tcard-delbtns"><button type="button" data-taldelno>Annulla</button>'
-          + '<button type="button" class="danger" data-taldelyes="'+escRz(t.id)+'">Elimina</button></div></div>'
-        : '<div class="tcard-staff"><button class="tcard-link" type="button" data-taledit="'+escRz(t.id)+'">Modifica</button>'
-          + '<button class="tcard-link danger" type="button" data-taldel="'+escRz(t.id)+'">Elimina</button></div>');
-  return '<article class="tcard" data-cardid="'+escRz(t.id)+'">'
+          + '<button type="button" class="danger" data-taldelyes="'+esc(t.id)+'">Elimina</button></div></div>'
+        : '<div class="tcard-staff"><button class="tcard-link" type="button" data-taledit="'+esc(t.id)+'">Modifica</button>'
+          + '<button class="tcard-link danger" type="button" data-taldel="'+esc(t.id)+'">Elimina</button></div>');
+  return '<article class="tcard" data-cardid="'+esc(t.id)+'">'
     + '<div class="tcard-cornice"></div>'
     + '<div class="tcard-illu">'+img+'</div>'
     + '<div class="tcard-right">'
     + '<div class="tcard-head">'
-    +   '<h3 class="tcard-nome">'+escRz(t.nome||"Senza nome")+'</h3>'
-    +   (badge ? '<div class="tcard-asi">'+escRz(badge)+'</div>' : '')
+    +   '<h3 class="tcard-nome">'+esc(t.nome||"Senza nome")+'</h3>'
+    +   (badge ? '<div class="tcard-asi">'+esc(badge)+'</div>' : '')
     +   (t.ripetibile ? '<div class="tcard-rip">Si pu&ograve; prendere pi&ugrave; volte</div>' : '')
-    +   (pieno(t.prerequisiti) ? '<div class="tcard-prq"><span>Prerequisiti</span> '+escRz(t.prerequisiti)+'</div>' : '')
+    +   (pieno(t.prerequisiti) ? '<div class="tcard-prq"><span>Prerequisiti</span> '+esc(t.prerequisiti)+'</div>' : '')
     + '</div>'
     + '<div class="tcard-scroll">'
-    +   '<div class="tcard-ben">'+(pieno(t.benefici)?escRz(t.benefici):'<span class="tcard-vuoto">Nessun beneficio descritto.</span>')+'</div>'
-    +   (pieno(t.fonte) ? '<div class="tcard-fonte">'+escRz(t.fonte)+'</div>' : '')
+    +   '<div class="tcard-ben">'+(pieno(t.benefici)?esc(t.benefici):'<span class="tcard-vuoto">Nessun beneficio descritto.</span>')+'</div>'
+    +   (pieno(t.fonte) ? '<div class="tcard-fonte">'+esc(t.fonte)+'</div>' : '')
     + '</div>'
     + scelta
     + staff
@@ -3331,8 +3336,8 @@ function renderElenco(){
   if(!lista.length){ box.innerHTML='<div class="elenco-vuoto">'+(talFiltro?"Nessun talento trovato.":"Nessun talento.")+'</div>'; return; }
   box.innerHTML = lista.map(function(t){
     var badge=badgeAsi(t);
-    return '<button class="elenco-item" type="button" data-taljump="'+escRz(t.id)+'"><span>'+escRz(t.nome||"Senza nome")+'</span>'
-      + (badge?'<span class="elenco-asi">'+escRz(badge)+'</span>':'')+'</button>';
+    return '<button class="elenco-item" type="button" data-taljump="'+esc(t.id)+'"><span>'+esc(t.nome||"Senza nome")+'</span>'
+      + (badge?'<span class="elenco-asi">'+esc(badge)+'</span>':'')+'</button>';
   }).join("");
 }
 /* vai dritto alla carta di un talento (dal suo id) e chiudi l'elenco */
@@ -3356,7 +3361,7 @@ function formTalentoHtml(){
   var t = talEditId ? (talentoById(talEditId) || {}) : {};
   var mod=!!talEditId;
   var src=immagineCorrenteTal();
-  var prev = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  var prev = src ? '<img src="'+esc(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
   var tipo = t.tipo_asi || "nessuno";
   function opt(v,lab,cur){ return '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+lab+'</option>'; }
   var selTipo = '<div class="frz-row"><label for="tf_tipoasi">Bonus di caratteristica</label>'
@@ -3404,7 +3409,7 @@ function apriFormTalento(id){
 function aggiornaAnteprimaImgTal(){
   var prev=document.getElementById("tf_prev"); if(!prev) return;
   var src=immagineCorrenteTal();
-  prev.innerHTML = src ? '<img src="'+escRz(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
+  prev.innerHTML = src ? '<img src="'+esc(src)+'" alt="anteprima">' : 'Nessuna<br>immagine';
   var rm=document.getElementById("tf_rm"); if(rm) rm.hidden = !src;
 }
 
@@ -3499,7 +3504,7 @@ function cellaAsi(t, sez, idx){
     return '<span class="tt-asi tt-asi-lock" title="Il +1 si sblocca quando lo staff conferma la missione di lore">&#128274; +1 bloccato</span>';
   if(t.tipo_asi==="fisso"){
     var n=nomeCaratt(t.asi_caratteristica);
-    return '<span class="tt-asi tt-asi-ok">+1 '+escRz(n||"a una caratteristica")+'</span>';
+    return '<span class="tt-asi tt-asi-ok">+1 '+esc(n||"a una caratteristica")+'</span>';
   }
   // "asi": il talento Aumento di Caratteristica — DUE punti (+2 a una / +1 a due)
   if(t.tipo_asi==="asi") return cellaAsiDistr(sez, idx);
@@ -3507,12 +3512,12 @@ function cellaAsi(t, sez, idx){
   var scelto = asiScelta(sez, idx) || "";
   if(soloLettura)
     return scelto
-      ? '<span class="tt-asi tt-asi-ok">+1 '+escRz(nomeCaratt(scelto))+'</span>'
+      ? '<span class="tt-asi tt-asi-ok">+1 '+esc(nomeCaratt(scelto))+'</span>'
       : '<span class="tt-asi tt-asi-manca">+1 a scelta</span>';
   var opts='<option value="">+1 a scelta&hellip;</option>'+CARATT.map(function(c){
     var scel=(c.k===scelto);
     var pieno = !scel && spazioAsi(c.k, sez, idx) < 1;   // già a 20: il +1 non ci sta
-    return '<option value="'+c.k+'"'+(scel?' selected':'')+(pieno?' disabled':'')+'>'+escRz(c.nome)+(pieno?' (max 20)':'')+'</option>';
+    return '<option value="'+c.k+'"'+(scel?' selected':'')+(pieno?' disabled':'')+'>'+esc(c.nome)+(pieno?' (max 20)':'')+'</option>';
   }).join("");
   var bang = scelto ? '' : '<span class="tt-asi-bang" aria-hidden="true">&#10071;</span>';
   return '<span class="tt-asi tt-asi-pick '+(scelto?'tt-asi-ok':'tt-asi-manca')+'" data-talasi>'
@@ -3530,7 +3535,7 @@ function cellaAsiDistr(sez, idx){
     if(!completo) return '<span class="tt-asi tt-asi-manca">+2 a scelta</span>';
     var d=distrDa(raw), parti=[];
     CARATT.forEach(function(c){ if(d[c.k]) parti.push('+'+d[c.k]+' '+nomeCaratt(c.k)); });
-    return '<span class="tt-asi tt-asi-ok">'+escRz(parti.join("  "))+'</span>';
+    return '<span class="tt-asi tt-asi-ok">'+esc(parti.join("  "))+'</span>';
   }
   // menù del modo
   function op(v,et,sel){ return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+et+'</option>'; }
@@ -3545,7 +3550,7 @@ function cellaAsiDistr(sez, idx){
       var ripet=(escludi && c.k===escludi);
       var pieno=!isSel && spazioAsi(c.k, sez, idx) < need;   // non ci sta fino a 20
       var dis=(ripet||pieno)?' disabled':'';
-      return '<option value="'+c.k+'"'+(isSel?' selected':'')+dis+'>'+escRz(c.nome)+(pieno?' (max 20)':'')+'</option>';
+      return '<option value="'+c.k+'"'+(isSel?' selected':'')+dis+'>'+esc(c.nome)+(pieno?' (max 20)':'')+'</option>';
     }).join("");
     return '<select data-talasi-sez="'+sez+'" data-talasi-idx="'+idx+'" data-talasi-slot="'+slot+'" aria-label="'+aria+'">'+opts+'</select>';
   }
@@ -3569,8 +3574,8 @@ function rigaTalentoRetro(id, sez, idx){
   // il talento ASI ha il selettore su DUE menù: quando è modificabile lo mando su
   // una riga tutta sua sotto il nome (classe tt-row-asi), così non sfora mai.
   var cls = "tt-row" + (rigaAsiEditabile(t, sez, idx) ? " tt-row-asi" : "");
-  return '<div class="'+cls+'" data-talview="'+escRz(id)+'" role="button" tabindex="0" title="Apri la carta">'
-    + '<span class="tt-nome">'+escRz(t.nome||"Senza nome")+rip+'</span>'
+  return '<div class="'+cls+'" data-talview="'+esc(id)+'" role="button" tabindex="0" title="Apri la carta">'
+    + '<span class="tt-nome">'+esc(t.nome||"Senza nome")+rip+'</span>'
     + cellaAsi(t, sez, idx)
     + togli + '</div>';
 }
@@ -3770,8 +3775,8 @@ function vociTalenti(){
 function elencoRetroHtml(){
   function gruppo(tit, voci, vuoto){
     var n = voci ? voci.length : 0;
-    var corpo = n ? fisarmonicaHtml(voci) : '<div class="acc-vuoto">'+escRz(vuoto)+'</div>';
-    return '<section class="he-gruppo"><h3 class="he-tit">'+escRz(tit)+' <span class="he-cont">'+n+'</span></h3>'+corpo+'</section>';
+    var corpo = n ? fisarmonicaHtml(voci) : '<div class="acc-vuoto">'+esc(vuoto)+'</div>';
+    return '<section class="he-gruppo"><h3 class="he-tit">'+esc(tit)+' <span class="he-cont">'+n+'</span></h3>'+corpo+'</section>';
   }
   var cls=vociClasse();
   var base=cls.filter(function(v){ return !v.sub; });
@@ -3807,18 +3812,18 @@ function renderRetroHub(){
   var pts=puntiHub(), sub=sottoclasseVisibile();
   var h="";
   pts.forEach(function(a,i){
-    h += '<button class="hub-punto" type="button" data-fonte="'+a.id+'" data-pt="'+i+'" aria-label="'+escRz(a.label)+'"><span class="hp-dot"></span></button>';
+    h += '<button class="hub-punto" type="button" data-fonte="'+a.id+'" data-pt="'+i+'" aria-label="'+esc(a.label)+'"><span class="hp-dot"></span></button>';
     if(a.id==="classe" && a.label2 && sub){
       // dal livello 3: due etichette separate (la linea si biforca)
-      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="0">'+escRz(a.label)+'</button>';
-      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="1">'+escRz(a.label2)+'</button>';
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="0">'+esc(a.label)+'</button>';
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="classe" data-pt="'+i+'" data-sub="1">'+esc(a.label2)+'</button>';
     } else {
-      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="'+a.id+'" data-pt="'+i+'">'+escRz(a.label)+'</button>';
+      h += '<button class="hub-et lato-'+a.lato+'" type="button" data-fonte="'+a.id+'" data-pt="'+i+'">'+esc(a.label)+'</button>';
     }
   });
   punti.innerHTML=h;
   if(mob) mob.innerHTML = pts.map(function(a){
-    var t = (a.id==="classe" && a.label2) ? (sub ? escRz(a.label)+" / "+escRz(a.label2) : escRz(a.label)) : escRz(a.label);
+    var t = (a.id==="classe" && a.label2) ? (sub ? esc(a.label)+" / "+esc(a.label2) : esc(a.label)) : esc(a.label);
     return '<button class="hub-mbtn" type="button" data-fonte="'+a.id+'">'+t+'</button>';
   }).join("");
   posizionaHub();
@@ -4004,13 +4009,13 @@ function vociRazza(){
   return voci;
 }
 function fisarmonicaHtml(voci, vuoto){
-  if(!voci || !voci.length) return '<div class="acc-vuoto">'+escRz(vuoto||"Ancora niente qui.")+'</div>';
-  var testa = vuoto ? '<div class="acc-nota">'+escRz(vuoto)+'</div>' : '';
+  if(!voci || !voci.length) return '<div class="acc-vuoto">'+esc(vuoto||"Ancora niente qui.")+'</div>';
+  var testa = vuoto ? '<div class="acc-nota">'+esc(vuoto)+'</div>' : '';
   return testa+'<div class="acc">'+voci.map(function(v){
-    var liv=v.liv?'<span class="acc-liv">'+escRz(String(v.liv))+'&deg;</span> ':'';
+    var liv=v.liv?'<span class="acc-liv">'+esc(String(v.liv))+'&deg;</span> ':'';
     return '<div class="acc-riga">'
-      + '<button class="acc-cap" type="button">'+liv+'<span class="acc-nome">'+escRz(v.nome||"")+'</span><span class="acc-frec" aria-hidden="true">&rsaquo;</span></button>'
-      + '<div class="acc-corpo"><div class="acc-testo">'+escRz(v.desc||"")+'</div></div>'
+      + '<button class="acc-cap" type="button">'+liv+'<span class="acc-nome">'+esc(v.nome||"")+'</span><span class="acc-frec" aria-hidden="true">&rsaquo;</span></button>'
+      + '<div class="acc-corpo"><div class="acc-testo">'+esc(v.desc||"")+'</div></div>'
       + '</div>';
   }).join("")+'</div>';
 }
@@ -4455,7 +4460,7 @@ function apriSottoclassi(key){
   park.querySelectorAll(".slice").forEach(function(sl){
     if(sl.getAttribute("data-key")===key) sl.classList.add("parkhi"); else sl.classList.add("parkdim");
   });
-  document.getElementById("svParkLab").innerHTML='<b>'+escRz((BY_KEY[key]&&BY_KEY[key].name)||key)+'</b>la tua classe';
+  document.getElementById("svParkLab").innerHTML='<b>'+esc((BY_KEY[key]&&BY_KEY[key].name)||key)+'</b>la tua classe';
   buildSubWheel();
   renderSub();
   document.getElementById("subView").hidden=false;
@@ -4503,7 +4508,7 @@ function renderSub(){
   });
   // centro: nome in primo piano (sempre orizzontale e leggibile)
   var lvls=livelliSott(s.id);
-  document.getElementById("svHub").innerHTML='<div class="svh-name">'+escRz(s.nome||"")+'</div>'
+  document.getElementById("svHub").innerHTML='<div class="svh-name">'+esc(s.nome||"")+'</div>'
     +'<div class="svh-lv">'+(lvls.length?("liv. "+lvls.join(" · ")):"—")+'</div>'
     +'<div class="svh-count">'+(subFocus+1)+" / "+n+'</div>';
   // frecce coi nomi dei vicini
@@ -4513,14 +4518,14 @@ function renderSub(){
   // dettaglio
   var gia = chosen===s.id;
   document.getElementById("svDetail").innerHTML=
-     '<h3>'+escRz(s.nome||"")+'</h3>'
+     '<h3>'+esc(s.nome||"")+'</h3>'
     +'<p class="svd-lv">'+(lvls.length?("Privilegi ai livelli "+lvls.join(" · ")):"Privilegi in arrivo")+'</p>'
-    +'<div class="svd-lore">'+escRz(s.descrizione||"Nessuna descrizione.")+'</div>'
+    +'<div class="svd-lore">'+esc(s.descrizione||"Nessuna descrizione.")+'</div>'
     +'<button class="svd-choose'+(gia?' gia':'')+'" data-subchoose>'+(gia?'&#10003; &Egrave; la tua sottoclasse — togli':'Scegli questa sottoclasse')+'</button>'
     +'<div class="svd-done" id="svDone">Sottoclasse impostata: appare nel pop-up Classe del Retro.</div>';
   // briciole
   var cr=chosen ? (function(){ for(var i=0;i<subList.length;i++) if(subList[i].id===chosen) return subList[i].nome; return ""; })() : "";
-  document.getElementById("svCrumb").innerHTML='<b>'+escRz((BY_KEY[subKey]&&BY_KEY[subKey].name)||subKey)+'</b> &rsaquo; '+(cr?escRz(cr):'<i>scegli una sottoclasse</i>');
+  document.getElementById("svCrumb").innerHTML='<b>'+esc((BY_KEY[subKey]&&BY_KEY[subKey].name)||subKey)+'</b> &rsaquo; '+(cr?esc(cr):'<i>scegli una sottoclasse</i>');
 }
 function scegliSottoclasse(){
   if(!subKey || !subList.length) return;
@@ -5814,15 +5819,6 @@ function mostra(quale){
 }
 
 /* ================= SEZIONE CONTROLLO ================= */
-
-/* I nomi dei personaggi li scrivono i giocatori: prima di metterli
-   dentro la pagina vanno disinnescati, altrimenti uno che chiama il
-   personaggio con del codice lo farebbe girare nel browser dei master. */
-function esc(s){
-  return String(s==null?"":s)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
 
 function mostraPane(quale){
   var sched = quale!=="controllo";

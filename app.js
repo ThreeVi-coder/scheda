@@ -2589,7 +2589,7 @@ function analizzaPrereq(txt){
   return { liv:liv, stats:stats };
 }
 /* ===== Ciò che la scheda SA del personaggio (per i prerequisiti) ===== */
-var CLASSI_INCANTATORI=["bardo","chierico","druido","mago","stregone","warlock","paladino","ranger","artificere","artificiere"];
+var CLASSI_INCANTATORI=["bardo","chierico","druido","mago","stregone","warlock","paladino","ranger","artificere"];
 function classiPossedute(){ return (state.classes||[]).map(function(c){ return c.key; }); }
 /* Le "famiglie" di razza che i prerequisiti dei talenti richiedono DAVVERO
    (es. elfo, nano, tiefling…), ricavate dai dati caricati: così quando lo staff
@@ -2788,12 +2788,12 @@ function privilegioById(id){ for(var i=0;i<PRIVILEGI.length;i++){ if(PRIVILEGI[i
 function initPrivBlock(){
   var pb=document.getElementById("privBlock"); if(!pb) return;
   if(!puoToccareSchede()){ pb.hidden=true; return; }
-  var sel=document.getElementById("privClasse");
-  if(sel && !sel.options.length){
-    sel.innerHTML = CLASSES.map(function(c){ return '<option value="'+escRz(c.key)+'">'+escRz(c.name)+'</option>'; }).join("");
+  var menuClasse=document.getElementById("privClasse");
+  if(menuClasse && !menuClasse.options.length){
+    menuClasse.innerHTML = CLASSES.map(function(c){ return '<option value="'+escRz(c.key)+'">'+escRz(c.name)+'</option>'; }).join("");
   }
   if(!privClasseSel) privClasseSel = (CLASSES[0] && CLASSES[0].key) || "";
-  if(sel) sel.value=privClasseSel;
+  if(menuClasse) menuClasse.value=privClasseSel;
   pb.hidden=false;
   renderPrivManage();
 }
@@ -2962,8 +2962,8 @@ function eliminaSottoclasse(id){
 /* agganci del pannello di gestione (delega su #privBlock) */
 (function(){
   var pb=document.getElementById("privBlock"); if(!pb) return;
-  var sel=document.getElementById("privClasse");
-  if(sel) sel.addEventListener("change", function(){ privClasseSel=sel.value; privForm=null; privDelId=null; privScDelId=null; renderPrivManage(); });
+  var menuClasse=document.getElementById("privClasse");
+  if(menuClasse) menuClasse.addEventListener("change", function(){ privClasseSel=menuClasse.value; privForm=null; privDelId=null; privScDelId=null; renderPrivManage(); });
   pb.addEventListener("click", function(e){
     var t=e.target.closest("button"); if(!t) return;
     var a=function(n){ return t.hasAttribute(n) ? t.getAttribute(n) : null; };
@@ -3510,9 +3510,9 @@ function cellaAsi(t, sez, idx){
       ? '<span class="tt-asi tt-asi-ok">+1 '+escRz(nomeCaratt(scelto))+'</span>'
       : '<span class="tt-asi tt-asi-manca">+1 a scelta</span>';
   var opts='<option value="">+1 a scelta&hellip;</option>'+CARATT.map(function(c){
-    var sel=(c.k===scelto);
-    var pieno = !sel && spazioAsi(c.k, sez, idx) < 1;   // già a 20: il +1 non ci sta
-    return '<option value="'+c.k+'"'+(sel?' selected':'')+(pieno?' disabled':'')+'>'+escRz(c.nome)+(pieno?' (max 20)':'')+'</option>';
+    var scel=(c.k===scelto);
+    var pieno = !scel && spazioAsi(c.k, sez, idx) < 1;   // già a 20: il +1 non ci sta
+    return '<option value="'+c.k+'"'+(scel?' selected':'')+(pieno?' disabled':'')+'>'+escRz(c.nome)+(pieno?' (max 20)':'')+'</option>';
   }).join("");
   var bang = scelto ? '' : '<span class="tt-asi-bang" aria-hidden="true">&#10071;</span>';
   return '<span class="tt-asi tt-asi-pick '+(scelto?'tt-asi-ok':'tt-asi-manca')+'" data-talasi>'
@@ -4283,9 +4283,9 @@ function sincronizzaExtra(dove){
   }
   if(dove==="abil"){
     if(typeof abilCarPicker!=="undefined" && abilCarPicker){
-      var sel=document.getElementById("abilCarSel");
+      var menuCar=document.getElementById("abilCarSel");
       abilFermo=true;
-      try{ abilCarPicker.setHex(colCar((sel&&sel.value)||"for")); } finally{ abilFermo=false; }
+      try{ abilCarPicker.setHex(colCar((menuCar&&menuCar.value)||"for")); } finally{ abilFermo=false; }
     }
   }
   if(dove==="hp"){
@@ -5413,9 +5413,9 @@ function azzeraTransizione(){
 
 /* Cambia la faccia del riquadro unito (Caratteristiche | Abilita' | Tiri
    salvezza). Con animato=true fa la transizione; senza, cambio secco per
-   l'avvio e le ricariche. Il morph "a smontaggio" vale solo tra Caratteristiche
-   e Abilita'; ogni passaggio che coinvolge i Tiri salvezza usa la dissolvenza
-   (il morph dei TS arrivera' nel blocco successivo). */
+   l'avvio e le ricariche. Col morph sono coperte tutte e sei le direzioni tra le
+   tre viste (Caratteristiche/Abilita'/Tiri salvezza); con la dissolvenza il
+   passaggio e' invece un cambio morbido e piu' sobrio. */
 function mostraVista(v, animato){
   var nuova = (v==="abil"||v==="ts") ? v : "stats";
   var vs=elVista("stats"), va=elVista("abil");   // servono ai morph
@@ -5643,10 +5643,10 @@ var tsDadoPicker=makePicker(document.getElementById("tsDadoPicker"), state.tsDad
    la tavolozza sul valore giusto scegliendo dal menu'. */
 var abilFermo=false;
 (function(){
-  var sel=document.getElementById("abilCarSel");
-  if(sel){
-    sel.innerHTML=CARATT.map(function(c){ return '<option value="'+c.k+'">'+c.nome+'</option>'; }).join("");
-    sel.addEventListener("change", function(){
+  var menuCar=document.getElementById("abilCarSel");
+  if(menuCar){
+    menuCar.innerHTML=CARATT.map(function(c){ return '<option value="'+c.k+'">'+c.nome+'</option>'; }).join("");
+    menuCar.addEventListener("change", function(){
       abilFermo=true;
       try{ abilCarPicker.setHex(colCar(this.value)); } finally{ abilFermo=false; }
     });
@@ -5917,12 +5917,12 @@ function ORDINI(){
   return v;
 }
 function preparaOrdini(){
-  var sel=document.getElementById("ordinePg"), v=ORDINI();
+  var menuOrd=document.getElementById("ordinePg"), v=ORDINI();
   if(!v.some(function(x){ return x[0]===ordine; })) ordine="nick";
-  sel.innerHTML = v.map(function(x){
+  menuOrd.innerHTML = v.map(function(x){
     return '<option value="'+x[0]+'">'+esc(x[1])+'</option>';
   }).join("");
-  sel.value=ordine;
+  menuOrd.value=ordine;
 }
 
 /* Data leggibile invece di un timbro del database. */

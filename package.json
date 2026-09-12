@@ -1,0 +1,12 @@
+{
+  "name": "scheda-dnd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheda personaggio D&D 5e (Legends of Eldran). Il sito è statico (index.html + styles.css + app.js); qui sotto c'è SOLO l'attrezzatura per le prove automatiche, non serve al sito online.",
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

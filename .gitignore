@@ -15,3 +15,8 @@ sql/06_talenti_full.sql
 # Inserimento dei privilegi di classe/sottoclasse: idem, testi dei manuali.
 sql/09_privilegi_seed.sql
 sql/10_privilegi_base_seed.sql
+
+# Attrezzatura delle prove automatiche: la libreria jsdom si (re)installa con
+# "npm install", non va nel repository (migliaia di file). Il codice delle
+# prove (cartella test/) e il package.json invece SÌ, quelli si committano.
+node_modules/

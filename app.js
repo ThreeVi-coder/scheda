@@ -5081,10 +5081,12 @@ function morphAbilVersoTs(va, vt, fine){
       {transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")"}
     ], {duration:680, fill:"forwards", easing:"ease-in-out"});
 
-    // i sei esagoni sbocciano in orario (portano sigle+valori), poi il dado
-    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:340+i*70,fill:"forwards",easing:"ease"}); });
-    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:640,fill:"forwards",easing:"ease"});
-    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:820+i*35,fill:"forwards",easing:"ease"}); });
+    // il favo sboccia a ridosso dell'ATTERRAGGIO dell'esagono (il clone arriva al
+    // centro a ~680ms): prima nessuna scritta durante il volo, poi i sei esagoni
+    // (sigle+valori) sbocciano, poi il dado. Così le parole non compaiono in anticipo.
+    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:640+i*70,fill:"forwards",easing:"ease"}); });
+    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:700,fill:"forwards",easing:"ease"});
+    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:900+i*35,fill:"forwards",easing:"ease"}); });
 
     setTimeout(function(){
       if(clone.parentNode) clone.parentNode.removeChild(clone);
@@ -5092,7 +5094,7 @@ function morphAbilVersoTs(va, vt, fine){
       azzeraTransizione();
       vt.hidden=false; va.hidden=true; if(vsEl) vsEl.hidden=true;
       fine();
-    }, 1220);
+    }, 1500);
   }, 280);
 }
 
@@ -5178,8 +5180,8 @@ function morphTsVersoAbil(vt, va, fine){
     // sigle/puntini/passiva e i sei gruppi rientrano in modo da posarsi INSIEME
     // al clone che arriva (niente cascata lunga): cosi' non resta il tempo morto
     // in cui l'esagono e' gia' fermo ma la vista non e' ancora a posto.
-    mapEl.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.animate([{opacity:0},{opacity:1}],{duration:200,delay:340,fill:"forwards",easing:"ease"}); });
-    grps.forEach(function(g,i){ g.animate([{opacity:0,transform:"translateY(-14px)"},{opacity:1,transform:"translateY(0px)"}],{duration:240,delay:380+i*28,fill:"forwards",easing:"ease-out"}); });
+    mapEl.querySelectorAll(".abvtx,.ppet,.ppval").forEach(function(e){ e.animate([{opacity:0},{opacity:1}],{duration:200,delay:620,fill:"forwards",easing:"ease"}); });
+    grps.forEach(function(g,i){ g.animate([{opacity:0,transform:"translateY(-14px)"},{opacity:1,transform:"translateY(0px)"}],{duration:240,delay:620+i*28,fill:"forwards",easing:"ease-out"}); });
 
     // appena il clone e' arrivato a grandezza piena, rivelo l'esagono VERO (che
     // gli sta esattamente sotto, identico) e tolgo subito il clone: il passaggio
@@ -5194,7 +5196,7 @@ function morphTsVersoAbil(vt, va, fine){
       azzeraTransizione();   // a cose gia' ferme: pulisce i residui senza spostare nulla
       va.hidden=false; vt.hidden=true; if(vsEl) vsEl.hidden=true;
       fine();
-    }, 780);
+    }, 1100);
   }, 300);
 }
 
@@ -5274,17 +5276,19 @@ function morphStatsVersoTs(vs, vt, fine){
       {transform:"translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate(450deg) scale("+s.toFixed(3)+")"}
     ], {duration:680, fill:"forwards", easing:"ease-in-out"});
 
-    // i sei esagoni sbocciano in orario (portano sigle+valori), poi il dado
-    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:340+i*70,fill:"forwards",easing:"ease"}); });
-    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:640,fill:"forwards",easing:"ease"});
-    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:820+i*35,fill:"forwards",easing:"ease"}); });
+    // il favo sboccia a ridosso dell'ATTERRAGGIO dell'esagono (il clone arriva al
+    // centro a ~680ms): niente scritte durante il volo, poi i sei esagoni
+    // (sigle+valori) sbocciano, poi il dado. Così le parole non compaiono in anticipo.
+    celle.forEach(function(c,i){ c.animate([{opacity:0,transform:"scale(.35)"},{opacity:1,transform:"scale(1)"}],{duration:260,delay:640+i*70,fill:"forwards",easing:"ease"}); });
+    if(centrale) centrale.animate([{opacity:0},{opacity:1}],{duration:220,delay:700,fill:"forwards",easing:"ease"});
+    dadoParti.forEach(function(e,i){ e.animate([{opacity:0},{opacity:1}],{duration:320,delay:900+i*35,fill:"forwards",easing:"ease"}); });
 
     setTimeout(function(){
       if(clone.parentNode) clone.parentNode.removeChild(clone);
       azzeraTransizione();
       vt.hidden=false; vs.hidden=true;
       fine();
-    }, 1220);
+    }, 1500);
   }, 260);
 }
 
@@ -5826,7 +5830,15 @@ function mostraPane(quale){
   document.getElementById("paneControllo").hidden = sched;
   document.getElementById("tabScheda").classList.toggle("on", sched);
   document.getElementById("tabControllo").classList.toggle("on", !sched);
-  if(sched){ apply(); }        // tornando sulla scheda il nome va rimisurato
+  if(sched){
+    apply();        // tornando sulla scheda il nome va rimisurato
+    // Se torniamo sulla pagina Retro, i richiami dell'hub vanno RIposizionati:
+    // mentre il Controllo era davanti la pagina era nascosta (misure a zero), e
+    // un eventuale ridisegno lì in mezzo lascia le etichette senza posizione
+    // (restano le linee ma non le parole). Ora che si vede di nuovo, le rimetto.
+    if(typeof posizionaHub==="function" && typeof PAGINE_FOGLIO!=="undefined"
+       && PAGINE_FOGLIO[paginaScheda]==="pagRetro"){ posizionaHub(); }
+  }
   else { caricaControllo(); }
 }
 

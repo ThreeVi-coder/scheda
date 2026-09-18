@@ -202,6 +202,7 @@ var state={
   razza:"",            // id (dal database) della razza scelta per il personaggio; "" = nessuna
   talenti:{origine:[],normali:[],asiOrigine:[],asiNormali:[],sbloccoOrigine:false},   // talenti scelti: id in ordine di scelta (origine = creazione, normali = agli ASI); asi* = caratteristica del +1 a scelta; sblocco = +1 d'origine confermato dallo staff
   allineamento:"",     // codice dell'allineamento scelto (LB, N, CM, SA...); "" = nessuno
+  estasiSlot:{},       // Estasi ed Anedonie: mappa lobo->id-voce (4 slot); la impostano SOLO i master (non si salva col personaggio)
   abilita:{},          // abilita' -> 1 competenza, 2 maestria (le altre non ci sono)
   abilCarColore:{},    // colore scelto per ogni caratteristica (vuoto = base)
   xp:0,
@@ -1988,10 +1989,35 @@ function esc(s){
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
+/* Legge una tabella con RITENTATIVO automatico. Serve perché su alcune reti/Chrome
+   la connessione veloce (QUIC/HTTP3) può cascare proprio sulle risposte GROSSE
+   (es. i 400+ privilegi), lasciando la scheda a metà. Se il primo tentativo
+   fallisce (rete caduta = "Failed to fetch", oppure errore dal database),
+   riprova dopo una breve pausa: al secondo giro Chrome abbandona QUIC da solo e
+   passa alla connessione normale, così la scheda SI AUTO-RIPARA senza che il
+   giocatore debba toccare niente. `ordina` è una funzione che applica gli .order().
+   Torna una Promise con i dati (array), o va in errore dopo N tentativi falliti. */
+function leggiTabella(nome, ordina, tentativi){
+  tentativi = tentativi || 3;
+  function unTentativo(rimasti){
+    var q = sb.from(nome).select("*");
+    if(typeof ordina==="function") q = ordina(q);
+    return Promise.resolve(q).then(function(res){
+      if(res && res.error) throw new Error(res.error.message || "errore di lettura");
+      return (res && res.data) || [];
+    }).catch(function(err){
+      if(rimasti<=1) throw err;
+      var attesa = 500*(tentativi-rimasti+1);   // 500ms, poi 1000ms, ...
+      console.warn("Lettura '"+nome+"' fallita, riprovo tra "+attesa+"ms:", err && err.message ? err.message : err);
+      return new Promise(function(ok){ setTimeout(ok, attesa); }).then(function(){ return unTentativo(rimasti-1); });
+    });
+  }
+  return unTentativo(tentativi);
+}
+
 function caricaRazze(poi){
-  sb.from("razze").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
-    if(!res.error && Array.isArray(res.data)) RAZZE=res.data;
-    else if(res.error) console.warn("Non riesco a leggere le razze:", res.error.message);
+  leggiTabella("razze", function(q){ return q.order("ordine",{ascending:true}).order("nome",{ascending:true}); }).then(function(data){
+    if(Array.isArray(data)) RAZZE=data;
     razzeCaricate=true;
     // "firma" dell'elenco: se il ricarico non cambia niente, NON ridisegno il
     // grimorio (così non interrompo la rivelazione a inchiostro appena partita)
@@ -2002,7 +2028,7 @@ function caricaRazze(poi){
     var mr=document.getElementById("modalRazze");
     if(mr && !mr.hidden && cambiato) renderGrimorio();
     if(typeof poi==="function") poi();
-  }, function(e){ razzeCaricate=true; console.warn("Razze:", e); if(typeof poi==="function") poi(); });
+  }).catch(function(e){ razzeCaricate=true; console.warn("Razze:", e); if(typeof poi==="function") poi(); });
 }
 function razzaById(id){ for(var i=0;i<RAZZE.length;i++){ if(RAZZE[i].id===id) return RAZZE[i]; } return null; }
 
@@ -2436,6 +2462,7 @@ function eliminaRazza(id){
 var TALENTI=[], talentiCaricate=false, talentiSig="";
 var PRIVILEGI=[], privilegiCaricati=false, privilegiSig="";       // i privilegi di classe/sottoclasse (tabella staff)
 var SOTTOCLASSI=[], sottoclassiCaricate=false, sottoclassiSig=""; // l'elenco delle sottoclassi (tabella staff)
+var ESTASI=[], estasiCaricate=false, estasiSig="";               // il catalogo Estasi ed Anedonie (tabella staff)
 var talIdx=0;             // indice della carta attiva nella lista filtrata
 var talMode="view";       // "view" = sfoglio | "form" = modulo aggiungi/modifica
 var talFile=null;         // file immagine scelto (non ancora caricato)
@@ -2718,9 +2745,8 @@ function prereqMancanti(t){
 }
 
 function caricaTalenti(poi){
-  sb.from("talenti").select("*").order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
-    if(!res.error && Array.isArray(res.data)) TALENTI=res.data;
-    else if(res.error) console.warn("Non riesco a leggere i talenti:", res.error.message);
+  leggiTabella("talenti", function(q){ return q.order("ordine",{ascending:true}).order("nome",{ascending:true}); }).then(function(data){
+    if(Array.isArray(data)) TALENTI=data;
     talentiCaricate=true;
     // firma dell'elenco: se il ricarico non cambia niente, non ridisegno
     var nuova = TALENTI.map(function(t){ return t.id+":"+(t.modificato_il||t.nome||""); }).join("|");
@@ -2731,7 +2757,7 @@ function caricaTalenti(poi){
     // punteggi (e a valle: modificatori, TS, abilità, PF dalla Costituzione)
     if(cambiato) renderAll();
     if(typeof poi==="function") poi();
-  }, function(e){ talentiCaricate=true; console.warn("Talenti:", e); if(typeof poi==="function") poi(); });
+  }).catch(function(e){ talentiCaricate=true; console.warn("Talenti:", e); if(typeof poi==="function") poi(); });
 }
 function talentoById(id){ for(var i=0;i<TALENTI.length;i++){ if(TALENTI[i].id===id) return TALENTI[i]; } return null; }
 
@@ -2740,26 +2766,24 @@ function talentoById(id){ for(var i=0;i<TALENTI.length;i++){ if(TALENTI[i].id===
    cambiati, lo ridisegno; altrimenti basta che siano in memoria per la prossima
    apertura. */
 function caricaSottoclassi(poi){
-  sb.from("sottoclassi").select("*").order("classe",{ascending:true}).order("ordine",{ascending:true}).order("nome",{ascending:true}).then(function(res){
-    if(!res.error && Array.isArray(res.data)) SOTTOCLASSI=res.data;
-    else if(res.error) console.warn("Non riesco a leggere le sottoclassi:", res.error.message);
+  leggiTabella("sottoclassi", function(q){ return q.order("classe",{ascending:true}).order("ordine",{ascending:true}).order("nome",{ascending:true}); }).then(function(data){
+    if(Array.isArray(data)) SOTTOCLASSI=data;
     sottoclassiCaricate=true;
     var nuova = SOTTOCLASSI.map(function(s){ return s.id+":"+(s.modificato_il||s.nome||""); }).join("|");
     var cambiato = nuova!==sottoclassiSig; sottoclassiSig=nuova;
     if(cambiato){ aggiornaVistePriv(); if(document.getElementById("classLine")) renderPanel(); }
     if(typeof poi==="function") poi();
-  }, function(e){ sottoclassiCaricate=true; console.warn("Sottoclassi:", e); if(typeof poi==="function") poi(); });
+  }).catch(function(e){ sottoclassiCaricate=true; console.warn("Sottoclassi:", e); if(typeof poi==="function") poi(); });
 }
 function caricaPrivilegi(poi){
-  sb.from("privilegi").select("*").order("classe",{ascending:true}).order("livello",{ascending:true}).order("ordine",{ascending:true}).then(function(res){
-    if(!res.error && Array.isArray(res.data)) PRIVILEGI=res.data;
-    else if(res.error) console.warn("Non riesco a leggere i privilegi:", res.error.message);
+  leggiTabella("privilegi", function(q){ return q.order("classe",{ascending:true}).order("livello",{ascending:true}).order("ordine",{ascending:true}); }).then(function(data){
+    if(Array.isArray(data)) PRIVILEGI=data;
     privilegiCaricati=true;
     var nuova = PRIVILEGI.map(function(p){ return p.id+":"+(p.modificato_il||p.nome||""); }).join("|");
     var cambiato = nuova!==privilegiSig; privilegiSig=nuova;
     if(cambiato) aggiornaVistePriv();
     if(typeof poi==="function") poi();
-  }, function(e){ privilegiCaricati=true; console.warn("Privilegi:", e); if(typeof poi==="function") poi(); });
+  }).catch(function(e){ privilegiCaricati=true; console.warn("Privilegi:", e); if(typeof poi==="function") poi(); });
 }
 /* dati nuovi: ridipingo sia il pop-up del Retro (se aperto sui privilegi di
    classe) sia il pannello di gestione nel Controllo (se visibile) */
@@ -2768,6 +2792,24 @@ function aggiornaVistePriv(){
   if(m && !m.hidden && privFonte==="classe") apriPriv("classe");
   var pb=document.getElementById("privBlock");
   if(pb && !pb.hidden) renderPrivManage();
+}
+/* Il CATALOGO Estasi ed Anedonie dal database (tabella staff). Serve al pop-up
+   "Estasi ed Anedonie" del Retro. Stessa logica delle altre: se cambia e il
+   pop-up è aperto su quelle, lo ridisegno; altrimenti basta averle in memoria. */
+function caricaEstasi(poi){
+  leggiTabella("estasi", function(q){ return q.order("lobo",{ascending:true}).order("ordine",{ascending:true}); }).then(function(data){
+    if(Array.isArray(data)) ESTASI=data;
+    estasiCaricate=true;
+    var nuova = ESTASI.map(function(e){ return e.id+":"+(e.modificato_il||e.nome||""); }).join("|");
+    var cambiato = nuova!==estasiSig; estasiSig=nuova;
+    if(cambiato) aggiornaVisteEstasi();
+    if(typeof poi==="function") poi();
+  }).catch(function(e){ estasiCaricate=true; console.warn("Estasi:", e); if(typeof poi==="function") poi(); });
+}
+function estasiById(id){ for(var i=0;i<ESTASI.length;i++){ if(ESTASI[i].id===id) return ESTASI[i]; } return null; }
+function aggiornaVisteEstasi(){
+  var m=document.getElementById("modalPriv");
+  if(m && !m.hidden && privFonte==="estasi") apriPriv("estasi");
 }
 
 /* ===== GESTIONE STAFF DEI PRIVILEGI (sezione nel Controllo) =====
@@ -3785,7 +3827,7 @@ function elencoRetroHtml(){
     + gruppo("Talenti", vociTalenti(), "Nessun talento scelto.")
     + gruppo("Classe", base, "Scegli una classe nella scheda.")
     + gruppo("Sottoclasse", sub, "Nessuna sottoclasse scelta (o non ancora al livello giusto).")
-    + gruppo("Estasi ed Anedonie", [], "In arrivo.");
+    + gruppo("Estasi ed Anedonie", vociEstasi(), "Nessuna Estasi o Anedonia assegnata (le impostano i master).");
 }
 
 function renderRetroHub(){
@@ -3936,7 +3978,12 @@ function messaggioVuoto(fonte){
       : "Carico i privilegi…";
   }
   if(fonte==="razza")  return state.razza ? "" : "Scegli una razza per vederne i tratti.";
-  if(fonte==="estasi") return "Estasi e Anedonie sono 4 slot legati ai lobi (frontale, parietale, temporale, occipitale). Le impostano solo i master.";
+  if(fonte==="estasi"){
+    if(vociEstasi().length) return "";   // ci sono slot assegnati: niente nota sopra
+    return estasiCaricate
+      ? "Estasi e Anedonie sono 4 slot legati ai lobi (frontale, parietale, temporale, occipitale). Le impostano solo i master."
+      : "Carico il catalogo…";
+  }
   return "";
 }
 /* le voci della fisarmonica per ogni fonte. La RAZZA legge i tratti veri dal
@@ -3945,7 +3992,8 @@ function messaggioVuoto(fonte){
 function vociFonte(fonte){
   if(fonte==="razza")  return vociRazza();
   if(fonte==="classe") return vociClasse();
-  return [];   // estasi: solo master → mostro il messaggio
+  if(fonte==="estasi") return vociEstasi();   // i 4 slot assegnati dai master
+  return [];
 }
 /* I privilegi delle classi del personaggio, presi dalla tabella staff, fino al
    livello raggiunto in ciascuna classe. Per ora solo la classe base (le capacità
@@ -4006,6 +4054,34 @@ function vociRazza(){
   if(pieno(r.dimensioni))   voci.push({ nome:"Dimensioni",             desc:String(r.dimensioni) });
   if(pieno(r.tipologia))    voci.push({ nome:"Tipologia",              desc:String(r.tipologia) });
   if(pieno(r.lingue))       voci.push({ nome:"Lingue",                 desc:String(r.lingue) });
+  return voci;
+}
+/* ===== ESTASI ed ANEDONIE — la vista in scheda dei 4 slot =====
+   Le voci del catalogo stanno in ESTASI (tabella staff). L'ASSEGNAZIONE dei 4
+   slot a un personaggio (uno per lobo) sta in state.estasiSlot = mappa
+   lobo→id-voce; la impostano SOLO i master (arriva nel prossimo mattone, letta
+   da una colonna della tabella "schede"). Qui la si mostra e basta. */
+var EST_RAR = { comune:{lab:"Comune",rank:1}, non_comune:{lab:"Non Comune",rank:2},
+                rara:{lab:"Rara",rank:3}, molto_rara:{lab:"Molto Rara",rank:4},
+                leggendaria:{lab:"Leggendaria",rank:5} };
+function rarLabel(r){ return (EST_RAR[r]&&EST_RAR[r].lab) || r || ""; }
+var LOBI_ORD = [["frontale","Lobo Frontale"],["parietale","Lobo Parietale"],
+                ["temporale","Lobo Temporale"],["occipitale","Lobo Occipitale"]];
+/* le voci a fisarmonica dei 4 slot: una riga per lobo che ha una voce
+   assegnata. Nome = "Lobo · Voce"; il corpo apre i tre testi del documento
+   (Effetto, Origine, Manifestazione) preceduti da tipo e rarità. */
+function vociEstasi(){
+  var slot = state.estasiSlot || {}, voci=[];
+  LOBI_ORD.forEach(function(l){
+    var id = slot[l[0]]; if(!id) return;
+    var e = estasiById(id); if(!e) return;
+    var tipoLab = (e.tipo==="anedonia") ? "Anedonia" : "Estasi";
+    var parti = [ tipoLab + " · " + rarLabel(e.rarita) ];
+    if(e.effetto)        parti.push("Effetto\n"+e.effetto);
+    if(e.origine)        parti.push("Origine\n"+e.origine);
+    if(e.manifestazione) parti.push("Manifestazione\n"+e.manifestazione);
+    voci.push({ nome: l[1] + " · " + (e.nome||""), desc: parti.join("\n\n") });
+  });
   return voci;
 }
 function fisarmonicaHtml(voci, vuoto){
@@ -6404,6 +6480,7 @@ function avvia(){
       caricaTalenti();          // il mazzo dei talenti dal database (pronto per il Retro)
       caricaSottoclassi();      // le sottoclassi (tabella staff), per il pop-up Classe del Retro
       caricaPrivilegi();        // i privilegi di classe/sottoclasse (tabella staff)
+      caricaEstasi();           // il catalogo Estasi ed Anedonie (tabella staff), per il pop-up del Retro
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }

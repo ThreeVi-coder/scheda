@@ -79,7 +79,8 @@ function makeFakeSupabase(seed){
     razze:      (seed && seed.razze)      || [],
     talenti:    (seed && seed.talenti)    || [],
     sottoclassi:(seed && seed.sottoclassi)|| [],
-    privilegi:  (seed && seed.privilegi)  || []
+    privilegi:  (seed && seed.privilegi)  || [],
+    estasi:     (seed && seed.estasi)     || []
   };
   var session = (seed && seed.session) || null;
   var client = {

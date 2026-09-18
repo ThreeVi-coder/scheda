@@ -43,7 +43,12 @@ function seed(){
       { id: "t_asi",   nome: "Aumento di Caratteristica", tipo_asi: "asi", ripetibile: true, prereq: null, prerequisiti: "" }
     ],
     sottoclassi: [],
-    privilegi:   []
+    privilegi:   [],
+    // due voci del catalogo Estasi ed Anedonie (una coppia del lobo frontale)
+    estasi: [
+      { id:"e_f1",  lobo:"frontale", rarita:"comune", tipo:"estasi",   coppia:1, ordine:1, nome:"Chiarezza",     effetto:"Vantaggio ai TS contro Affascinato.",  origine:"Meditazione profonda.", manifestazione:"Le pupille diventano argentate." },
+      { id:"e_f1a", lobo:"frontale", rarita:"comune", tipo:"anedonia", coppia:1, ordine:2, nome:"Nebbia Mentale", effetto:"Svantaggio ai TS contro Affascinato.", origine:"Reliquie corrotte.",    manifestazione:"Lo sguardo è assente." }
+    ]
   };
 }
 
@@ -155,6 +160,40 @@ async function main(){
   eq(W.bonusCarTalenti("cos"), 0, "+1 d'origine BLOCCATO senza sblocco dello staff");
   W.state.talenti.sbloccoOrigine = true;
   eq(W.bonusCarTalenti("cos"), 1, "+1 d'origine attivo dopo lo sblocco");
+
+  /* ===== G) Estasi ed Anedonie: catalogo + vista dei 4 slot ===== */
+  ok(W.ESTASI.length >= 2, "il catalogo Estasi si carica dal database");
+  W.state.estasiSlot = {};
+  eq(W.vociEstasi().length, 0, "senza assegnazione, nessuno slot da mostrare");
+  W.state.estasiSlot = { frontale: "e_f1", parietale: "e_f1a" };
+  const ve = W.vociEstasi();
+  eq(ve.length, 2, "due slot assegnati → due voci");
+  eq(ve[0].nome, "Lobo Frontale · Chiarezza", "lo slot Frontale mostra lobo + nome della voce");
+  ok(ve[0].desc.indexOf("Estasi · Comune") === 0, "il corpo apre con tipo e rarità");
+  ok(ve[0].desc.indexOf("Vantaggio ai TS") !== -1, "il corpo contiene l'Effetto");
+  ok(ve[1].nome.indexOf("Lobo Parietale") === 0, "gli slot escono in ordine di lobo (Parietale dopo Frontale)");
+  eq(W.rarLabel("molto_rara"), "Molto Rara", "l'etichetta della rarità è leggibile");
+
+  /* ===== H) auto-riparazione: la lettura RITENTA se la rete casca ===== */
+  let tentativiFinti = 0;
+  const fromVero = W.sb.from;
+  W.sb.from = function(nome){
+    if(nome === "provaretry"){
+      tentativiFinti++;
+      const primo = (tentativiFinti === 1);
+      return { select:function(){ return this; }, order:function(){ return this; },
+        then:function(ris,rif){
+          return (primo ? Promise.reject(new Error("Failed to fetch"))     // 1° giro: QUIC caduto
+                        : Promise.resolve({ data:[{id:"ok"}], error:null }) // 2° giro: recupera
+                 ).then(ris,rif);
+        } };
+    }
+    return fromVero.call(W.sb, nome);
+  };
+  const datiRecuperati = await W.leggiTabella("provaretry", function(q){ return q; }, 3);
+  W.sb.from = fromVero;
+  eq(tentativiFinti, 2, "la lettura ha RITENTATO dopo il primo fallimento di rete");
+  eq(datiRecuperati.length, 1, "al secondo tentativo i dati arrivano (auto-riparazione)");
 
   /* ===== esito ===== */
   console.log("");

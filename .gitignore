@@ -18,6 +18,11 @@ sql/09_privilegi_seed.sql
 sql/10_privilegi_base_seed.sql
 sql/11_sottoclasse_monaco_astral_self.sql
 
+# Catalogo Estasi ed Anedonie: contenuto homebrew della land, tenuto solo in
+# locale / da lanciare su Supabase (il repo è pubblico). Lo schema della tabella
+# (sql/12_estasi.sql) invece SÌ, si committa; qui sotto solo il carico dati.
+sql/13_estasi_seed.sql
+
 # Attrezzatura delle prove automatiche: la libreria jsdom si (re)installa con
 # "npm install", non va nel repository (migliaia di file). Il codice delle
 # prove (cartella test/) e il package.json invece SÌ, quelli si committano.

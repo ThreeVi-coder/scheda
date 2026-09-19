@@ -3988,15 +3988,30 @@ function apriPriv(fonte){
   privFonte=fonte;
   var titoli={ talenti:"Talenti", classe:"Classe e Sottoclasse", razza:"Tratti di Razza", estasi:"Estasi ed Anedonie" };
   if(tit) tit.textContent=titoli[fonte]||"Privilegi";
+  // il pop-up delle Estasi diventa un TOMO su pergamena (stile del concept);
+  // gli altri restano la finestra normale scura.
+  var dlg=document.getElementById("dialogPriv");
+  if(dlg) dlg.classList.toggle("tomo", fonte==="estasi");
   if(fonte==="talenti"){
     body.innerHTML='<div class="taltab" id="taltab"></div>';
     renderTaltab();
   } else if(fonte==="estasi"){
-    // il cervello coi lobi accesi; sotto, l'editor (per chi assegna) o l'elenco
+    if(tit) tit.textContent="";   // il titolo grande sta nel corpo (col suo font)
     var sotto = puoAssegnareEstasi()
       ? estasiEditorHtml()
       : fisarmonicaHtml(vociEstasi(), messaggioVuoto("estasi"));
-    body.innerHTML='<div class="est-wrap"><div class="cerv-plate">'+cervelloSvg()+'</div>'+sotto+'</div>';
+    body.innerHTML =
+        '<div class="tomo-head">'
+      +   '<p class="tomo-eyebrow">Legends of Eldran</p>'
+      +   '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
+      + '</div>'
+      + '<div class="cerv-plate">'+cervelloSvg()+'</div>'
+      + '<div class="tomo-legend">'
+      +   '<span><i class="lg-est"></i> Estasi &mdash; il lobo si accende</span>'
+      +   '<span><i class="lg-ane"></i> Anedonia &mdash; il lobo si spegne</span>'
+      +   '<span><i class="lg-vuo"></i> Vuoto</span>'
+      + '</div>'
+      + '<div class="tomo-sotto">'+sotto+'</div>';
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
   }
@@ -6332,32 +6347,86 @@ function estasiPerLobo(lobo){
 var LOBI_COL={ frontale:"#d98b96", parietale:"#9cc07f", temporale:"#e3ac5a", occipitale:"#9a9fd6" };
 var LOBI_MASK={ frontale:"cvF", parietale:"cvP", temporale:"cvT", occipitale:"cvO" };
 var LOBI_FILE={ frontale:"mF.png", parietale:"mP.png", temporale:"mT.png", occipitale:"mO.png" };
+var LOBI_DOM ={ frontale:"Dominio Mentale", parietale:"Equilibrio", temporale:"Empatia", occipitale:"Occhio del Cosmo" };
 
-/* L'illustrazione del cervello coi 4 lobi. Ogni lobo assegnato riceve un velo:
-   Estasi = tinta del suo colore (mix-blend "color": ricolora tenendo l'inchiostro);
-   Anedonia = grigio scuro (mix-blend "multiply": lo spegne). Vuoto = niente.
-   Le maschere/ritaglio sono allineate a cutout.webp (1040×800) in un'area 1560×900. */
+/* --- ritocco colore (HSL): serve a scaldare/spegnere la tinta di un lobo --- */
+function _hex2rgb(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
+function _rgb2hex(r,g,b){ function c(x){ x=Math.round(Math.max(0,Math.min(255,x))); return (x<16?'0':'')+x.toString(16); } return '#'+c(r)+c(g)+c(b); }
+function _rgb2hsl(r,g,b){ r/=255;g/=255;b/=255; var mx=Math.max(r,g,b),mn=Math.min(r,g,b),h,s,l=(mx+mn)/2;
+  if(mx===mn){ h=s=0; } else { var d=mx-mn; s=l>0.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r) h=(g-b)/d+(g<b?6:0); else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4; h/=6; }
+  return [h,s,l]; }
+function _hsl2rgb(h,s,l){ var r,g,b; if(s===0){ r=g=b=l; } else {
+    function q2(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+    var q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q; r=q2(p,q,h+1/3); g=q2(p,q,h); b=q2(p,q,h-1/3); }
+  return [r*255,g*255,b*255]; }
+/* sMul = quanto scalare la saturazione; lSet = forzare la luminosità (o null) */
+function aggiustaCol(hex, sMul, lSet){
+  var c=_hex2rgb(hex), hsl=_rgb2hsl(c[0],c[1],c[2]);
+  var s=Math.max(0,Math.min(1,hsl[1]*sMul)), l=(lSet==null)?hsl[2]:lSet;
+  var r=_hsl2rgb(hsl[0],s,l); return _rgb2hex(r[0],r[1],r[2]);
+}
+
+/* i veli di un lobo, a seconda dello stato. Si parte SEMPRE dal colore del lobo:
+   - vuoto  = colore base tenue;
+   - Estasi = stesso colore ma PIÙ INTENSO (satura di più) + un tocco di luce;
+   - Anedonia = stesso colore ma SPENTO (satura di meno) + un velo scuro.
+   Mai grigio piatto. (mix-blend "color" ricolora tenendo l'inchiostro.) */
+function veliLobo(lobo){
+  var base=LOBI_COL[lobo]||"#c0a060", mid=LOBI_MASK[lobo];
+  var id=(state.estasiSlot||{})[lobo], e=id?estasiById(id):null;
+  var tipo = e ? (e.tipo==="anedonia"?"aned":"estasi") : "vuoto";
+  function velo(fill, blend, op, cls){
+    return '<rect '+(cls?'class="'+cls+'" ':'')+'width="1040" height="800" fill="'+fill+'" mask="url(#'+mid+')" style="mix-blend-mode:'+blend+'" opacity="'+op+'"/>';
+  }
+  if(tipo==="estasi")
+    return velo(aggiustaCol(base,1.7), "color", "1", "cerv-estasi")
+         + velo(aggiustaCol(base,1,0.72), "soft-light", "0.45");
+  if(tipo==="aned")
+    return velo(aggiustaCol(base,0.5), "color", "0.95")   // stessa tinta, smorzata
+         + velo("#4a3d2c", "multiply", "0.22");           // appena spenta, non nera
+  return velo(aggiustaCol(base,0.7), "color", "0.45");    // vuoto: base tenue
+}
+
+/* L'illustrazione del cervello (tomo): pergamena, ritaglio a inchiostro coi 4
+   lobi che si accendono/spengono, richiami a gomito e le etichette dei lobi.
+   Maschere/ritaglio allineate a cutout.webp (1040×800) in un'area 1560×900. */
 function cervelloSvg(){
-  var slot = state.estasiSlot || {};
   var defs="", tint="";
   LOBI_ORD.forEach(function(l){
     var lobo=l[0];
     defs += '<mask id="'+LOBI_MASK[lobo]+'" maskContentUnits="userSpaceOnUse">'
           + '<image href="img/estasi/'+LOBI_FILE[lobo]+'" x="0" y="0" width="1040" height="800"/></mask>';
-    var id=slot[lobo]; if(!id) return;
-    var e=estasiById(id); if(!e) return;
-    if(e.tipo==="anedonia"){
-      tint += '<rect class="cerv-tint cerv-aned" width="1040" height="800" fill="#5f5f5f" mask="url(#'+LOBI_MASK[lobo]+')" style="mix-blend-mode:multiply"/>';
-    } else {
-      tint += '<rect class="cerv-tint cerv-estasi" width="1040" height="800" fill="'+(LOBI_COL[lobo]||"#c0a060")+'" mask="url(#'+LOBI_MASK[lobo]+')" style="mix-blend-mode:color"/>';
-    }
+    tint += veliLobo(lobo);
   });
-  return '<svg class="cerv-svg" viewBox="255 55 1050 810" role="img" aria-label="Cervello coi quattro lobi">'
+  // il sottotitolo di ogni lobo: la voce assegnata, o il suo "dominio" se vuoto
+  function sub(lobo){ var id=(state.estasiSlot||{})[lobo], e=id?estasiById(id):null; return e ? (e.nome||LOBI_DOM[lobo]) : LOBI_DOM[lobo]; }
+  return '<svg class="cerv-svg" viewBox="0 0 1560 900" role="img" aria-label="Cervello coi quattro lobi">'
     + '<defs>'+defs+'</defs>'
     + '<g transform="translate(260,60)">'
     + '<image href="img/estasi/cutout.webp" x="0" y="0" width="1040" height="800"/>'
-    + '<g>'+tint+'</g>'
-    + '</g></svg>';
+    + '<g>'+tint+'</g></g>'
+    + '<g class="lead-line">'
+      + '<path d="M560,360 L235,360"/>'
+      + '<path d="M800,600 L800,720 L235,720"/>'
+      + '<path d="M880,285 L880,224 L1325,224"/>'
+      + '<path d="M1120,470 L1325,470"/>'
+    + '</g>'
+    + '<g class="lead-dot">'
+      + '<circle cx="560" cy="360" r="4.5"/><circle cx="800" cy="600" r="4.5"/>'
+      + '<circle cx="880" cy="285" r="4.5"/><circle cx="1120" cy="470" r="4.5"/>'
+    + '</g>'
+    + '<g>'
+      + '<text class="cerv-lbl" x="235" y="354" text-anchor="end" font-size="33">Frontale</text>'
+      + '<text class="cerv-sub" x="235" y="385" text-anchor="end" font-size="26">'+esc(sub("frontale"))+'</text>'
+      + '<text class="cerv-lbl" x="235" y="714" text-anchor="end" font-size="33">Temporale</text>'
+      + '<text class="cerv-sub" x="235" y="745" text-anchor="end" font-size="26">'+esc(sub("temporale"))+'</text>'
+      + '<text class="cerv-lbl" x="1325" y="220" text-anchor="start" font-size="33">Parietale</text>'
+      + '<text class="cerv-sub" x="1325" y="251" text-anchor="start" font-size="26">'+esc(sub("parietale"))+'</text>'
+      + '<text class="cerv-lbl" x="1325" y="466" text-anchor="start" font-size="33">Occipitale</text>'
+      + '<text class="cerv-sub" x="1325" y="497" text-anchor="start" font-size="26">'+esc(sub("occipitale"))+'</text>'
+    + '</g>'
+    + '</svg>';
 }
 
 function unSelectLobo(lobo, etich, scelto){

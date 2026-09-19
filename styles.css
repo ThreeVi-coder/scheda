@@ -115,25 +115,57 @@
     .ea-riga{ flex-direction:column; align-items:stretch; gap:6px; }
     .ea-sel{ max-width:none; }
   }
-  /* editor Estasi dentro il pop-up del Retro */
   .ea-bar{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:16px; }
   .ea-bar .ctrlmsg{ margin-right:auto; }
-  /* l'illustrazione del cervello nel pop-up Estasi */
-  .est-wrap{ display:flex; flex-direction:column; gap:16px; }
-  /* la pergamena del tomo dietro al cervello (stessa ricetta del concept:
-     base grigia + aloni caldi + texture sporca) */
-  .cerv-plate{ border-radius:12px; padding:8px; overflow:hidden;
-    background-color:#a6aba6;
+
+  /* ===== TOMO delle Estasi ed Anedonie: il pop-up su PERGAMENA (stile concept) ===== */
+  .dialog.tomo{ max-width:980px; width:min(980px,96vw);
+    color:#201406; font-family:"EB Garamond",Georgia,serif;
+    background-color:#adb1ab;
     background-image:
       radial-gradient(ellipse 55% 45% at 18% 12%, rgba(150,120,68,.24), transparent 55%),
       radial-gradient(ellipse 50% 45% at 85% 90%, rgba(120,92,50,.28), transparent 52%),
       radial-gradient(ellipse 60% 55% at 60% 45%, rgba(176,150,98,.16), transparent 72%),
       url(img/estasi/grimD.webp);
     background-size:cover; background-position:center;
-    box-shadow:inset 0 0 0 1px rgba(80,60,30,.28), inset 0 0 40px rgba(60,44,20,.18); }
-  .cerv-svg{ display:block; width:100%; max-width:520px; height:auto; margin:0 auto; }
+    border:1px solid #b19661;
+    box-shadow:0 24px 60px -20px rgba(30,18,8,.7), inset 0 0 0 1px rgba(80,60,30,.25); }
+  .dialog.tomo .dlghead{ border-bottom:1px solid rgba(120,90,40,.35); }
+  .dialog.tomo .dlgx{ color:#33261a; }
+  .dialog.tomo .dlgbar{ border-top:1px solid rgba(120,90,40,.35); }
+  .dialog.tomo .btn-close{ color:#201406; border-color:#b19661; background:rgba(255,251,240,.35); }
+  .dialog.tomo .btn-save{ background:#7a4a2a; border-color:#5f3418; color:#fff3e2; }
+
+  .tomo-head{ text-align:left; }
+  .tomo-eyebrow{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:#5f200e; margin:0 0 4px; }
+  .tomo-title{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(30px,5vw,46px); line-height:1.02; margin:0; color:#201406; }
+  .tomo-title .amp{ color:#8a3020; font-style:italic; }
+
+  .cerv-svg{ display:block; width:100%; height:auto; margin:2px auto 0; }
   .cerv-estasi{ animation:cervBreathe 5.5s ease-in-out infinite; }
-  @keyframes cervBreathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
+  @keyframes cervBreathe{ 0%,100%{ opacity:.86; } 50%{ opacity:1; } }
+  .lead-line{ fill:none; stroke:#43301a; stroke-width:1.6; opacity:.9; stroke-linecap:round; }
+  .lead-dot{ fill:#43301a; opacity:.95; }
+  .cerv-lbl{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.06em; fill:#1c1206; }
+  .cerv-sub{ font-family:"EB Garamond",Georgia,serif; font-style:italic; fill:#57200f; }
+
+  .tomo-legend{ display:flex; flex-wrap:wrap; gap:6px 20px; justify-content:center; margin:4px 0; font-size:14px; color:#33261a; }
+  .tomo-legend span{ display:inline-flex; align-items:center; gap:8px; }
+  .tomo-legend i{ width:14px; height:14px; border-radius:3px; display:inline-block; }
+  .tomo-legend .lg-est{ background:linear-gradient(90deg,#d98b96,#9cc07f,#e3ac5a,#9a9fd6); }
+  .tomo-legend .lg-ane{ background:#9a8f7e; }
+  .tomo-legend .lg-vuo{ background:transparent; border:1.5px dashed #33261a; }
+
+  .tomo-sotto{ margin-top:10px; }
+  /* editor su pergamena */
+  .dialog.tomo .ea-lobo{ color:#201406; }
+  .dialog.tomo .ea-sel{ background:rgba(255,251,240,.6); color:#201406; border:1px solid #b19661; }
+  .dialog.tomo .ea-edit .hint{ color:#4c3820; }
+  .dialog.tomo .ea-bar .ctrlmsg{ color:#5f200e; }
+  /* elenco a fisarmonica (vista giocatore) su pergamena */
+  .dialog.tomo .acc-riga{ border-color:rgba(120,90,40,.3); }
+  .dialog.tomo .acc-cap, .dialog.tomo .acc-nome{ color:#201406; }
+  .dialog.tomo .acc-testo, .dialog.tomo .acc-vuoto, .dialog.tomo .acc-nota{ color:#33261a; }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

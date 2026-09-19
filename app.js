@@ -3991,9 +3991,12 @@ function apriPriv(fonte){
   if(fonte==="talenti"){
     body.innerHTML='<div class="taltab" id="taltab"></div>';
     renderTaltab();
-  } else if(fonte==="estasi" && puoAssegnareEstasi()){
-    // il master/sviluppatore che guarda una scheda può ASSEGNARE qui, in contesto
-    body.innerHTML=estasiEditorHtml();
+  } else if(fonte==="estasi"){
+    // il cervello coi lobi accesi; sotto, l'editor (per chi assegna) o l'elenco
+    var sotto = puoAssegnareEstasi()
+      ? estasiEditorHtml()
+      : fisarmonicaHtml(vociEstasi(), messaggioVuoto("estasi"));
+    body.innerHTML='<div class="est-wrap"><div class="cerv-plate">'+cervelloSvg()+'</div>'+sotto+'</div>';
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
   }
@@ -6324,8 +6327,38 @@ function estasiPerLobo(lobo){
     return String(a.nome||"").localeCompare(String(b.nome||""));
   });
 }
-// i colori del concept, un pallino per lobo (solo estetica della finestra)
+// i colori dei lobi (fissi per lobo): con un'Estasi il lobo si accende nel suo
+// colore, con un'Anedonia vira al grigio, vuoto = spento.
 var LOBI_COL={ frontale:"#d98b96", parietale:"#9cc07f", temporale:"#e3ac5a", occipitale:"#9a9fd6" };
+var LOBI_MASK={ frontale:"cvF", parietale:"cvP", temporale:"cvT", occipitale:"cvO" };
+var LOBI_FILE={ frontale:"mF.png", parietale:"mP.png", temporale:"mT.png", occipitale:"mO.png" };
+
+/* L'illustrazione del cervello coi 4 lobi. Ogni lobo assegnato riceve un velo:
+   Estasi = tinta del suo colore (mix-blend "color": ricolora tenendo l'inchiostro);
+   Anedonia = grigio scuro (mix-blend "multiply": lo spegne). Vuoto = niente.
+   Le maschere/ritaglio sono allineate a cutout.webp (1040×800) in un'area 1560×900. */
+function cervelloSvg(){
+  var slot = state.estasiSlot || {};
+  var defs="", tint="";
+  LOBI_ORD.forEach(function(l){
+    var lobo=l[0];
+    defs += '<mask id="'+LOBI_MASK[lobo]+'" maskContentUnits="userSpaceOnUse">'
+          + '<image href="img/estasi/'+LOBI_FILE[lobo]+'" x="0" y="0" width="1040" height="800"/></mask>';
+    var id=slot[lobo]; if(!id) return;
+    var e=estasiById(id); if(!e) return;
+    if(e.tipo==="anedonia"){
+      tint += '<rect class="cerv-tint cerv-aned" width="1040" height="800" fill="#5f5f5f" mask="url(#'+LOBI_MASK[lobo]+')" style="mix-blend-mode:multiply"/>';
+    } else {
+      tint += '<rect class="cerv-tint cerv-estasi" width="1040" height="800" fill="'+(LOBI_COL[lobo]||"#c0a060")+'" mask="url(#'+LOBI_MASK[lobo]+')" style="mix-blend-mode:color"/>';
+    }
+  });
+  return '<svg class="cerv-svg" viewBox="255 55 1050 810" role="img" aria-label="Cervello coi quattro lobi">'
+    + '<defs>'+defs+'</defs>'
+    + '<g transform="translate(260,60)">'
+    + '<image href="img/estasi/cutout.webp" x="0" y="0" width="1040" height="800"/>'
+    + '<g>'+tint+'</g>'
+    + '</g></svg>';
+}
 
 function unSelectLobo(lobo, etich, scelto){
   var voci=estasiPerLobo(lobo);

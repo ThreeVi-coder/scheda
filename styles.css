@@ -118,6 +118,22 @@
   /* editor Estasi dentro il pop-up del Retro */
   .ea-bar{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:16px; }
   .ea-bar .ctrlmsg{ margin-right:auto; }
+  /* l'illustrazione del cervello nel pop-up Estasi */
+  .est-wrap{ display:flex; flex-direction:column; gap:16px; }
+  /* la pergamena del tomo dietro al cervello (stessa ricetta del concept:
+     base grigia + aloni caldi + texture sporca) */
+  .cerv-plate{ border-radius:12px; padding:8px; overflow:hidden;
+    background-color:#a6aba6;
+    background-image:
+      radial-gradient(ellipse 55% 45% at 18% 12%, rgba(150,120,68,.24), transparent 55%),
+      radial-gradient(ellipse 50% 45% at 85% 90%, rgba(120,92,50,.28), transparent 52%),
+      radial-gradient(ellipse 60% 55% at 60% 45%, rgba(176,150,98,.16), transparent 72%),
+      url(img/estasi/grimD.webp);
+    background-size:cover; background-position:center;
+    box-shadow:inset 0 0 0 1px rgba(80,60,30,.28), inset 0 0 40px rgba(60,44,20,.18); }
+  .cerv-svg{ display:block; width:100%; max-width:520px; height:auto; margin:0 auto; }
+  .cerv-estasi{ animation:cervBreathe 5.5s ease-in-out infinite; }
+  @keyframes cervBreathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

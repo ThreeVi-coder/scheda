@@ -1011,13 +1011,14 @@ function apriScheda(id){
 function caricaScheda(id){
   var msg=document.getElementById("ctrlMsg");
   if(msg) msg.textContent="Apro la scheda\u2026";
-  sb.from("schede").select("dati,origine_sbloccata").eq("user_id", id).maybeSingle().then(function(r){
+  sb.from("schede").select("dati,origine_sbloccata,estasi_slot").eq("user_id", id).maybeSingle().then(function(r){
     if(r && r.error){ if(msg) msg.textContent="Non riesco ad aprirla: "+r.error.message; return; }
     if(msg) msg.textContent="";
     bersaglio=id;
     schedaVuota();
     if(r && r.data && r.data.dati) applicaDati(r.data.dati);
     applicaSbloccoOrigine(r && r.data);
+    applicaEstasiSlot(r && r.data);
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
@@ -1034,11 +1035,12 @@ function tornaAllaMia(){
 }
 
 function caricaLaMia(){
-  sb.from("schede").select("dati,origine_sbloccata").eq("user_id", utente.id).maybeSingle().then(function(r){
+  sb.from("schede").select("dati,origine_sbloccata,estasi_slot").eq("user_id", utente.id).maybeSingle().then(function(r){
     bersaglio=null;
     schedaVuota();
     if(r && r.data && r.data.dati) applicaDati(r.data.dati);
     applicaSbloccoOrigine(r && r.data);
+    applicaEstasiSlot(r && r.data);
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
@@ -2527,6 +2529,14 @@ function normalizzaTalenti(o){
    scheda, subito dopo applicaDati, e diventa la verità in memoria. */
 function applicaSbloccoOrigine(rigaScheda){
   state.talenti.sbloccoOrigine = !!(rigaScheda && rigaScheda.origine_sbloccata);
+}
+/* Come lo sblocco d'origine, anche l'assegnazione delle Estasi/Anedonie sta
+   FUORI dal blob dati: nella colonna schede.estasi_slot (mappa lobo→id-voce),
+   scritta solo dai master. La leggo dalla riga della scheda e diventa la verità
+   in memoria; il salvataggio del giocatore non la include e non può cambiarla. */
+function applicaEstasiSlot(rigaScheda){
+  var m = rigaScheda && rigaScheda.estasi_slot;
+  state.estasiSlot = (m && typeof m==="object" && !Array.isArray(m)) ? m : {};
 }
 
 /* ===== IL +1 DEI TALENTI CHE ENTRA NEI PUNTEGGI =====
@@ -5933,6 +5943,10 @@ function puoStaff(){ return puoAssegnare() || puoDareAccesso() || puoTogliereAcc
    non gliele darebbe comunque, qui si evita solo di chiedergliele. */
 function puoVedereSchede(){ return haRuolo("master") || haRuolo("supporto") || haRuolo("sviluppatore"); }
 function puoToccareSchede(){ return haRuolo("supporto") || haRuolo("sviluppatore"); }
+// Le Estasi/Anedonie le assegna il MASTER (è un atto di narrazione, non di
+// supporto tecnico). Lo sviluppatore fa sempre tutto. Deve combaciare col
+// controllo di ruolo dentro la funzione SQL "assegna_estasi".
+function puoAssegnareEstasi(){ return haRuolo("master") || haRuolo("sviluppatore"); }
 
 function nickCell(p){
   var disp = p.nome && p.nome!==p.username ? ' <small>('+esc(p.nome)+')</small>' : '';
@@ -5948,7 +5962,7 @@ function caricaControllo(){
 
   var richieste=[
     sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa,ultimo_accesso"),
-    puoVedereSchede() ? sb.from("schede").select("user_id,dati,origine_sbloccata") : Promise.resolve({ data:[], error:null }),
+    puoVedereSchede() ? sb.from("schede").select("user_id,dati,origine_sbloccata,estasi_slot") : Promise.resolve({ data:[], error:null }),
     sb.from("ruoli").select("user_id,ruolo")
   ];
 
@@ -5964,8 +5978,12 @@ function caricaControllo(){
       return String(a.username||"").localeCompare(String(b.username||""));
     });
     mappaRuoli(r[2] ? (r[2].data||[]) : []);
-    schedeCache={}; sbloccoCache={};
-    (r[1].data||[]).forEach(function(x){ schedeCache[x.user_id]=x.dati||{}; sbloccoCache[x.user_id]=!!x.origine_sbloccata; });
+    schedeCache={}; sbloccoCache={}; estasiSlotCache={};
+    (r[1].data||[]).forEach(function(x){
+      schedeCache[x.user_id]=x.dati||{};
+      sbloccoCache[x.user_id]=!!x.origine_sbloccata;
+      estasiSlotCache[x.user_id]=(x.estasi_slot && typeof x.estasi_slot==="object" && !Array.isArray(x.estasi_slot)) ? x.estasi_slot : {};
+    });
     preparaOrdini();
     disegnaPersonaggi();
     if(puoStaff()){
@@ -5986,7 +6004,7 @@ function inAttesa(p){
   return !p.approvato && (ruoliDi[p.user_id]||[]).indexOf("sviluppatore")<0;
 }
 
-var schedeCache={}, sbloccoCache={}, cerca="", ordine="nick";
+var schedeCache={}, sbloccoCache={}, estasiSlotCache={}, cerca="", ordine="nick";
 
 /* Le voci dell'ordinamento dipendono da cosa uno puo' vedere: a chi le schede
    sono chiuse non ha senso proporre "livello" o "XP", che non gli arrivano. */
@@ -6117,10 +6135,19 @@ function disegnaPersonaggi(){
                           :'Sblocca il +1 del talento d’origine (missione di lore fatta)')+'">'
         + (sbl?'🔓 +1 sbloccato':'🔒 +1 origine')+'</button>';
     }
+    // l'assegnazione delle Estasi/Anedonie ai 4 lobi: la fanno i master (e lo
+    // sviluppatore), su chi ha già una scheda salvata. Mostra quanti slot pieni.
+    var estasiBtn = '';
+    if(puoAssegnareEstasi() && haScheda){
+      var sl = estasiSlotCache[p.user_id] || {}, n=0;
+      for(var kk in sl){ if(sl[kk]) n++; }
+      estasiBtn = '<button class="chip c-estasi'+(n?' on':'')+'" data-estasi="'+esc(p.user_id)
+        + '" title="Assegna le Estasi ed Anedonie ai 4 lobi">🧠 Estasi'+(n?' '+n+'/4':'')+'</button>';
+    }
     return '<tr>'+prima+'<td class="pgname">'+pg+'</td>'
          + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td>'
          + '<td>'+quando(p.ultimo_accesso)+'</td>'
-         + '<td><div class="ctrl-azioni">'+apri+sblocco+'</div></td></tr>';
+         + '<td><div class="ctrl-azioni">'+apri+sblocco+estasiBtn+'</div></td></tr>';
   }).join("");
 }
 
@@ -6161,6 +6188,100 @@ function toggleSbloccoOrigine(id, btn){
   });
 }
 
+
+/* ===== ASSEGNAZIONE ESTASI/ANEDONIE (finestra nel Controllo) =====
+   Il master (o lo sviluppatore) sceglie, per un personaggio, cosa mettere in
+   ognuno dei 4 lobi: una voce del catalogo o niente. Il salvataggio passa dalla
+   funzione SQL "assegna_estasi", che ricontrolla il ruolo e scrive solo la
+   colonna schede.estasi_slot. Non c'è personalizzazione: è uno strumento dello
+   staff, come lo sblocco d'origine. */
+var estAssTarget=null, estAssSalvando=false;
+
+/* le voci del catalogo per un lobo, ordinate: prima le Estasi poi le Anedonie,
+   dentro per rarità crescente e poi per nome. */
+function estasiPerLobo(lobo){
+  return ESTASI.filter(function(e){ return e.lobo===lobo; }).slice().sort(function(a,b){
+    var ta=a.tipo==="anedonia"?1:0, tb=b.tipo==="anedonia"?1:0;
+    if(ta!==tb) return ta-tb;
+    var ra=(EST_RAR[a.rarita]&&EST_RAR[a.rarita].rank)||9, rb=(EST_RAR[b.rarita]&&EST_RAR[b.rarita].rank)||9;
+    if(ra!==rb) return ra-rb;
+    return String(a.nome||"").localeCompare(String(b.nome||""));
+  });
+}
+// i colori del concept, un pallino per lobo (solo estetica della finestra)
+var LOBI_COL={ frontale:"#d98b96", parietale:"#9cc07f", temporale:"#e3ac5a", occipitale:"#9a9fd6" };
+
+function unSelectLobo(lobo, etich, scelto){
+  var voci=estasiPerLobo(lobo);
+  var estasi=voci.filter(function(e){ return e.tipo!=="anedonia"; });
+  var aned =voci.filter(function(e){ return e.tipo==="anedonia"; });
+  function opt(e){
+    return '<option value="'+esc(e.id)+'"'+(e.id===scelto?' selected':'')+'>'
+      + esc((e.nome||"(senza nome)")+" · "+rarLabel(e.rarita))+'</option>';
+  }
+  function gruppo(lab, arr){ return arr.length ? '<optgroup label="'+esc(lab)+'">'+arr.map(opt).join("")+'</optgroup>' : ''; }
+  var col=LOBI_COL[lobo]||"#999";
+  return '<label class="ea-riga">'
+    + '<span class="ea-lobo"><span class="ea-dot" style="background:'+col+'"></span>'+esc(etich)+'</span>'
+    + '<select class="ea-sel" data-lobo="'+esc(lobo)+'">'
+    + '<option value="">— vuoto —</option>'
+    + gruppo("Estasi", estasi) + gruppo("Anedonie", aned)
+    + '</select></label>';
+}
+
+function apriAssegnaEstasi(id){
+  if(!puoAssegnareEstasi()) return;
+  estAssTarget=id;
+  var m=document.getElementById("modalEstAss"); if(!m) return;
+  var nm=nomePg(id);
+  document.getElementById("eaTit").textContent = nm ? ("Estasi ed Anedonie — "+nm) : "Estasi ed Anedonie";
+  var msg=document.getElementById("eaMsg"); if(msg) msg.textContent="";
+  var body=document.getElementById("eaBody");
+  if(!estasiCaricate || !ESTASI.length){
+    body.innerHTML='<p class="hint">Il catalogo delle Estasi non è ancora pronto (o è vuoto). Riprova tra un attimo con Aggiorna.</p>';
+  } else {
+    var sl=estasiSlotCache[id]||{};
+    body.innerHTML = LOBI_ORD.map(function(l){ return unSelectLobo(l[0], l[1], sl[l[0]]||""); }).join("");
+  }
+  m.hidden=false;
+}
+function chiudiAssegnaEstasi(){
+  var m=document.getElementById("modalEstAss"); if(m) m.hidden=true;
+  estAssTarget=null;
+}
+function salvaAssegnaEstasi(){
+  if(estAssSalvando || !estAssTarget) return;
+  var id=estAssTarget, msg=document.getElementById("eaMsg");
+  var nuovo={};
+  document.querySelectorAll("#eaBody .ea-sel").forEach(function(s){
+    var v=s.value; if(v) nuovo[s.getAttribute("data-lobo")]=v;
+  });
+  estAssSalvando=true;
+  var btn=document.getElementById("eaSalva"); if(btn) btn.disabled=true;
+  if(msg) msg.textContent="Salvo…";
+  Promise.resolve(sb.rpc("assegna_estasi", { target:id, nuovo:nuovo })).then(function(res){
+    estAssSalvando=false; if(btn) btn.disabled=false;
+    if(res && res.error){
+      if(msg) msg.textContent="Non sono riuscito a salvare: "+res.error.message;
+      console.error(res.error); return;
+    }
+    // il database restituisce la mappa RIPULITA (scarta id non validi): uso quella
+    var pulito=(res && res.data && typeof res.data==="object" && !Array.isArray(res.data)) ? res.data : nuovo;
+    estasiSlotCache[id]=pulito;
+    // se sto guardando/possiedo proprio quella scheda, aggiorno subito la vista
+    if(id===(bersaglio||utente.id)){
+      state.estasiSlot=pulito;
+      if(typeof renderRetro==="function") renderRetro();
+      aggiornaVisteEstasi();
+    }
+    disegnaPersonaggi();
+    chiudiAssegnaEstasi();
+  }).catch(function(e){
+    estAssSalvando=false; if(btn) btn.disabled=false;
+    if(msg) msg.textContent="Qualcosa non ha risposto: riprova.";
+    console.error(e);
+  });
+}
 
 /* ---- pannello dello staff ---- */
 var ASSEGNABILI=[
@@ -6382,8 +6503,20 @@ document.getElementById("tblBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest("[data-apri]") : null;
   if(b){ apriScheda(b.getAttribute("data-apri")); return; }
   var s = e.target && e.target.closest ? e.target.closest("[data-sblocca]") : null;
-  if(s && !s.disabled){ toggleSbloccoOrigine(s.getAttribute("data-sblocca"), s); }
+  if(s && !s.disabled){ toggleSbloccoOrigine(s.getAttribute("data-sblocca"), s); return; }
+  var es = e.target && e.target.closest ? e.target.closest("[data-estasi]") : null;
+  if(es && !es.disabled){ apriAssegnaEstasi(es.getAttribute("data-estasi")); }
 });
+(function(){
+  var m=document.getElementById("modalEstAss"); if(!m) return;
+  var sv=document.getElementById("eaSalva"); if(sv) sv.addEventListener("click", salvaAssegnaEstasi);
+  m.addEventListener("click", function(e){
+    if(e.target && e.target.closest && e.target.closest("[data-eaclose]")) chiudiAssegnaEstasi();
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key==="Escape" && !m.hidden) chiudiAssegnaEstasi();
+  });
+})();
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
   if(!b || b.disabled) return;
@@ -6430,7 +6563,7 @@ function avvia(){
       // lo segnalo solo nella console, senza fermare niente
       if(prof && prof.error) console.warn("sync_profilo non ha risposto:", prof.error.message);
       return Promise.all([
-        sb.from("schede").select("dati,origine_sbloccata").eq("user_id", utente.id).maybeSingle(),
+        sb.from("schede").select("dati,origine_sbloccata,estasi_slot").eq("user_id", utente.id).maybeSingle(),
         sb.from("ruoli").select("ruolo").eq("user_id", utente.id),
         sb.from("profili").select(CAMPI_MIEI).eq("user_id", utente.id).maybeSingle()
       ]);
@@ -6471,6 +6604,7 @@ function avvia(){
       aggiornaNav();
       if(scheda.data && scheda.data.dati) applicaDati(scheda.data.dati);
       applicaSbloccoOrigine(scheda.data);
+      applicaEstasiSlot(scheda.data);
       disegnaAuthbar();
       mostra("sheet");          // prima si mostra: così la barra ha una larghezza vera
       sincronizzaComandi();     // e solo dopo si misura il nome

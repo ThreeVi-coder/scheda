@@ -100,7 +100,21 @@
   /* sblocco del +1 d'origine: spento = ambra tratteggiata, acceso = verde confermato */
   .chip.c-sblocco{ border-color:rgba(224,177,94,.4); color:var(--gold); white-space:nowrap; }
   .chip.on.c-sblocco{ color:#77c99a; border-color:rgba(119,201,154,.55); background:rgba(119,201,154,.12); font-weight:600; }
+  /* assegnazione Estasi/Anedonie: spento = viola tenue, acceso = viola pieno */
+  .chip.c-estasi{ border-color:rgba(154,159,214,.45); color:#b9bdea; white-space:nowrap; }
+  .chip.on.c-estasi{ color:#cfd2f4; border-color:rgba(154,159,214,.6); background:rgba(154,159,214,.16); font-weight:600; }
   .ctrl-azioni{ display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }
+  /* finestra di assegnazione Estasi/Anedonie (una riga per lobo) */
+  .ea-body{ display:flex; flex-direction:column; gap:12px; }
+  .ea-riga{ display:flex; align-items:center; gap:12px; justify-content:space-between; }
+  .ea-lobo{ display:flex; align-items:center; gap:8px; font-family:var(--ui); font-size:13px; color:var(--ink); white-space:nowrap; }
+  .ea-dot{ width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25) inset; flex-shrink:0; }
+  .ea-sel{ flex:1 1 auto; min-width:0; max-width:340px; font-family:var(--ui); font-size:13px;
+    padding:7px 9px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  @media (max-width:520px){
+    .ea-riga{ flex-direction:column; align-items:stretch; gap:6px; }
+    .ea-sel{ max-width:none; }
+  }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

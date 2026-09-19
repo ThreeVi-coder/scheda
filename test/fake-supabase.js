@@ -92,7 +92,23 @@ function makeFakeSupabase(seed){
       onAuthStateChange: function(){ return { data: { subscription: { unsubscribe: function(){} } } }; }
     },
     from: function(nome){ return makeTable(store, nome); },
-    rpc:  function(){ return ok(null); },
+    rpc:  function(nome, args){
+      // rispecchia la funzione SQL "assegna_estasi": tiene solo le 4 chiavi-lobo
+      // e solo id di voci che esistono e appartengono a QUEL lobo; scrive la
+      // colonna estasi_slot della scheda e ritorna la mappa ripulita.
+      if(nome === "assegna_estasi"){
+        var target = args && args.target, nuovo = (args && args.nuovo) || {}, pulito = {};
+        ["frontale","parietale","temporale","occipitale"].forEach(function(k){
+          var v = nuovo[k];
+          if(v && (store.estasi||[]).some(function(e){ return String(e.id)===String(v) && e.lobo===k; })) pulito[k] = v;
+        });
+        var toccate = 0;
+        (store.schede||[]).forEach(function(r){ if(r.user_id===target){ r.estasi_slot = pulito; toccate++; } });
+        if(!toccate) return Promise.resolve({ data:null, error:{ message:"Questa persona non ha ancora una scheda salvata." } });
+        return ok(pulito);
+      }
+      return ok(null);
+    },
     channel: function(){
       var ch = { on: function(){ return ch; }, subscribe: function(){ return ch; }, unsubscribe: function(){ return ok(null); } };
       return ch;

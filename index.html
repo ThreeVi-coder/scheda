@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=78">
+<link rel="stylesheet" href="styles.css?v=79">
 </head>
 <body>
   <div class="wrap">
@@ -860,6 +860,25 @@
       </div>
     </div>
 
+    <div class="modal" id="modalEstAss" hidden>
+      <div class="backdrop" data-eaclose></div>
+      <div class="dialog centrata" id="dialogEstAss">
+        <div class="dlghead">
+          <h2 id="eaTit">Estasi ed Anedonie</h2>
+          <button class="dlgx" data-eaclose aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="dlgbody">
+          <p class="hint" style="margin:2px 0 12px">Scegli, per ogni lobo, una voce del catalogo oppure lascia &laquo;vuoto&raquo;. Lo decide il master: il giocatore non pu&ograve; cambiarlo.</p>
+          <div id="eaBody" class="ea-body"></div>
+          <p class="ctrlmsg" id="eaMsg" style="margin-top:10px"></p>
+        </div>
+        <div class="dlgbar">
+          <button class="btn-close" data-eaclose>Annulla</button>
+          <button class="btn-save" id="eaSalva">Salva</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal" id="modalEsci" hidden>
       <div class="backdrop" data-close="esci"></div>
       <div class="dialog mezzo">
@@ -944,6 +963,6 @@
 
   </div>
 
-<script src="app.js?v=78"></script>
+<script src="app.js?v=79"></script>
 </body>
 </html>

@@ -195,6 +195,41 @@ async function main(){
   eq(tentativiFinti, 2, "la lettura ha RITENTATO dopo il primo fallimento di rete");
   eq(datiRecuperati.length, 1, "al secondo tentativo i dati arrivano (auto-riparazione)");
 
+  /* ===== I) Estasi ed Anedonie — Mattone 2: assegnazione dei master ===== */
+  // lettura della colonna nello stato (come applicaSbloccoOrigine)
+  W.applicaEstasiSlot({ estasi_slot: { frontale: "e_f1" } });
+  eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale: "e_f1" }), "applicaEstasiSlot legge la mappa dalla riga");
+  W.applicaEstasiSlot({ estasi_slot: "roba-sbagliata" });
+  eq(JSON.stringify(W.state.estasiSlot), "{}", "una estasi_slot non valida diventa mappa vuota");
+  W.applicaEstasiSlot(null);
+  eq(JSON.stringify(W.state.estasiSlot), "{}", "senza riga, mappa vuota");
+  // il gate: assegna il master (e lo sviluppatore, qui il tester lo è)
+  ok(W.puoAssegnareEstasi() === true, "lo sviluppatore può assegnare le Estasi");
+  // l'ordine del menù per lobo: prima le Estasi, poi le Anedonie
+  const perFront = W.estasiPerLobo("frontale");
+  eq(perFront.length, 2, "il lobo frontale ha due voci nel catalogo di prova");
+  eq(perFront[0].tipo, "estasi", "nel menù del lobo l'Estasi viene prima");
+  eq(perFront[1].tipo, "anedonia", "e l'Anedonia dopo");
+  // il giro completo salva → finestra: apre, sceglie, salva via rpc, aggiorna
+  W.estasiSlotCache = { u1: {} };
+  W.bersaglio = null;               // sto sulla MIA scheda (u1)
+  W.apriAssegnaEstasi("u1");
+  const selF = W.document.querySelector('#eaBody .ea-sel[data-lobo="frontale"]');
+  ok(!!selF, "la finestra crea un menù per il lobo frontale");
+  if(selF){
+    selF.value = "e_f1";
+    W.salvaAssegnaEstasi();
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r, 20));
+    eq(JSON.stringify(W.estasiSlotCache.u1), JSON.stringify({ frontale: "e_f1" }), "il salvataggio aggiorna la cache del Controllo");
+    eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale: "e_f1" }), "e lo stato vivo della scheda aperta");
+    const rigaU1 = W.sb._store.schede.filter(function(r){ return r.user_id==="u1"; })[0];
+    eq(JSON.stringify(rigaU1.estasi_slot), JSON.stringify({ frontale: "e_f1" }), "e la colonna estasi_slot nel database");
+    eq(W.vociEstasi().length, 1, "ora la vista mostra un lobo assegnato");
+  }
+  // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
+  const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
+  eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");
+
   /* ===== esito ===== */
   console.log("");
   if (falliti === 0){

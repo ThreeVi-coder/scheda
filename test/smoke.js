@@ -210,18 +210,20 @@ async function main(){
   eq(perFront.length, 2, "il lobo frontale ha due voci nel catalogo di prova");
   eq(perFront[0].tipo, "estasi", "nel menù del lobo l'Estasi viene prima");
   eq(perFront[1].tipo, "anedonia", "e l'Anedonia dopo");
-  // il giro completo salva → finestra: apre, sceglie, salva via rpc, aggiorna
+  // il giro completo dal POP-UP del Retro: chi assegna vede l'editor (4 menù),
+  // sceglie, Salva → rpc → aggiorna stato/cache/database.
   W.estasiSlotCache = { u1: {} };
   W.bersaglio = null;               // sto sulla MIA scheda (u1)
-  W.apriAssegnaEstasi("u1");
-  const selF = W.document.querySelector('#eaBody .ea-sel[data-lobo="frontale"]');
-  ok(!!selF, "la finestra crea un menù per il lobo frontale");
+  W.state.estasiSlot = {};
+  W.apriPriv("estasi");             // essendo sviluppatore, esce l'editor
+  const selF = W.document.querySelector('#privBody .ea-sel[data-lobo="frontale"]');
+  ok(!!selF, "il pop-up Estasi mostra l'editor coi menù per lobo (a chi assegna)");
   if(selF){
     selF.value = "e_f1";
-    W.salvaAssegnaEstasi();
+    W.salvaEstasiDaPopup();
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r, 20));
-    eq(JSON.stringify(W.estasiSlotCache.u1), JSON.stringify({ frontale: "e_f1" }), "il salvataggio aggiorna la cache del Controllo");
-    eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale: "e_f1" }), "e lo stato vivo della scheda aperta");
+    eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale: "e_f1" }), "il salvataggio aggiorna lo stato vivo della scheda");
+    eq(JSON.stringify(W.estasiSlotCache.u1), JSON.stringify({ frontale: "e_f1" }), "e la cache del Controllo");
     const rigaU1 = W.sb._store.schede.filter(function(r){ return r.user_id==="u1"; })[0];
     eq(JSON.stringify(rigaU1.estasi_slot), JSON.stringify({ frontale: "e_f1" }), "e la colonna estasi_slot nel database");
     eq(W.vociEstasi().length, 1, "ora la vista mostra un lobo assegnato");
@@ -229,6 +231,17 @@ async function main(){
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
   eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");
+
+  /* ===== J) Controllo a sezioni per ruolo ===== */
+  ok(W.sezOk("panoramica") && W.sezOk("master") && W.sezOk("supporto") && W.sezOk("moderazione") && W.sezOk("ruoli"),
+     "lo sviluppatore vede tutte le sezioni del Controllo");
+  const pTest = { user_id:"uX", approvato:true, in_pausa:false };
+  ok(W.azioniRiga("moderazione", pTest).indexOf('data-azione="accesso"')!==-1
+     && W.azioniRiga("moderazione", pTest).indexOf('data-azione="pausa"')!==-1,
+     "la sezione Moderazione mostra accesso e pausa nella riga");
+  ok(W.azioniRiga("master", pTest).indexOf('data-apri=')!==-1, "la sezione Master mostra Apri scheda");
+  ok(W.azioniRiga("panoramica", pTest)==="" || W.azioniRiga("panoramica", pTest).indexOf('data-azione')===-1,
+     "la Panoramica non mette pulsanti d'azione per riga");
 
   /* ===== esito ===== */
   console.log("");

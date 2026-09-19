@@ -1003,12 +1003,20 @@ function modoScheda(){
   if(soloLettura) closeAll();
 }
 
-function apriScheda(id){
-  conModifiche(function(){ caricaScheda(id); },
+function apriScheda(id, poi){
+  conModifiche(function(){ caricaScheda(id, poi); },
     "Sono state effettuate delle modifiche non salvate. Vuoi salvarle prima di aprire un'altra scheda?");
 }
+/* apre la scheda di un personaggio e va dritto alle Estasi ed Anedonie del Retro
+   (usato dal pulsante "Estasi" della sezione Master del Controllo). */
+function apriSchedaEstasi(id){
+  apriScheda(id, function(){
+    if(typeof vaiAPagina==="function") vaiAPagina(1);   // 1 = Retro (Tratti & Talenti)
+    apriPriv("estasi");
+  });
+}
 
-function caricaScheda(id){
+function caricaScheda(id, poi){
   var msg=document.getElementById("ctrlMsg");
   if(msg) msg.textContent="Apro la scheda\u2026";
   sb.from("schede").select("dati,origine_sbloccata,estasi_slot").eq("user_id", id).maybeSingle().then(function(r){
@@ -1023,6 +1031,7 @@ function caricaScheda(id){
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
     mostraPane("scheda");
+    if(typeof poi==="function") poi();
   }).catch(function(e){
     if(msg) msg.textContent="Non ha risposto: riprova.";
     console.error(e);
@@ -3972,6 +3981,9 @@ function apriPriv(fonte){
   if(fonte==="talenti"){
     body.innerHTML='<div class="taltab" id="taltab"></div>';
     renderTaltab();
+  } else if(fonte==="estasi" && puoAssegnareEstasi()){
+    // il master/sviluppatore che guarda una scheda può ASSEGNARE qui, in contesto
+    body.innerHTML=estasiEditorHtml();
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
   }
@@ -4147,6 +4159,7 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
   var m=document.getElementById("modalPriv");
   if(m){
     m.addEventListener("click", function(e){
+      var esav=e.target.closest("[data-estasave]"); if(esav){ salvaEstasiDaPopup(); return; }
       var cap=e.target.closest(".acc-cap"); if(cap){ cap.parentNode.classList.toggle("aperta"); return; }
       var add=e.target.closest("[data-taladdsez]"); if(add){ apriAggiuntaTalento(add.getAttribute("data-taladdsez")); return; }
       var rem=e.target.closest("[data-talrem]"); if(rem){ togliTalento(rem.getAttribute("data-talsez"), rem.getAttribute("data-talrem")); return; }
@@ -5829,7 +5842,10 @@ var CAMPI_MIEI = "username,nome,approvato,in_pausa,accesso_tolto_il";
    saltare tra le pagine); "Controllo" invece solo per lo staff. */
 function aggiornaNav(){
   var nav=document.getElementById("nav"); if(nav) nav.hidden=false;
-  var tc=document.getElementById("tabControllo"); if(tc) tc.hidden=!ruoli.length;
+  // ogni voce di sezione compare solo a chi ne ha diritto (dev tutte)
+  document.querySelectorAll("#nav .tab-sez").forEach(function(b){
+    b.hidden = !sezOk(b.getAttribute("data-sez"));
+  });
 }
 function applicaRuoli(){
   aggiornaNav();
@@ -5837,12 +5853,15 @@ function applicaRuoli(){
   // l'elenco del Controllo va riletto: con le posizioni nuove il database
   // risponde in modo diverso, e alcune colonne potrebbero non spettargli piu'
   ctrlCaricato=false;
-  document.getElementById("ruoliBlock").hidden = !puoStaff();
   preparaOrdini();   // "livello" e "XP" spariscono a chi le schede non spettano piu'
 
   var suControllo = !document.getElementById("paneControllo").hidden;
-  if(suControllo && !ruoli.length){ mostraPane("scheda"); }
-  else if(suControllo){ caricaControllo(); }
+  if(suControllo){
+    // se la sezione aperta non mi spetta più, passo alla prima disponibile
+    var s = sezOk(sezioneCtrl) ? sezioneCtrl : primaSezione();
+    if(!s){ mostraPane("scheda"); }
+    else { sezioneCtrl=s; caricaControllo(); }   // caricaControllo → renderSezione
+  }
 
   if(bersaglio){
     if(!puoVedereSchede()){
@@ -5915,8 +5934,8 @@ function mostraPane(quale){
   document.getElementById("paneScheda").hidden = !sched;
   document.getElementById("paneControllo").hidden = sched;
   document.getElementById("tabScheda").classList.toggle("on", sched);
-  document.getElementById("tabControllo").classList.toggle("on", !sched);
   if(sched){
+    document.querySelectorAll("#nav .tab-sez").forEach(function(b){ b.classList.remove("on"); });
     apply();        // tornando sulla scheda il nome va rimisurato
     // Se torniamo sulla pagina Retro, i richiami dell'hub vanno RIposizionati:
     // mentre il Controllo era davanti la pagina era nascosta (misure a zero), e
@@ -5925,10 +5944,68 @@ function mostraPane(quale){
     if(typeof posizionaHub==="function" && typeof PAGINE_FOGLIO!=="undefined"
        && PAGINE_FOGLIO[paginaScheda]==="pagRetro"){ posizionaHub(); }
   }
-  else { caricaControllo(); }
+}
+
+/* Apre una sezione del Controllo (voce del menù in alto). Mostra il pannello,
+   ricorda quale sezione è attiva e disegna solo quella. I dati si leggono una
+   volta sola (ctrlCaricato); cambiando sezione si ridisegna e basta. */
+function mostraSezione(sez){
+  if(!sezOk(sez)){ sez = primaSezione(); if(!sez) return; }
+  sezioneCtrl = sez;
+  mostraPane("controllo");
+  if(!ctrlCaricato) caricaControllo();   // in fondo chiama renderSezione()
+  else renderSezione();
+}
+
+/* Disegna la sezione attiva: titolo, quali blocchi mostrare, e l'elenco giusto.
+   Le sezioni a elenco (Panoramica/Master/Supporto/Moderazione) usano la stessa
+   tabella dei personaggi, con i pulsanti che cambiano; "Ruoli" usa la tabella
+   delle posizioni. Il pannello Privilegi compare solo in Supporto. */
+var SEZ_TIT={ panoramica:"Panoramica", master:"Master", supporto:"Supporto", moderazione:"Moderazione", ruoli:"Ruoli" };
+var SEZ_NOTA={
+  panoramica:"Colpo d’occhio su tutti: chi c’è, a che punto è, chi è in attesa o in pausa.",
+  master:"Apri la scheda di un personaggio per lavorarci (Estasi ed Anedonie comprese).",
+  supporto:"Sblocca il +1 del talento d’origine e gestisci i privilegi di classe.",
+  moderazione:"Dai e togli l’accesso, metti in pausa, gestisci chi è in attesa.",
+  ruoli:"Assegna le posizioni dello staff."
+};
+function renderSezione(){
+  var tit=document.getElementById("ctrlSezTit"); if(tit) tit.textContent=SEZ_TIT[sezioneCtrl]||"Controllo";
+  var nota=document.getElementById("ctrlSezNota"); if(nota) nota.textContent=SEZ_NOTA[sezioneCtrl]||"";
+  document.querySelectorAll("#nav .tab-sez").forEach(function(b){
+    b.classList.toggle("on", b.getAttribute("data-sez")===sezioneCtrl);
+  });
+  var conElenco = sezioneCtrl!=="ruoli";
+  var lista=document.getElementById("ctrlLista"); if(lista) lista.hidden=!conElenco;
+  var rb=document.getElementById("ruoliBlock"); if(rb) rb.hidden = sezioneCtrl!=="ruoli";
+  var pb=document.getElementById("privBlock"); if(pb) pb.hidden = !(sezioneCtrl==="supporto" && puoToccareSchede());
+  if(conElenco) disegnaPersonaggi();
+  else disegnaRuoli();
 }
 
 var ctrlCaricato=false, profiliCache=[], ruoliDi={};
+var sezioneCtrl="panoramica";   // sezione del Controllo attualmente mostrata
+
+/* Chi vede quale sezione del Controllo. Lo sviluppatore vede tutto (regola
+   ferrea). Ogni sezione è gated dalla capacità vera che serve, non dal solo
+   tag, così stella (accessi) e fondatore (ruoli) finiscono nel posto giusto. */
+function sezOk(sez){
+  if(haRuolo("sviluppatore")) return true;
+  switch(sez){
+    case "panoramica":  return ruoli.length>0;
+    case "master":      return haRuolo("master");
+    case "supporto":    return puoToccareSchede();
+    case "moderazione": return puoDareAccesso() || puoTogliereAccesso() || puoPausare();
+    case "ruoli":       return puoAssegnare();
+  }
+  return false;
+}
+/* la prima sezione a cui ho diritto, in ordine di menù */
+function primaSezione(){
+  var ord=["panoramica","master","supporto","moderazione","ruoli"];
+  for(var i=0;i<ord.length;i++){ if(sezOk(ord[i])) return ord[i]; }
+  return null;
+}
 
 /* Chi puo' cosa. Le stesse regole stanno anche nel database, che e' quello
    che decide davvero: qui servono solo a non mostrare tasti che verrebbero
@@ -5985,12 +6062,8 @@ function caricaControllo(){
       estasiSlotCache[x.user_id]=(x.estasi_slot && typeof x.estasi_slot==="object" && !Array.isArray(x.estasi_slot)) ? x.estasi_slot : {};
     });
     preparaOrdini();
-    disegnaPersonaggi();
-    if(puoStaff()){
-      disegnaRuoli();
-      document.getElementById("ruoliBlock").hidden=false;
-    }
-    initPrivBlock();   // gestione privilegi di classe (solo supporto/sviluppatore)
+    initPrivBlock();   // prepara il menù dei privilegi (la visibilità la decide renderSezione)
+    renderSezione();   // disegna solo la sezione attiva
   }).catch(function(e){
     ctrlCaricato=false;
     body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
@@ -6080,16 +6153,73 @@ function filtraOrdina(){
   });
 }
 
+/* chip accesso/pausa (sezione Moderazione), nella riga del personaggio. Il
+   permesso vero lo decide il database; qui non mostro/abilito tasti che
+   verrebbero rifiutati. */
+function chipAccesso(p){
+  var suoi=ruoliDi[p.user_id]||[], sonoIo=(p.user_id===utente.id), loroDev=suoi.indexOf("sviluppatore")>=0;
+  var acceso=p.approvato||loroDev;
+  var posso=!sonoIo && !loroDev && (acceso?puoTogliereAccesso():puoDareAccesso());
+  var perche=sonoIo?"non puoi cambiare il tuo accesso":loroDev?"lo sviluppatore non si chiude fuori"
+           :acceso?"non hai il permesso di togliere l'accesso":"non hai il permesso di dare l'accesso";
+  return '<button class="chip c-accesso'+(acceso?' on':'')+'" data-user="'+esc(p.user_id)+'" data-azione="accesso"'
+       + (posso?'':' disabled title="'+perche+'"')+'>accesso</button>';
+}
+function chipPausa(p){
+  var suoi=ruoliDi[p.user_id]||[], sonoIo=(p.user_id===utente.id), loroDev=suoi.indexOf("sviluppatore")>=0;
+  var posso=!sonoIo && !loroDev && puoPausare();
+  var perche=sonoIo?"non puoi mettere in pausa te stesso":loroDev?"lo sviluppatore non si mette in pausa":"non hai il permesso di mettere in pausa";
+  return '<button class="chip c-pausa'+(p.in_pausa?' on':'')+'" data-user="'+esc(p.user_id)+'" data-azione="pausa"'
+       + (posso?'':' disabled title="'+perche+'"')+'>pausa</button>';
+}
+
+/* i pulsanti della riga cambiano a seconda della sezione aperta */
+function azioniRiga(sez, p){
+  if(sez==="panoramica") return "";   // solo sguardo d'insieme, niente pulsanti
+  if(sez==="moderazione") return chipAccesso(p)+" "+chipPausa(p);
+  var sonoIo=(p.user_id===utente.id);
+  var haScheda=Object.prototype.hasOwnProperty.call(schedeCache,p.user_id);
+  var apri = sonoIo ? '<span class="vuoto">la tua</span>'
+    : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
+  if(sez==="master"){
+    var sl=estasiSlotCache[p.user_id]||{}, n=0; for(var k in sl){ if(sl[k]) n++; }
+    var est = haScheda
+      ? '<button class="chip c-estasi'+(n?' on':'')+'" data-estasiapri="'+esc(p.user_id)
+        + '" title="Apri la scheda del personaggio alle Estasi ed Anedonie">🧠 Estasi'+(n?' '+n+'/4':'')+'</button>'
+      : '';
+    return apri+est;
+  }
+  if(sez==="supporto"){
+    // sblocco del +1 d'origine: mai la propria (serve un'altra persona), tranne lo
+    // sviluppatore che fa tutto; solo per chi ha un talento d'origine col +1.
+    var sbl='';
+    if(puoToccareSchede() && (!sonoIo || haRuolo("sviluppatore")) && origineHaPiuUno(p.user_id)){
+      var on=!!sbloccoCache[p.user_id];
+      sbl='<button class="chip c-sblocco'+(on?' on':'')+'" data-sblocca="'+esc(p.user_id)
+        + '" title="'+(on?'Il +1 del talento d’origine è sbloccato — clic per ri-bloccarlo'
+                          :'Sblocca il +1 del talento d’origine (missione di lore fatta)')+'">'
+        + (on?'🔓 +1 sbloccato':'🔒 +1 origine')+'</button>';
+    }
+    return apri+sbl;
+  }
+  return apri;
+}
+
 function disegnaPersonaggi(){
   var body=document.getElementById("tblBody");
   var vede=puoVedereSchede();
+  var sez=sezioneCtrl;
+  var azioni = (sez==="master" || sez==="supporto" || sez==="moderazione");
 
-  // Chi le schede non le vede si ferma al nick e allo stato: le colonne del
-  // personaggio resterebbero vuote e farebbero solo credere che manchi qualcosa.
-  document.getElementById("tblHead").innerHTML = vede
-    ? '<th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th><th>Ultimo accesso</th><th></th>'
+  // chi vede le schede ha le colonne del personaggio; gli altri (es. la
+  // moderazione) solo nick + ultimo accesso. La colonna azioni compare se la
+  // sezione ha pulsanti per riga (in Panoramica no: e' solo sguardo d'insieme).
+  var head = vede
+    ? '<th>Nick Discord</th><th>Personaggio</th><th>Livello</th><th>XP totale</th><th>Ultimo accesso</th>'
     : '<th>Nick Discord</th><th>Ultimo accesso</th>';
-  var quante = vede ? 6 : 2;
+  if(azioni) head += '<th></th>';
+  document.getElementById("tblHead").innerHTML = head;
+  var quante = (vede?5:2) + (azioni?1:0);
 
   var lista = filtraOrdina();
   var attesa = profiliCache.filter(inAttesa).length;
@@ -6111,45 +6241,21 @@ function disegnaPersonaggi(){
   body.innerHTML = lista.map(function(p){
     var marchio = inAttesa(p) ? '<span class="attesa">in attesa</span>' : '';
     if(p.in_pausa) marchio += ' <span class="tag-pausa">in pausa</span>';
-    var prima = '<td>'+nickCell(p)+marchio+'</td>';
-    if(!vede) return '<tr>'+prima+'<td>'+quando(p.ultimo_accesso)+'</td></tr>';
-
-    var haScheda = Object.prototype.hasOwnProperty.call(schedeCache, p.user_id);
-    var nm = nomePg(p.user_id);
-    var pg = nm ? esc(nm) : '<span class="vuoto">senza nome</span>';
-    var lv = haScheda ? levelFromXP(xpDi(p.user_id)) : '<span class="vuoto">&mdash;</span>';
-    var xt = haScheda ? numIt(xpDi(p.user_id)) : '<span class="vuoto">nessuna scheda</span>';
-    var apri = (p.user_id===utente.id)
-      ? '<span class="vuoto">la tua</span>'
-      : '<button class="btn-apri" data-apri="'+esc(p.user_id)+'">'+(puoToccareSchede()?"Apri":"Guarda")+'</button>';
-    // l'interruttore dello sblocco del +1 d'origine: solo staff che tocca le
-    // schede, per chi ha un talento d'origine col +1. Sulla PROPRIA riga il
-    // supporto non ce l'ha (deve sempre essere un'altra persona ad approvare e
-    // sbloccare); lo SVILUPPATORE invece può fare tutto, anche la propria.
-    var sblocco = '';
-    var suDiMe = (p.user_id===utente.id);
-    if(puoToccareSchede() && (!suDiMe || haRuolo("sviluppatore")) && origineHaPiuUno(p.user_id)){
-      var sbl = !!sbloccoCache[p.user_id];
-      sblocco = '<button class="chip c-sblocco'+(sbl?' on':'')+'" data-sblocca="'+esc(p.user_id)
-        + '" title="'+(sbl?'Il +1 del talento d’origine è sbloccato — clic per ri-bloccarlo'
-                          :'Sblocca il +1 del talento d’origine (missione di lore fatta)')+'">'
-        + (sbl?'🔓 +1 sbloccato':'🔒 +1 origine')+'</button>';
+    var righe = '<td>'+nickCell(p)+marchio+'</td>';
+    if(vede){
+      var haScheda = Object.prototype.hasOwnProperty.call(schedeCache, p.user_id);
+      var nm = nomePg(p.user_id);
+      var pg = nm ? esc(nm) : '<span class="vuoto">senza nome</span>';
+      var lv = haScheda ? levelFromXP(xpDi(p.user_id)) : '<span class="vuoto">&mdash;</span>';
+      var xt = haScheda ? numIt(xpDi(p.user_id)) : '<span class="vuoto">nessuna scheda</span>';
+      righe += '<td class="pgname">'+pg+'</td><td class="lv">'+lv+'</td><td class="xp">'+xt+'</td>';
     }
-    // l'assegnazione delle Estasi/Anedonie ai 4 lobi: la fanno i master (e lo
-    // sviluppatore), su chi ha già una scheda salvata. Mostra quanti slot pieni.
-    var estasiBtn = '';
-    if(puoAssegnareEstasi() && haScheda){
-      var sl = estasiSlotCache[p.user_id] || {}, n=0;
-      for(var kk in sl){ if(sl[kk]) n++; }
-      estasiBtn = '<button class="chip c-estasi'+(n?' on':'')+'" data-estasi="'+esc(p.user_id)
-        + '" title="Assegna le Estasi ed Anedonie ai 4 lobi">🧠 Estasi'+(n?' '+n+'/4':'')+'</button>';
-    }
-    return '<tr>'+prima+'<td class="pgname">'+pg+'</td>'
-         + '<td class="lv">'+lv+'</td><td class="xp">'+xt+'</td>'
-         + '<td>'+quando(p.ultimo_accesso)+'</td>'
-         + '<td><div class="ctrl-azioni">'+apri+sblocco+estasiBtn+'</div></td></tr>';
+    righe += '<td>'+quando(p.ultimo_accesso)+'</td>';
+    if(azioni) righe += '<td><div class="ctrl-azioni">'+azioniRiga(sez,p)+'</div></td>';
+    return '<tr>'+righe+'</tr>';
   }).join("");
 }
+
 
 /* la scheda ha un talento d'origine che porta un +1 (fisso o a scelta)? Per la
    MIA scheda aperta uso lo stato vivo (vale anche se non l'ho ancora salvata,
@@ -6189,13 +6295,13 @@ function toggleSbloccoOrigine(id, btn){
 }
 
 
-/* ===== ASSEGNAZIONE ESTASI/ANEDONIE (finestra nel Controllo) =====
-   Il master (o lo sviluppatore) sceglie, per un personaggio, cosa mettere in
-   ognuno dei 4 lobi: una voce del catalogo o niente. Il salvataggio passa dalla
-   funzione SQL "assegna_estasi", che ricontrolla il ruolo e scrive solo la
-   colonna schede.estasi_slot. Non c'è personalizzazione: è uno strumento dello
-   staff, come lo sblocco d'origine. */
-var estAssTarget=null, estAssSalvando=false;
+/* ===== ASSEGNAZIONE ESTASI/ANEDONIE =====
+   Il master (o lo sviluppatore) apre la scheda del personaggio e, nel pop-up
+   "Estasi ed Anedonie" del Retro, sceglie per ognuno dei 4 lobi una voce del
+   catalogo o niente. Il salvataggio passa dalla funzione SQL "assegna_estasi",
+   che ricontrolla il ruolo e scrive solo la colonna schede.estasi_slot. Non c'è
+   personalizzazione: è uno strumento dello staff, come lo sblocco d'origine. */
+var estasiSalvando=false;
 
 /* le voci del catalogo per un lobo, ordinate: prima le Estasi poi le Anedonie,
    dentro per rarità crescente e poi per nome. */
@@ -6229,56 +6335,51 @@ function unSelectLobo(lobo, etich, scelto){
     + '</select></label>';
 }
 
-function apriAssegnaEstasi(id){
-  if(!puoAssegnareEstasi()) return;
-  estAssTarget=id;
-  var m=document.getElementById("modalEstAss"); if(!m) return;
-  var nm=nomePg(id);
-  document.getElementById("eaTit").textContent = nm ? ("Estasi ed Anedonie — "+nm) : "Estasi ed Anedonie";
-  var msg=document.getElementById("eaMsg"); if(msg) msg.textContent="";
-  var body=document.getElementById("eaBody");
+/* Il corpo EDITABILE del pop-up "Estasi ed Anedonie" (solo per chi assegna):
+   4 menù (uno per lobo) coi valori attuali + una barra Salva. */
+function estasiEditorHtml(){
   if(!estasiCaricate || !ESTASI.length){
-    body.innerHTML='<p class="hint">Il catalogo delle Estasi non è ancora pronto (o è vuoto). Riprova tra un attimo con Aggiorna.</p>';
-  } else {
-    var sl=estasiSlotCache[id]||{};
-    body.innerHTML = LOBI_ORD.map(function(l){ return unSelectLobo(l[0], l[1], sl[l[0]]||""); }).join("");
+    return '<p class="hint">Il catalogo delle Estasi non è ancora pronto. Riprova tra un attimo.</p>';
   }
-  m.hidden=false;
+  var sl = state.estasiSlot || {};
+  var sel = LOBI_ORD.map(function(l){ return unSelectLobo(l[0], l[1], sl[l[0]]||""); }).join("");
+  return '<div class="ea-edit">'
+    + '<p class="hint" style="margin:0 0 12px">Assegna una voce a ogni lobo, o lascia «vuoto». Lo decidi tu (master): il giocatore non può cambiarlo.</p>'
+    + '<div class="ea-body">'+sel+'</div>'
+    + '<div class="ea-bar"><span class="ctrlmsg" id="eaMsg"></span>'
+    + '<button class="btn-save" type="button" data-estasave>Salva</button></div>'
+    + '</div>';
 }
-function chiudiAssegnaEstasi(){
-  var m=document.getElementById("modalEstAss"); if(m) m.hidden=true;
-  estAssTarget=null;
-}
-function salvaAssegnaEstasi(){
-  if(estAssSalvando || !estAssTarget) return;
-  var id=estAssTarget, msg=document.getElementById("eaMsg");
+/* salva l'assegnazione dal pop-up del Retro, sul personaggio APERTO (bersaglio,
+   o la propria scheda). Via la funzione SQL assegna_estasi. */
+function salvaEstasiDaPopup(){
+  if(estasiSalvando) return;
+  var id = bersaglio || (utente && utente.id);
+  if(!id) return;
+  var msg=document.getElementById("eaMsg");
   var nuovo={};
-  document.querySelectorAll("#eaBody .ea-sel").forEach(function(s){
+  document.querySelectorAll("#privBody .ea-sel").forEach(function(s){
     var v=s.value; if(v) nuovo[s.getAttribute("data-lobo")]=v;
   });
-  estAssSalvando=true;
-  var btn=document.getElementById("eaSalva"); if(btn) btn.disabled=true;
+  estasiSalvando=true;
+  var btn=document.querySelector("#privBody [data-estasave]"); if(btn) btn.disabled=true;
   if(msg) msg.textContent="Salvo…";
   Promise.resolve(sb.rpc("assegna_estasi", { target:id, nuovo:nuovo })).then(function(res){
-    estAssSalvando=false; if(btn) btn.disabled=false;
+    estasiSalvando=false;
     if(res && res.error){
-      if(msg) msg.textContent="Non sono riuscito a salvare: "+res.error.message;
-      console.error(res.error); return;
+      var m2=document.getElementById("eaMsg"); if(m2) m2.textContent="Non sono riuscito a salvare: "+res.error.message;
+      if(btn) btn.disabled=false; console.error(res.error); return;
     }
-    // il database restituisce la mappa RIPULITA (scarta id non validi): uso quella
+    // il database ritorna la mappa RIPULITA (scarta id non validi): uso quella
     var pulito=(res && res.data && typeof res.data==="object" && !Array.isArray(res.data)) ? res.data : nuovo;
-    estasiSlotCache[id]=pulito;
-    // se sto guardando/possiedo proprio quella scheda, aggiorno subito la vista
-    if(id===(bersaglio||utente.id)){
-      state.estasiSlot=pulito;
-      if(typeof renderRetro==="function") renderRetro();
-      aggiornaVisteEstasi();
-    }
-    disegnaPersonaggi();
-    chiudiAssegnaEstasi();
+    state.estasiSlot=pulito;
+    if(estasiSlotCache) estasiSlotCache[id]=pulito;   // il conteggio nel Controllo resta aggiornato
+    if(typeof renderRetro==="function") renderRetro();
+    apriPriv("estasi");   // ridisegno il pop-up coi valori nuovi
+    var m3=document.getElementById("eaMsg"); if(m3) m3.textContent="Salvato.";
   }).catch(function(e){
-    estAssSalvando=false; if(btn) btn.disabled=false;
-    if(msg) msg.textContent="Qualcosa non ha risposto: riprova.";
+    estasiSalvando=false;
+    var m4=document.getElementById("eaMsg"); if(m4) m4.textContent="Qualcosa non ha risposto: riprova.";
     console.error(e);
   });
 }
@@ -6314,7 +6415,7 @@ function noteStaff(){
 function disegnaRuoli(){
   var dev = haRuolo("sviluppatore");
   var body = document.getElementById("ruoliBody");
-  document.getElementById("ruoliNote").textContent = noteStaff();
+  var nota=document.getElementById("ruoliNote"); if(nota) nota.textContent = noteStaff();
 
   if(!profiliCache.length){
     body.innerHTML='<tr><td colspan="2" class="ctrlmsg">Non risulta registrato nessuno.</td></tr>';
@@ -6322,45 +6423,18 @@ function disegnaRuoli(){
   }
   body.innerHTML = profiliCache.map(function(p){
     var suoi = ruoliDi[p.user_id]||[];
-    var sonoIo = (p.user_id===utente.id);
     var loroDev = suoi.indexOf("sviluppatore")>=0;
     var pezzi = [];
-
-    // 1. l'accesso: e' quello che decide se la persona entra o resta fuori
-    var acceso = p.approvato || loroDev;
-    var possoAccesso = !sonoIo && !loroDev && (acceso ? puoTogliereAccesso() : puoDareAccesso());
-    var perche = sonoIo ? "non puoi cambiare il tuo accesso"
-               : loroDev ? "lo sviluppatore non si chiude fuori"
-               : acceso ? "non hai il permesso di togliere l'accesso"
-               : "non hai il permesso di dare l'accesso";
-    pezzi.push('<button class="chip c-accesso'+(acceso?' on':'')+'" data-user="'+esc(p.user_id)
-             + '" data-azione="accesso"'+(possoAccesso?'':' disabled title="'+perche+'"')+'>accesso</button>');
-
-    // 2. la pausa: congela la scheda mentre la moderazione decide
-    var possoPausa = !sonoIo && !loroDev && puoPausare();
-    var perchePausa = sonoIo ? "non puoi mettere in pausa te stesso"
-                    : loroDev ? "lo sviluppatore non si mette in pausa"
-                    : "non hai il permesso di mettere in pausa";
-    pezzi.push('<button class="chip c-pausa'+(p.in_pausa?' on':'')+'" data-user="'+esc(p.user_id)
-             + '" data-azione="pausa"'+(possoPausa?'':' disabled title="'+perchePausa+'"')+'>pausa</button>');
-
-    // 3. le posizioni, solo per chi le assegna
-    if(puoAssegnare()){
-      pezzi.push('<span class="sep"></span>');
-      // quelle che questa persona ha ma che io non posso toccare: le mostro e basta
-      if(loroDev) pezzi.push('<span class="tag-sviluppatore">sviluppatore</span>');
-      if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-fondatore">fondatore</span>');
-      if(!dev && suoi.indexOf("stella")>=0) pezzi.push('<span class="tag-stella">stella</span>');
-      ASSEGNABILI.forEach(function(a){
-        if(a.soloDev && !dev) return;
-        var on = suoi.indexOf(a.k)>=0;
-        pezzi.push('<button class="chip c-'+a.k+(on?' on':'')+'" data-user="'+esc(p.user_id)
-                 + '" data-ruolo="'+a.k+'">'+a.k+'</button>');
-      });
-    } else {
-      // non le assegno, ma vedere chi e' chi serve per decidere
-      suoi.forEach(function(k){ pezzi.push('<span class="tag-'+k+'">'+k+'</span>'); });
-    }
+    // quelle che questa persona ha ma che io non posso toccare: le mostro e basta
+    if(loroDev) pezzi.push('<span class="tag-sviluppatore">sviluppatore</span>');
+    if(!dev && suoi.indexOf("fondatore")>=0) pezzi.push('<span class="tag-fondatore">fondatore</span>');
+    if(!dev && suoi.indexOf("stella")>=0) pezzi.push('<span class="tag-stella">stella</span>');
+    ASSEGNABILI.forEach(function(a){
+      if(a.soloDev && !dev) return;
+      var on = suoi.indexOf(a.k)>=0;
+      pezzi.push('<button class="chip c-'+a.k+(on?' on':'')+'" data-user="'+esc(p.user_id)
+               + '" data-ruolo="'+a.k+'">'+a.k+'</button>');
+    });
     return '<tr><td>'+nickCell(p)+'</td><td><div class="chiprow">'+pezzi.join(" ")+'</div></td></tr>';
   }).join("");
 }
@@ -6462,7 +6536,9 @@ function login(){
 document.getElementById("btnLogin").addEventListener("click", login);
 
 document.getElementById("tabScheda").addEventListener("click", function(){ mostraPane("scheda"); });
-document.getElementById("tabControllo").addEventListener("click", function(){ mostraPane("controllo"); });
+document.getElementById("nav").addEventListener("click", function(e){
+  var b=e.target.closest(".tab-sez"); if(b) mostraSezione(b.getAttribute("data-sez"));
+});
 
 // Menù a tendina su "Scheda": compare passandoci sopra (con un attimo di sosta) e
 // salta alla pagina scelta del foglio (Fronte / Retro / Terza). Comodo per non
@@ -6500,23 +6576,20 @@ document.getElementById("btnCercaVia").addEventListener("click", function(){
 });
 
 document.getElementById("tblBody").addEventListener("click", function(e){
-  var b = e.target && e.target.closest ? e.target.closest("[data-apri]") : null;
+  var t=e.target; if(!t || !t.closest) return;
+  var b = t.closest("[data-apri]");
   if(b){ apriScheda(b.getAttribute("data-apri")); return; }
-  var s = e.target && e.target.closest ? e.target.closest("[data-sblocca]") : null;
+  var ea = t.closest("[data-estasiapri]");
+  if(ea){ apriSchedaEstasi(ea.getAttribute("data-estasiapri")); return; }
+  var s = t.closest("[data-sblocca]");
   if(s && !s.disabled){ toggleSbloccoOrigine(s.getAttribute("data-sblocca"), s); return; }
-  var es = e.target && e.target.closest ? e.target.closest("[data-estasi]") : null;
-  if(es && !es.disabled){ apriAssegnaEstasi(es.getAttribute("data-estasi")); }
+  var az = t.closest("[data-azione]");
+  if(az && !az.disabled){
+    var azione=az.getAttribute("data-azione");
+    if(azione==="accesso") toggleAccesso(az.getAttribute("data-user"), az);
+    else if(azione==="pausa") togglePausa(az.getAttribute("data-user"), az);
+  }
 });
-(function(){
-  var m=document.getElementById("modalEstAss"); if(!m) return;
-  var sv=document.getElementById("eaSalva"); if(sv) sv.addEventListener("click", salvaAssegnaEstasi);
-  m.addEventListener("click", function(e){
-    if(e.target && e.target.closest && e.target.closest("[data-eaclose]")) chiudiAssegnaEstasi();
-  });
-  document.addEventListener("keydown", function(e){
-    if(e.key==="Escape" && !m.hidden) chiudiAssegnaEstasi();
-  });
-})();
 document.getElementById("ruoliBody").addEventListener("click", function(e){
   var b = e.target && e.target.closest ? e.target.closest(".chip") : null;
   if(!b || b.disabled) return;

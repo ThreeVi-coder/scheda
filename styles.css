@@ -115,6 +115,9 @@
     .ea-riga{ flex-direction:column; align-items:stretch; gap:6px; }
     .ea-sel{ max-width:none; }
   }
+  /* editor Estasi dentro il pop-up del Retro */
+  .ea-bar{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:16px; }
+  .ea-bar .ctrlmsg{ margin-right:auto; }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

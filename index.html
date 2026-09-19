@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css?v=79">
+<link rel="stylesheet" href="styles.css?v=80">
 </head>
 <body>
   <div class="wrap">
@@ -62,7 +62,11 @@
           <button type="button" data-pagina="2">Equipaggiamento</button>
         </div>
       </div>
-      <button id="tabControllo">Controllo</button>
+      <button class="tab-sez" data-sez="panoramica" hidden>Panoramica</button>
+      <button class="tab-sez" data-sez="master" hidden>Master</button>
+      <button class="tab-sez" data-sez="supporto" hidden>Supporto</button>
+      <button class="tab-sez" data-sez="moderazione" hidden>Moderazione</button>
+      <button class="tab-sez" data-sez="ruoli" hidden>Ruoli</button>
     </div>
 
     <div id="hpBanner" aria-hidden="true">
@@ -860,25 +864,6 @@
       </div>
     </div>
 
-    <div class="modal" id="modalEstAss" hidden>
-      <div class="backdrop" data-eaclose></div>
-      <div class="dialog centrata" id="dialogEstAss">
-        <div class="dlghead">
-          <h2 id="eaTit">Estasi ed Anedonie</h2>
-          <button class="dlgx" data-eaclose aria-label="Chiudi">&times;</button>
-        </div>
-        <div class="dlgbody">
-          <p class="hint" style="margin:2px 0 12px">Scegli, per ogni lobo, una voce del catalogo oppure lascia &laquo;vuoto&raquo;. Lo decide il master: il giocatore non pu&ograve; cambiarlo.</p>
-          <div id="eaBody" class="ea-body"></div>
-          <p class="ctrlmsg" id="eaMsg" style="margin-top:10px"></p>
-        </div>
-        <div class="dlgbar">
-          <button class="btn-close" data-eaclose>Annulla</button>
-          <button class="btn-save" id="eaSalva">Salva</button>
-        </div>
-      </div>
-    </div>
-
     <div class="modal" id="modalEsci" hidden>
       <div class="backdrop" data-close="esci"></div>
       <div class="dialog mezzo">
@@ -902,36 +887,33 @@
     <div id="paneControllo" hidden>
       <div class="ctrlhead">
         <div>
-          <h2>Personaggi</h2>
+          <h2 id="ctrlSezTit">Panoramica</h2>
+          <span class="ctrlnote" id="ctrlSezNota"></span>
           <span class="ctrlnote" id="ctrlNote"></span>
           <span class="ctrlnote" id="ctrlMsg"></span>
         </div>
         <button class="btn-out" id="btnCtrlReload">Aggiorna</button>
       </div>
-      <div class="cerca">
-        <input type="search" id="cercaPg" placeholder="Cerca per nick Discord o nome del personaggio" autocomplete="off">
-        <select id="ordinePg"></select>
-        <button class="btn-apri" id="btnCercaVia" hidden>Azzera</button>
-      </div>
-      <div class="tblwrap">
-        <table class="tbl" id="tblPg">
-          <thead>
-            <tr id="tblHead"></tr>
-          </thead>
-          <tbody id="tblBody">
-            <tr><td colspan="4" class="ctrlmsg">Carico l'elenco&hellip;</td></tr>
-          </tbody>
-        </table>
+
+      <div id="ctrlLista">
+        <div class="cerca">
+          <input type="search" id="cercaPg" placeholder="Cerca per nick Discord o nome del personaggio" autocomplete="off">
+          <select id="ordinePg"></select>
+          <button class="btn-apri" id="btnCercaVia" hidden>Azzera</button>
+        </div>
+        <div class="tblwrap">
+          <table class="tbl" id="tblPg">
+            <thead>
+              <tr id="tblHead"></tr>
+            </thead>
+            <tbody id="tblBody">
+              <tr><td colspan="4" class="ctrlmsg">Carico l'elenco&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div id="ruoliBlock" hidden>
-        <hr class="sep">
-        <div class="ctrlhead">
-          <div>
-            <h2>Staff</h2>
-            <span class="ctrlnote" id="ruoliNote"></span>
-          </div>
-        </div>
         <div class="tblwrap">
           <table class="tbl" id="tblRuoli">
             <thead>
@@ -944,7 +926,6 @@
       </div>
 
       <div id="privBlock" hidden>
-        <hr class="sep">
         <div class="ctrlhead">
           <div>
             <h2>Privilegi di classe</h2>
@@ -963,6 +944,6 @@
 
   </div>
 
-<script src="app.js?v=79"></script>
+<script src="app.js?v=80"></script>
 </body>
 </html>

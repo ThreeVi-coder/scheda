@@ -1011,7 +1011,17 @@ function apriScheda(id, poi){
    (usato dal pulsante "Estasi" della sezione Master del Controllo). */
 function apriSchedaEstasi(id){
   apriScheda(id, function(){
+    // il Retro deve mostrare il PERSONAGGIO (illustrazione), non l'elenco, anche
+    // se quel player aveva salvato la vista "elenco". Cambio solo la vista in
+    // memoria e ri-fotografo lo stato, così non scatta il falso "modifiche non
+    // salvate" quando poi il master torna alla propria scheda.
+    if(state.retroVista!=="hub"){
+      state.retroVista="hub";
+      if(typeof aggiornaBtnRetro==="function") aggiornaBtnRetro();
+      salvato=foto();
+    }
     if(typeof vaiAPagina==="function") vaiAPagina(1);   // 1 = Retro (Tratti & Talenti)
+    if(typeof renderRetro==="function") renderRetro();
     apriPriv("estasi");
   });
 }

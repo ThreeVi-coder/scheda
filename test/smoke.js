@@ -234,12 +234,12 @@ async function main(){
   // (con una dissolvenza: aspetto che finisca prima di leggere il contenuto)
   const box = W.document.getElementById("tomoText");
   W.apriDettaglioLobo("frontale");
-  for (let i = 0; i < 12; i++) await new Promise(r => setTimeout(r, 20));
+  for (let i = 0; i < 32; i++) await new Promise(r => setTimeout(r, 20));
   ok(box && box.textContent.indexOf("Chiarezza")!==-1, "cliccando il lobo la pagina di sinistra mostra il nome della voce");
   ok(box && box.textContent.indexOf("Vantaggio ai TS")!==-1, "e il testo dell'Effetto (leggibile dai master)");
   ok(box && box.querySelector("[data-tornaintro]"), "c'è il «Torna» all'introduzione");
   W.tornaIntro();
-  for (let i = 0; i < 12; i++) await new Promise(r => setTimeout(r, 20));
+  for (let i = 0; i < 32; i++) await new Promise(r => setTimeout(r, 20));
   ok(box && box.textContent.indexOf("Cornelious Vane")!==-1, "«Torna» rimette l'introduzione (estratto di Vane)");
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });

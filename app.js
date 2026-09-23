@@ -6518,20 +6518,48 @@ function evidenziaLoboSel(lobo){
     g.classList.toggle("sel", g.getAttribute("data-lobo")===lobo);
   });
 }
-/* cambio "a inchiostro": il testo sfuma (opacità+sfocato+scivolamento), viene
-   sostituito, poi ricompare. Un solo scambio alla volta. */
-var tomoSwapT=null;
+/* cambio "a graniglia": il testo si DISINTEGRA (displacement crescente su un
+   rumore + opacità che cala), viene sostituito, poi si RICOMPONE. Usa il filtro
+   SVG #inkDissolve (feTurbulence+feDisplacementMap); se manca, semplice fade.
+   Un solo scambio alla volta. */
+var tomoAnim=null, tomoSwapT=null, tomoCleanT=null;
+function tweenTomo(box, disp, s0, s1, o0, o1, dur, done){
+  var t0=null;
+  function step(ts){
+    if(t0===null) t0=ts;
+    var k=Math.min(1,(ts-t0)/dur), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;   // easeInOut
+    if(disp) disp.setAttribute("scale", (s0+(s1-s0)*e).toFixed(2));
+    box.style.opacity=(o0+(o1-o0)*e).toFixed(3);
+    if(k<1){ tomoAnim=requestAnimationFrame(step); }
+    else { tomoAnim=null; if(done) done(); }
+  }
+  tomoAnim=requestAnimationFrame(step);
+}
 function swapTomoText(html, poi){
   var box=document.getElementById("tomoText"); if(!box) return;
-  if(tomoSwapT){ clearTimeout(tomoSwapT); }
-  box.classList.add("fading");
-  tomoSwapT=setTimeout(function(){
-    box.innerHTML=html; box.scrollTop=0;
-    if(typeof poi==="function") poi();
-    void box.offsetWidth;          // forza il reflow così la dissolvenza riparte
-    box.classList.remove("fading");
-    tomoSwapT=null;
-  }, 160);
+  if(tomoAnim){ cancelAnimationFrame(tomoAnim); tomoAnim=null; }
+  if(tomoSwapT){ clearTimeout(tomoSwapT); tomoSwapT=null; }
+  if(tomoCleanT){ clearTimeout(tomoCleanT); tomoCleanT=null; }
+  var disp=document.getElementById("inkDispl");
+  var raf=(typeof requestAnimationFrame==="function");
+  var swapped=false;
+  function metti(){ if(swapped) return; swapped=true; box.innerHTML=html; box.scrollTop=0; if(typeof poi==="function") poi(); }
+  function pulisci(){ if(tomoAnim){ cancelAnimationFrame(tomoAnim); tomoAnim=null; } box.style.filter=""; box.style.opacity=""; box.style.willChange=""; if(disp) disp.setAttribute("scale","0"); }
+  if(!disp || !raf){        // ripiego: dissolvenza semplice
+    box.style.transition="opacity .18s ease"; box.style.opacity="0";
+    tomoSwapT=setTimeout(function(){ metti(); box.style.opacity="1"; box.style.transition=""; tomoSwapT=null; }, 170);
+    return;
+  }
+  box.style.transition=""; box.style.filter="url(#inkDissolve)"; box.style.willChange="filter,opacity";
+  var OUT=190, IN=240;
+  tweenTomo(box, disp, 0, 30, 1, 0, OUT, function(){       // si disintegra
+    metti();
+    tweenTomo(box, disp, 30, 0, 0, 1, IN, pulisci);        // si ricompone
+  });
+  // reti di sicurezza: se il rAF è strozzato (scheda in secondo piano) lo scambio
+  // e la pulizia avvengono comunque, così il testo non resta mai disintegrato.
+  tomoSwapT =setTimeout(metti,   OUT+50);
+  tomoCleanT=setTimeout(function(){ metti(); pulisci(); }, OUT+IN+280);
 }
 function apriDettaglioLobo(lobo){
   if(!document.getElementById("tomoText")) return;

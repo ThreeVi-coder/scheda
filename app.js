@@ -6518,17 +6518,29 @@ function evidenziaLoboSel(lobo){
     g.classList.toggle("sel", g.getAttribute("data-lobo")===lobo);
   });
 }
-function apriDettaglioLobo(lobo){
+/* cambio "a inchiostro": il testo sfuma (opacità+sfocato+scivolamento), viene
+   sostituito, poi ricompare. Un solo scambio alla volta. */
+var tomoSwapT=null;
+function swapTomoText(html, poi){
   var box=document.getElementById("tomoText"); if(!box) return;
+  if(tomoSwapT){ clearTimeout(tomoSwapT); }
+  box.classList.add("fading");
+  tomoSwapT=setTimeout(function(){
+    box.innerHTML=html; box.scrollTop=0;
+    if(typeof poi==="function") poi();
+    void box.offsetWidth;          // forza il reflow così la dissolvenza riparte
+    box.classList.remove("fading");
+    tomoSwapT=null;
+  }, 160);
+}
+function apriDettaglioLobo(lobo){
+  if(!document.getElementById("tomoText")) return;
   var ed=document.getElementById("estEditor"); if(ed) ed.hidden=true;
-  box.innerHTML=voceEntryHtml(lobo);
-  box.scrollTop=0;
-  evidenziaLoboSel(lobo);
+  swapTomoText(voceEntryHtml(lobo), function(){ evidenziaLoboSel(lobo); });
 }
 function tornaIntro(){
-  var box=document.getElementById("tomoText"); if(!box) return;
-  box.innerHTML=introTomoHtml();
-  evidenziaLoboSel(null);
+  if(!document.getElementById("tomoText")) return;
+  swapTomoText(introTomoHtml(), function(){ evidenziaLoboSel(null); });
 }
 
 /* l'editor coi menù (solo master), che compare col "+ Assegna" */

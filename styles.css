@@ -140,7 +140,9 @@
 
   /* TESTO a sinistra, CERVELLO a destra: tutto in una schermata, senza scorrere */
   .dialog.tomo .tomo-grid{ display:flex; align-items:stretch; gap:28px; flex-wrap:wrap; }
-  .dialog.tomo .tomo-text{ flex:1 1 340px; min-width:0; display:flex; flex-direction:column; max-height:72vh; overflow-y:auto; padding-right:4px; }
+  .dialog.tomo .tomo-text{ flex:1 1 340px; min-width:0; display:flex; flex-direction:column; max-height:72vh; overflow-y:auto; padding-right:4px;
+    transition:opacity .24s ease, filter .24s ease, transform .24s ease; }
+  .dialog.tomo .tomo-text.fading{ opacity:0; filter:blur(2.5px); transform:translateY(7px); }
   .dialog.tomo .tomo-text .legend{ margin-top:auto; padding-top:18px; display:flex; flex-direction:column; gap:14px; }
   /* la pagina di sinistra quando mostra una VOCE (al clic sul lobo) */
   .tomo-back{ align-self:flex-start; font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.08em; font-size:13px; color:#8a3020; background:transparent; border:0; cursor:pointer; padding:0; margin:0 0 12px; }

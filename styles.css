@@ -119,7 +119,9 @@
   .ea-bar .ctrlmsg{ margin-right:auto; }
 
   /* ===== TOMO delle Estasi ed Anedonie: il pop-up su PERGAMENA (stile concept) ===== */
-  .dialog.tomo{ max-width:980px; width:min(980px,96vw);
+  /* più specifico di ".dialog.priv-dialog" (che imporrebbe 560px) → il tomo è largo */
+  .dialog.priv-dialog.tomo{ width:min(1120px,96vw); max-width:none; }
+  .dialog.tomo{ max-width:1120px; width:min(1120px,96vw);
     color:#201406; font-family:"EB Garamond",Georgia,serif;
     background-color:#adb1ab;
     background-image:
@@ -130,17 +132,35 @@
     background-size:cover; background-position:center;
     border:1px solid #b19661;
     box-shadow:0 24px 60px -20px rgba(30,18,8,.7), inset 0 0 0 1px rgba(80,60,30,.25); }
-  .dialog.tomo .dlghead{ border-bottom:1px solid rgba(120,90,40,.35); }
+  .dialog.tomo .dlghead{ border-bottom:1px solid rgba(120,90,40,.35); min-height:0; padding-bottom:2px; }
   .dialog.tomo .dlgx{ color:#33261a; }
   .dialog.tomo .dlgbar{ border-top:1px solid rgba(120,90,40,.35); }
   .dialog.tomo .btn-close{ color:#201406; border-color:#b19661; background:rgba(255,251,240,.35); }
   .dialog.tomo .btn-save{ background:#7a4a2a; border-color:#5f3418; color:#fff3e2; }
 
-  .tomo-head{ text-align:left; }
+  /* testata a due colonne: titolo + estratto a sinistra, legenda a destra */
+  .dialog.tomo .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px 40px; flex-wrap:wrap; }
+  .dialog.tomo .top-left{ flex:1 1 440px; min-width:0; }
+  .dialog.tomo .legend{ flex:0 1 300px; display:flex; flex-direction:column; gap:14px; padding-top:4px; }
   .tomo-eyebrow{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:#5f200e; margin:0 0 4px; }
-  .tomo-title{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(30px,5vw,46px); line-height:1.02; margin:0; color:#201406; }
+  .tomo-title{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(30px,5vw,48px); line-height:1.02; margin:0; color:#201406; }
   .tomo-title .amp{ color:#8a3020; font-style:italic; }
+  .tomo-cite{ font-family:"IM Fell English",Georgia,serif; font-style:italic; font-size:17px; color:#5f200e; margin:14px 0 8px; }
+  .tomo-excerpt p{ margin:0 0 8px; color:#33261a; font-size:15.5px; line-height:1.5; text-align:justify; }
+  .tomo-excerpt strong{ font-weight:400; font-style:italic; color:#5f200e; }
+  .legend h4{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.1em; font-size:12.5px; color:#5f200e; margin:0 0 9px; }
+  .lg-rows{ display:flex; flex-direction:column; gap:7px; }
+  .lg-item{ display:flex; align-items:center; gap:9px; font-size:14px; color:#33261a; }
+  .lg-dot{ width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+  .lg-grad{ background:linear-gradient(90deg,#d98b96,#9cc07f,#e3ac5a,#9a9fd6); }
+  .lg-hollow{ width:14px; height:14px; border-radius:3px; border:1.5px dashed #33261a; flex-shrink:0; }
+  .lg-ramp{ display:flex; flex-wrap:wrap; gap:6px 14px; }
+  .lg-ramp span{ display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:#33261a; }
+  .lg-ramp i{ width:13px; height:13px; border-radius:3px; }
+  .tomo-rule{ height:0; border:0; border-top:1.5px solid #b19661; margin:18px 0 6px; box-shadow:0 2px 0 -1px rgba(156,59,40,.3); }
 
+  /* la tavola del cervello */
+  .cerv-plate{ position:relative; }
   .cerv-svg{ display:block; width:100%; height:auto; margin:2px auto 0; }
   .cerv-estasi{ animation:cervBreathe 5.5s ease-in-out infinite; }
   @keyframes cervBreathe{ 0%,100%{ opacity:.86; } 50%{ opacity:1; } }
@@ -148,24 +168,49 @@
   .lead-dot{ fill:#43301a; opacity:.95; }
   .cerv-lbl{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.06em; fill:#1c1206; }
   .cerv-sub{ font-family:"EB Garamond",Georgia,serif; font-style:italic; fill:#57200f; }
+  .cerv-hit{ fill:transparent; pointer-events:all; cursor:pointer; }
+  .cerv-lg{ cursor:pointer; }
+  .cerv-lg:hover .cerv-lbl{ fill:#8a3020; }
+  .cerv-lg:hover .cerv-sub{ fill:#8a3020; }
 
-  .tomo-legend{ display:flex; flex-wrap:wrap; gap:6px 20px; justify-content:center; margin:4px 0; font-size:14px; color:#33261a; }
-  .tomo-legend span{ display:inline-flex; align-items:center; gap:8px; }
-  .tomo-legend i{ width:14px; height:14px; border-radius:3px; display:inline-block; }
-  .tomo-legend .lg-est{ background:linear-gradient(90deg,#d98b96,#9cc07f,#e3ac5a,#9a9fd6); }
-  .tomo-legend .lg-ane{ background:#9a8f7e; }
-  .tomo-legend .lg-vuo{ background:transparent; border:1.5px dashed #33261a; }
+  /* il "+ Assegna" (solo master), in alto a destra sulla tavola */
+  .est-piu{ position:absolute; top:6px; right:6px; z-index:3; font-family:"IM Fell English SC",Georgia,serif;
+    letter-spacing:.06em; font-size:13px; padding:7px 14px; border-radius:4px; cursor:pointer;
+    color:#fff3e2; background:#7a4a2a; border:1px solid #5f3418; box-shadow:0 4px 12px -4px rgba(30,18,8,.6); }
+  .est-piu:hover{ background:#8a5530; }
 
-  .tomo-sotto{ margin-top:10px; }
-  /* editor su pergamena */
+  /* il DETTAGLIO della voce (comparsa al clic sul lobo) e l'EDITOR (col +) */
+  .est-pop, .est-editor{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:14px; z-index:4; }
+  .est-pop[hidden], .est-editor[hidden]{ display:none; }
+  .est-pop-in, .est-editor-in{ position:relative; width:min(460px,96%); max-height:100%; overflow:auto;
+    background:linear-gradient(180deg, rgba(255,251,240,.9), rgba(210,186,140,.5)), #e7d9ba;
+    border:1px solid #b19661; border-radius:7px; padding:22px 24px 24px; box-shadow:0 24px 60px -20px rgba(30,18,8,.75); }
+  .est-editor-in{ width:min(520px,96%); }
+  .est-pop-x{ position:absolute; top:6px; right:12px; border:0; background:transparent; cursor:pointer;
+    font-family:"IM Fell English",Georgia,serif; font-size:26px; line-height:1; color:#33261a; }
+  .est-pop-lobo{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.13em; font-size:12.5px; color:#5f200e; margin:0 0 2px; }
+  .est-pop-name{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:28px; margin:0; line-height:1.05; color:#201406; }
+  .est-badges{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 2px; }
+  .est-badges .badge{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.08em; font-size:12px; padding:4px 11px; border-radius:2px; border:1px solid currentColor; display:inline-flex; align-items:center; gap:7px; }
+  .est-badges .badge i{ width:9px; height:9px; border-radius:50%; background:currentColor; }
+  .est-badges .b-est{ color:#9a7522; } .est-badges .b-ane{ color:#726a5c; } .est-badges .b-rar{ color:#5f200e; }
+  .est-divider{ height:1px; background:#b19661; margin:14px 0 0; opacity:.7; }
+  .est-sect{ margin-top:14px; } .est-sect h3{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.11em; font-size:12px; color:#8a3020; margin:0 0 2px; }
+  .est-sect p{ margin:0; font-size:15.5px; color:#33261a; line-height:1.5; }
+  .est-empty{ text-align:center; color:#4c3820; padding:14px 0 6px; font-size:15px; }
+  .est-empty .big{ font-family:"IM Fell English",Georgia,serif; font-size:24px; color:#201406; display:block; margin-bottom:6px; }
+  .est-ed-tit{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:24px; margin:0 0 2px; color:#201406; }
+  .est-ed-hint{ font-size:14px; color:#4c3820; margin:0 0 14px; }
+
+  /* selettori dell'editor, più curati su pergamena */
+  .dialog.tomo .ea-body{ gap:12px; }
   .dialog.tomo .ea-lobo{ color:#201406; }
-  .dialog.tomo .ea-sel{ background:rgba(255,251,240,.6); color:#201406; border:1px solid #b19661; }
-  .dialog.tomo .ea-edit .hint{ color:#4c3820; }
+  .dialog.tomo .ea-sel{ appearance:none; -webkit-appearance:none; background:rgba(255,251,240,.72); color:#201406;
+    border:1px solid #b19661; border-radius:7px; padding:9px 34px 9px 12px; font-size:14px; box-shadow:inset 0 1px 2px rgba(60,44,20,.12);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235f3418' stroke-width='1.6' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; }
+  .dialog.tomo .ea-sel:focus{ outline:none; border-color:#7a4a2a; box-shadow:0 0 0 2px rgba(122,74,42,.25); }
   .dialog.tomo .ea-bar .ctrlmsg{ color:#5f200e; }
-  /* elenco a fisarmonica (vista giocatore) su pergamena */
-  .dialog.tomo .acc-riga{ border-color:rgba(120,90,40,.3); }
-  .dialog.tomo .acc-cap, .dialog.tomo .acc-nome{ color:#201406; }
-  .dialog.tomo .acc-testo, .dialog.tomo .acc-vuoto, .dialog.tomo .acc-nota{ color:#33261a; }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }
   .ctrlerr{ font-size:12px; color:var(--danger); margin-top:10px; min-height:16px; }

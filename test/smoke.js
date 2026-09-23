@@ -210,14 +210,16 @@ async function main(){
   eq(perFront.length, 2, "il lobo frontale ha due voci nel catalogo di prova");
   eq(perFront[0].tipo, "estasi", "nel menù del lobo l'Estasi viene prima");
   eq(perFront[1].tipo, "anedonia", "e l'Anedonia dopo");
-  // il giro completo dal POP-UP del Retro: chi assegna vede l'editor (4 menù),
-  // sceglie, Salva → rpc → aggiorna stato/cache/database.
+  // il TOMO: chi assegna apre l'editor col "+", sceglie, Salva → rpc → aggiorna.
   W.estasiSlotCache = { u1: {} };
   W.bersaglio = null;               // sto sulla MIA scheda (u1)
   W.state.estasiSlot = {};
-  W.apriPriv("estasi");             // essendo sviluppatore, esce l'editor
+  W.apriPriv("estasi");             // di base esce il TOMO (nessun menù)
+  ok(!W.document.querySelector('#privBody .ea-sel'), "di base il tomo NON mostra i menù (vista da lettura)");
+  ok(!!W.document.querySelector('#privBody .cerv-svg'), "il tomo mostra il cervello");
+  W.apriEditorEstasi();             // il master apre l'editor col +
   const selF = W.document.querySelector('#privBody .ea-sel[data-lobo="frontale"]');
-  ok(!!selF, "il pop-up Estasi mostra l'editor coi menù per lobo (a chi assegna)");
+  ok(!!selF, "il + apre l'editor coi menù per lobo (a chi assegna)");
   if(selF){
     selF.value = "e_f1";
     W.salvaEstasiDaPopup();
@@ -228,6 +230,12 @@ async function main(){
     eq(JSON.stringify(rigaU1.estasi_slot), JSON.stringify({ frontale: "e_f1" }), "e la colonna estasi_slot nel database");
     eq(W.vociEstasi().length, 1, "ora la vista mostra un lobo assegnato");
   }
+  // il DETTAGLIO della voce si legge cliccando il lobo (vale anche per i master)
+  W.apriDettaglioLobo("frontale");
+  const pop = W.document.getElementById("estPop");
+  ok(pop && !pop.hidden, "cliccando un lobo assegnato si apre il dettaglio della voce");
+  ok(pop && pop.textContent.indexOf("Chiarezza")!==-1, "il dettaglio mostra il nome della voce");
+  ok(pop && pop.textContent.indexOf("Vantaggio ai TS")!==-1, "e il testo dell'Effetto (leggibile dai master)");
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
   eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");

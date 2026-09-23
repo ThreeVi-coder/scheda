@@ -3996,22 +3996,8 @@ function apriPriv(fonte){
     body.innerHTML='<div class="taltab" id="taltab"></div>';
     renderTaltab();
   } else if(fonte==="estasi"){
-    if(tit) tit.textContent="";   // il titolo grande sta nel corpo (col suo font)
-    var sotto = puoAssegnareEstasi()
-      ? estasiEditorHtml()
-      : fisarmonicaHtml(vociEstasi(), messaggioVuoto("estasi"));
-    body.innerHTML =
-        '<div class="tomo-head">'
-      +   '<p class="tomo-eyebrow">Legends of Eldran</p>'
-      +   '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
-      + '</div>'
-      + '<div class="cerv-plate">'+cervelloSvg()+'</div>'
-      + '<div class="tomo-legend">'
-      +   '<span><i class="lg-est"></i> Estasi &mdash; il lobo si accende</span>'
-      +   '<span><i class="lg-ane"></i> Anedonia &mdash; il lobo si spegne</span>'
-      +   '<span><i class="lg-vuo"></i> Vuoto</span>'
-      + '</div>'
-      + '<div class="tomo-sotto">'+sotto+'</div>';
+    if(tit) tit.textContent="";        // il titolo grande sta nel corpo (col suo font)
+    body.innerHTML = estasiTomoHtml();  // testata + estratto + legenda + cervello cliccabile
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
   }
@@ -4187,7 +4173,11 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
   var m=document.getElementById("modalPriv");
   if(m){
     m.addEventListener("click", function(e){
+      if(e.target.closest("[data-estpopclose]") || e.target.id==="estPop"){ chiudiEstPop(); return; }
+      if(e.target.closest("[data-esteditclose]") || e.target.id==="estEditor"){ chiudiEditorEstasi(); return; }
+      if(e.target.closest("[data-estedit]")){ apriEditorEstasi(); return; }
       var esav=e.target.closest("[data-estasave]"); if(esav){ salvaEstasiDaPopup(); return; }
+      var lob=e.target.closest("[data-lobo]"); if(lob){ apriDettaglioLobo(lob.getAttribute("data-lobo")); return; }
       var cap=e.target.closest(".acc-cap"); if(cap){ cap.parentNode.classList.toggle("aperta"); return; }
       var add=e.target.closest("[data-taladdsez]"); if(add){ apriAggiuntaTalento(add.getAttribute("data-taladdsez")); return; }
       var rem=e.target.closest("[data-talrem]"); if(rem){ togliTalento(rem.getAttribute("data-talsez"), rem.getAttribute("data-talrem")); return; }
@@ -6416,15 +6406,22 @@ function cervelloSvg(){
       + '<circle cx="560" cy="360" r="4.5"/><circle cx="800" cy="600" r="4.5"/>'
       + '<circle cx="880" cy="285" r="4.5"/><circle cx="1120" cy="470" r="4.5"/>'
     + '</g>'
-    + '<g>'
-      + '<text class="cerv-lbl" x="235" y="354" text-anchor="end" font-size="33">Frontale</text>'
-      + '<text class="cerv-sub" x="235" y="385" text-anchor="end" font-size="26">'+esc(sub("frontale"))+'</text>'
-      + '<text class="cerv-lbl" x="235" y="714" text-anchor="end" font-size="33">Temporale</text>'
-      + '<text class="cerv-sub" x="235" y="745" text-anchor="end" font-size="26">'+esc(sub("temporale"))+'</text>'
-      + '<text class="cerv-lbl" x="1325" y="220" text-anchor="start" font-size="33">Parietale</text>'
-      + '<text class="cerv-sub" x="1325" y="251" text-anchor="start" font-size="26">'+esc(sub("parietale"))+'</text>'
-      + '<text class="cerv-lbl" x="1325" y="466" text-anchor="start" font-size="33">Occipitale</text>'
-      + '<text class="cerv-sub" x="1325" y="497" text-anchor="start" font-size="26">'+esc(sub("occipitale"))+'</text>'
+    // aree invisibili cliccabili sopra i lobi (aprono il dettaglio della voce)
+    + '<g class="cerv-hits">'
+      + '<rect class="cerv-hit" data-lobo="frontale"  x="410" y="140" width="330" height="470"/>'
+      + '<rect class="cerv-hit" data-lobo="parietale" x="740" y="160" width="320" height="300"/>'
+      + '<rect class="cerv-hit" data-lobo="temporale" x="620" y="480" width="420" height="320"/>'
+      + '<rect class="cerv-hit" data-lobo="occipitale" x="1020" y="290" width="280" height="270"/>'
+    + '</g>'
+    + '<g class="cerv-labels">'
+      + '<g class="cerv-lg" data-lobo="frontale"><text class="cerv-lbl" x="235" y="354" text-anchor="end" font-size="33">Frontale</text>'
+      +   '<text class="cerv-sub" x="235" y="385" text-anchor="end" font-size="26">'+esc(sub("frontale"))+'</text></g>'
+      + '<g class="cerv-lg" data-lobo="temporale"><text class="cerv-lbl" x="235" y="714" text-anchor="end" font-size="33">Temporale</text>'
+      +   '<text class="cerv-sub" x="235" y="745" text-anchor="end" font-size="26">'+esc(sub("temporale"))+'</text></g>'
+      + '<g class="cerv-lg" data-lobo="parietale"><text class="cerv-lbl" x="1325" y="220" text-anchor="start" font-size="33">Parietale</text>'
+      +   '<text class="cerv-sub" x="1325" y="251" text-anchor="start" font-size="26">'+esc(sub("parietale"))+'</text></g>'
+      + '<g class="cerv-lg" data-lobo="occipitale"><text class="cerv-lbl" x="1325" y="466" text-anchor="start" font-size="33">Occipitale</text>'
+      +   '<text class="cerv-sub" x="1325" y="497" text-anchor="start" font-size="26">'+esc(sub("occipitale"))+'</text></g>'
     + '</g>'
     + '</svg>';
 }
@@ -6447,21 +6444,101 @@ function unSelectLobo(lobo, etich, scelto){
     + '</select></label>';
 }
 
-/* Il corpo EDITABILE del pop-up "Estasi ed Anedonie" (solo per chi assegna):
-   4 menù (uno per lobo) coi valori attuali + una barra Salva. */
-function estasiEditorHtml(){
-  if(!estasiCaricate || !ESTASI.length){
-    return '<p class="hint">Il catalogo delle Estasi non è ancora pronto. Riprova tra un attimo.</p>';
-  }
+/* --- il TOMO delle Estasi ed Anedonie ---
+   Testata (eyebrow + titolo + estratto del Grimorio di Vane) + legenda, poi il
+   cervello: i LOBI si cliccano (etichetta o area) per LEGGERE la voce in un
+   dettaglio a comparsa — vale anche per i master. Il "+ Assegna" (solo master)
+   apre l'editor coi menù. Niente più tendine incollate sotto. */
+var VANE_EXCERPT =
+    '<p class="tomo-cite">Estratto dal <em>Grimorio: Studio della Mente</em>, di Cornelious Vane</p>'
+  + '<div class="tomo-excerpt">'
+  +   '<p>Questo volume raccoglie i pi&ugrave; recenti studi sulle conseguenze fisiologiche e neurologiche delle <strong>Anomalie</strong> sui resti degli avventurieri deceduti che hanno volontariamente donato il proprio corpo alla ricerca.</p>'
+  +   '<p>Attraverso l&rsquo;analisi dei reperti e degli effetti post-mortem dell&rsquo;esposizione alle Anomalie, gli studiosi mirano a comprenderne i meccanismi e sviluppare metodi per contrastarne gli effetti.</p>'
+  +   '<p>Ogni scoperta rappresenta un passo verso la soluzione della piaga che affligge l&rsquo;umanit&agrave; sin dall&rsquo;alba della <strong>Frattura</strong>.</p>'
+  + '</div>';
+
+function tomoLegendHtml(){
+  return '<div class="lg-block"><h4>Il segno del lobo</h4><div class="lg-rows">'
+    + '<span class="lg-item"><span class="lg-dot lg-grad"></span> Estasi &mdash; il lobo si accende</span>'
+    + '<span class="lg-item"><span class="lg-dot" style="background:#9a8f7e"></span> Anedonia &mdash; si spegne</span>'
+    + '<span class="lg-item"><span class="lg-hollow"></span> Vuoto &mdash; lo incide un master</span>'
+    + '</div></div>'
+    + '<div class="lg-block"><h4>Il colore di ogni lobo</h4><div class="lg-ramp">'
+    + '<span><i style="background:#d98b96"></i>Frontale</span>'
+    + '<span><i style="background:#9cc07f"></i>Parietale</span>'
+    + '<span><i style="background:#e3ac5a"></i>Temporale</span>'
+    + '<span><i style="background:#9a9fd6"></i>Occipitale</span>'
+    + '</div></div>';
+}
+
+function estasiTomoHtml(){
+  if(!estasiCaricate || !ESTASI.length)
+    return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
+  var piu = puoAssegnareEstasi()
+    ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
+  return '<div class="top">'
+    +   '<div class="top-left">'
+    +     '<p class="tomo-eyebrow">Legends of Eldran</p>'
+    +     '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
+    +     VANE_EXCERPT
+    +   '</div>'
+    +   '<div class="legend">'+tomoLegendHtml()+'</div>'
+    + '</div>'
+    + '<hr class="tomo-rule">'
+    + '<div class="cerv-plate">'+piu+cervelloSvg()
+    +   '<div class="est-pop" id="estPop" hidden></div>'
+    +   (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
+    + '</div>';
+}
+
+/* il dettaglio di una voce (o la nota "vuoto"), mostrato al clic sul lobo */
+function dettaglioVoceHtml(lobo){
+  var nomeLobo=""; for(var i=0;i<LOBI_ORD.length;i++){ if(LOBI_ORD[i][0]===lobo){ nomeLobo=LOBI_ORD[i][1]; break; } }
+  var id=(state.estasiSlot||{})[lobo], e=id?estasiById(id):null;
+  var head = '<button class="est-pop-x" type="button" data-estpopclose aria-label="Chiudi">&times;</button>'
+           + '<p class="est-pop-lobo">'+esc(nomeLobo)+'</p>';
+  if(!e)
+    return head + '<div class="est-empty"><span class="big">Vuoto</span>'
+      + (puoAssegnareEstasi() ? 'Nessuna incisione. Usa &laquo;+ Assegna&raquo; per inciderlo.'
+                              : 'Questo lobo non &egrave; ancora stato inciso da un master.') + '</div>';
+  var est = e.tipo!=="anedonia";
+  var badges = '<span class="badge '+(est?'b-est':'b-ane')+'"><i></i>'+(est?'Estasi':'Anedonia')+'</span>'
+             + '<span class="badge b-rar">'+esc(rarLabel(e.rarita))+'</span>';
+  function sect(t,c){ return c ? '<div class="est-sect"><h3>'+t+'</h3><p>'+esc(c)+'</p></div>' : ''; }
+  return head
+    + '<h3 class="est-pop-name">'+esc(e.nome||"")+'</h3>'
+    + '<div class="est-badges">'+badges+'</div><div class="est-divider"></div>'
+    + sect("Effetto", e.effetto) + sect("Origine", e.origine) + sect("Manifestazione", e.manifestazione);
+}
+function apriDettaglioLobo(lobo){
+  var p=document.getElementById("estPop"); if(!p) return;
+  var ed=document.getElementById("estEditor"); if(ed) ed.hidden=true;
+  p.innerHTML='<div class="est-pop-in">'+dettaglioVoceHtml(lobo)+'</div>';
+  p.hidden=false;
+}
+function chiudiEstPop(){ var p=document.getElementById("estPop"); if(p) p.hidden=true; }
+
+/* l'editor coi menù (solo master), che compare col "+ Assegna" */
+function estEditorHtml(){
   var sl = state.estasiSlot || {};
-  var sel = LOBI_ORD.map(function(l){ return unSelectLobo(l[0], l[1], sl[l[0]]||""); }).join("");
-  return '<div class="ea-edit">'
-    + '<p class="hint" style="margin:0 0 12px">Assegna una voce a ogni lobo, o lascia «vuoto». Lo decidi tu (master): il giocatore non può cambiarlo.</p>'
-    + '<div class="ea-body">'+sel+'</div>'
+  var righe = LOBI_ORD.map(function(l){ return unSelectLobo(l[0], l[1], sl[l[0]]||""); }).join("");
+  return '<div class="est-editor-in">'
+    + '<button class="est-pop-x" type="button" data-esteditclose aria-label="Chiudi">&times;</button>'
+    + '<h3 class="est-ed-tit">Assegna gli slot</h3>'
+    + '<p class="est-ed-hint">Una voce per lobo, o &laquo;vuoto&raquo;. Lo decidi tu: il giocatore non pu&ograve; cambiarlo.</p>'
+    + '<div class="ea-body">'+righe+'</div>'
     + '<div class="ea-bar"><span class="ctrlmsg" id="eaMsg"></span>'
     + '<button class="btn-save" type="button" data-estasave>Salva</button></div>'
     + '</div>';
 }
+function apriEditorEstasi(){
+  if(!puoAssegnareEstasi()) return;
+  var ed=document.getElementById("estEditor"); if(!ed) return;
+  chiudiEstPop();
+  ed.innerHTML=estEditorHtml();
+  ed.hidden=false;
+}
+function chiudiEditorEstasi(){ var ed=document.getElementById("estEditor"); if(ed) ed.hidden=true; }
 /* salva l'assegnazione dal pop-up del Retro, sul personaggio APERTO (bersaglio,
    o la propria scheda). Via la funzione SQL assegna_estasi. */
 function salvaEstasiDaPopup(){
@@ -6487,7 +6564,8 @@ function salvaEstasiDaPopup(){
     state.estasiSlot=pulito;
     if(estasiSlotCache) estasiSlotCache[id]=pulito;   // il conteggio nel Controllo resta aggiornato
     if(typeof renderRetro==="function") renderRetro();
-    apriPriv("estasi");   // ridisegno il pop-up coi valori nuovi
+    apriPriv("estasi");        // ridisegno il tomo col cervello aggiornato
+    apriEditorEstasi();        // e riapro l'editor, così si può continuare
     var m3=document.getElementById("eaMsg"); if(m3) m3.textContent="Salvato.";
   }).catch(function(e){
     estasiSalvando=false;

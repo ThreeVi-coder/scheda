@@ -120,8 +120,8 @@
 
   /* ===== TOMO delle Estasi ed Anedonie: il pop-up su PERGAMENA (stile concept) ===== */
   /* più specifico di ".dialog.priv-dialog" (che imporrebbe 560px) → il tomo è largo */
-  .dialog.priv-dialog.tomo{ width:min(1120px,96vw); max-width:none; }
-  .dialog.tomo{ max-width:1120px; width:min(1120px,96vw);
+  .dialog.priv-dialog.tomo{ width:min(1280px,96vw); max-width:none; }
+  .dialog.tomo{ max-width:1280px; width:min(1280px,96vw);
     color:#201406; font-family:"EB Garamond",Georgia,serif;
     background-color:#adb1ab;
     background-image:
@@ -138,10 +138,11 @@
   .dialog.tomo .btn-close{ color:#201406; border-color:#b19661; background:rgba(255,251,240,.35); }
   .dialog.tomo .btn-save{ background:#7a4a2a; border-color:#5f3418; color:#fff3e2; }
 
-  /* testata a due colonne: titolo + estratto a sinistra, legenda a destra */
-  .dialog.tomo .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px 40px; flex-wrap:wrap; }
-  .dialog.tomo .top-left{ flex:1 1 440px; min-width:0; }
-  .dialog.tomo .legend{ flex:0 1 300px; display:flex; flex-direction:column; gap:14px; padding-top:4px; }
+  /* TESTO a sinistra, CERVELLO a destra: tutto in una schermata, senza scorrere */
+  .dialog.tomo .tomo-grid{ display:flex; align-items:stretch; gap:28px; flex-wrap:wrap; }
+  .dialog.tomo .tomo-text{ flex:1 1 340px; min-width:0; display:flex; flex-direction:column; }
+  .dialog.tomo .tomo-text .legend{ margin-top:auto; padding-top:18px; display:flex; flex-direction:column; gap:14px; }
+  .dialog.tomo .cerv-plate.tomo-brain{ flex:2 1 560px; min-width:0; position:relative; display:flex; align-items:center; justify-content:center; }
   .tomo-eyebrow{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:#5f200e; margin:0 0 4px; }
   .tomo-title{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(30px,5vw,48px); line-height:1.02; margin:0; color:#201406; }
   .tomo-title .amp{ color:#8a3020; font-style:italic; }
@@ -161,7 +162,7 @@
 
   /* la tavola del cervello */
   .cerv-plate{ position:relative; }
-  .cerv-svg{ display:block; width:100%; height:auto; margin:2px auto 0; }
+  .cerv-svg{ display:block; width:100%; height:auto; max-height:min(72vh,660px); margin:auto; }
   .cerv-estasi{ animation:cervBreathe 5.5s ease-in-out infinite; }
   @keyframes cervBreathe{ 0%,100%{ opacity:.86; } 50%{ opacity:1; } }
   .lead-line{ fill:none; stroke:#43301a; stroke-width:1.6; opacity:.9; stroke-linecap:round; }

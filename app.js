@@ -6476,18 +6476,17 @@ function estasiTomoHtml(){
     return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
   var piu = puoAssegnareEstasi()
     ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
-  return '<div class="top">'
-    +   '<div class="top-left">'
+  return '<div class="tomo-grid">'
+    +   '<div class="tomo-text">'
     +     '<p class="tomo-eyebrow">Legends of Eldran</p>'
     +     '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
     +     VANE_EXCERPT
+    +     '<div class="legend">'+tomoLegendHtml()+'</div>'
     +   '</div>'
-    +   '<div class="legend">'+tomoLegendHtml()+'</div>'
-    + '</div>'
-    + '<hr class="tomo-rule">'
-    + '<div class="cerv-plate">'+piu+cervelloSvg()
-    +   '<div class="est-pop" id="estPop" hidden></div>'
-    +   (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
+    +   '<div class="cerv-plate tomo-brain">'+piu+cervelloSvg()
+    +     '<div class="est-pop" id="estPop" hidden></div>'
+    +     (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
+    +   '</div>'
     + '</div>';
 }
 

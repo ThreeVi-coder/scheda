@@ -230,12 +230,14 @@ async function main(){
     eq(JSON.stringify(rigaU1.estasi_slot), JSON.stringify({ frontale: "e_f1" }), "e la colonna estasi_slot nel database");
     eq(W.vociEstasi().length, 1, "ora la vista mostra un lobo assegnato");
   }
-  // il DETTAGLIO della voce si legge cliccando il lobo (vale anche per i master)
+  // il DETTAGLIO si legge cliccando il lobo: la PAGINA DI SINISTRA diventa la voce
   W.apriDettaglioLobo("frontale");
-  const pop = W.document.getElementById("estPop");
-  ok(pop && !pop.hidden, "cliccando un lobo assegnato si apre il dettaglio della voce");
-  ok(pop && pop.textContent.indexOf("Chiarezza")!==-1, "il dettaglio mostra il nome della voce");
-  ok(pop && pop.textContent.indexOf("Vantaggio ai TS")!==-1, "e il testo dell'Effetto (leggibile dai master)");
+  const box = W.document.getElementById("tomoText");
+  ok(box && box.textContent.indexOf("Chiarezza")!==-1, "cliccando il lobo la pagina di sinistra mostra il nome della voce");
+  ok(box && box.textContent.indexOf("Vantaggio ai TS")!==-1, "e il testo dell'Effetto (leggibile dai master)");
+  ok(box && box.querySelector("[data-tornaintro]"), "c'è il «Torna» all'introduzione");
+  W.tornaIntro();
+  ok(box && box.textContent.indexOf("Cornelious Vane")!==-1, "«Torna» rimette l'introduzione (estratto di Vane)");
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
   eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");

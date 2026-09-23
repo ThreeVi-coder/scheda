@@ -4173,7 +4173,7 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
   var m=document.getElementById("modalPriv");
   if(m){
     m.addEventListener("click", function(e){
-      if(e.target.closest("[data-estpopclose]") || e.target.id==="estPop"){ chiudiEstPop(); return; }
+      if(e.target.closest("[data-tornaintro]")){ tornaIntro(); return; }
       if(e.target.closest("[data-esteditclose]") || e.target.id==="estEditor"){ chiudiEditorEstasi(); return; }
       if(e.target.closest("[data-estedit]")){ apriEditorEstasi(); return; }
       var esav=e.target.closest("[data-estasave]"); if(esav){ salvaEstasiDaPopup(); return; }
@@ -6471,51 +6471,65 @@ function tomoLegendHtml(){
     + '</div></div>';
 }
 
+/* la PAGINA DI SINISTRA in versione "introduzione" (titolo + estratto + legenda) */
+function introTomoHtml(){
+  return '<p class="tomo-eyebrow">Legends of Eldran</p>'
+    + '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
+    + VANE_EXCERPT
+    + '<div class="legend">'+tomoLegendHtml()+'</div>';
+}
+
 function estasiTomoHtml(){
   if(!estasiCaricate || !ESTASI.length)
     return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
   var piu = puoAssegnareEstasi()
     ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
   return '<div class="tomo-grid">'
-    +   '<div class="tomo-text">'
-    +     '<p class="tomo-eyebrow">Legends of Eldran</p>'
-    +     '<h1 class="tomo-title">Estasi <span class="amp">&amp;</span> Anedonie</h1>'
-    +     VANE_EXCERPT
-    +     '<div class="legend">'+tomoLegendHtml()+'</div>'
-    +   '</div>'
+    +   '<div class="tomo-text" id="tomoText">'+introTomoHtml()+'</div>'
     +   '<div class="cerv-plate tomo-brain">'+piu+cervelloSvg()
-    +     '<div class="est-pop" id="estPop" hidden></div>'
     +     (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
     +   '</div>'
     + '</div>';
 }
 
-/* il dettaglio di una voce (o la nota "vuoto"), mostrato al clic sul lobo */
-function dettaglioVoceHtml(lobo){
+/* la PAGINA DI SINISTRA in versione "voce": la scheda del lobo cliccato (o la
+   nota "vuoto"), con un "‹ Torna" per rivedere l'introduzione. Niente pop-up. */
+function voceEntryHtml(lobo){
   var nomeLobo=""; for(var i=0;i<LOBI_ORD.length;i++){ if(LOBI_ORD[i][0]===lobo){ nomeLobo=LOBI_ORD[i][1]; break; } }
   var id=(state.estasiSlot||{})[lobo], e=id?estasiById(id):null;
-  var head = '<button class="est-pop-x" type="button" data-estpopclose aria-label="Chiudi">&times;</button>'
+  var head = '<button class="tomo-back" type="button" data-tornaintro>&lsaquo; Torna</button>'
            + '<p class="est-pop-lobo">'+esc(nomeLobo)+'</p>';
   if(!e)
     return head + '<div class="est-empty"><span class="big">Vuoto</span>'
-      + (puoAssegnareEstasi() ? 'Nessuna incisione. Usa &laquo;+ Assegna&raquo; per inciderlo.'
+      + (puoAssegnareEstasi() ? 'Nessuna incisione su questo lobo. Usa &laquo;+ Assegna&raquo; per inciderlo.'
                               : 'Questo lobo non &egrave; ancora stato inciso da un master.') + '</div>';
   var est = e.tipo!=="anedonia";
   var badges = '<span class="badge '+(est?'b-est':'b-ane')+'"><i></i>'+(est?'Estasi':'Anedonia')+'</span>'
              + '<span class="badge b-rar">'+esc(rarLabel(e.rarita))+'</span>';
   function sect(t,c){ return c ? '<div class="est-sect"><h3>'+t+'</h3><p>'+esc(c)+'</p></div>' : ''; }
   return head
-    + '<h3 class="est-pop-name">'+esc(e.nome||"")+'</h3>'
+    + '<h2 class="voce-name">'+esc(e.nome||"")+'</h2>'
     + '<div class="est-badges">'+badges+'</div><div class="est-divider"></div>'
     + sect("Effetto", e.effetto) + sect("Origine", e.origine) + sect("Manifestazione", e.manifestazione);
 }
-function apriDettaglioLobo(lobo){
-  var p=document.getElementById("estPop"); if(!p) return;
-  var ed=document.getElementById("estEditor"); if(ed) ed.hidden=true;
-  p.innerHTML='<div class="est-pop-in">'+dettaglioVoceHtml(lobo)+'</div>';
-  p.hidden=false;
+/* evidenzia il lobo scelto sull'illustrazione (l'etichetta si accende) */
+function evidenziaLoboSel(lobo){
+  document.querySelectorAll("#privBody .cerv-lg").forEach(function(g){
+    g.classList.toggle("sel", g.getAttribute("data-lobo")===lobo);
+  });
 }
-function chiudiEstPop(){ var p=document.getElementById("estPop"); if(p) p.hidden=true; }
+function apriDettaglioLobo(lobo){
+  var box=document.getElementById("tomoText"); if(!box) return;
+  var ed=document.getElementById("estEditor"); if(ed) ed.hidden=true;
+  box.innerHTML=voceEntryHtml(lobo);
+  box.scrollTop=0;
+  evidenziaLoboSel(lobo);
+}
+function tornaIntro(){
+  var box=document.getElementById("tomoText"); if(!box) return;
+  box.innerHTML=introTomoHtml();
+  evidenziaLoboSel(null);
+}
 
 /* l'editor coi menù (solo master), che compare col "+ Assegna" */
 function estEditorHtml(){
@@ -6533,7 +6547,6 @@ function estEditorHtml(){
 function apriEditorEstasi(){
   if(!puoAssegnareEstasi()) return;
   var ed=document.getElementById("estEditor"); if(!ed) return;
-  chiudiEstPop();
   ed.innerHTML=estEditorHtml();
   ed.hidden=false;
 }

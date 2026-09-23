@@ -140,8 +140,16 @@
 
   /* TESTO a sinistra, CERVELLO a destra: tutto in una schermata, senza scorrere */
   .dialog.tomo .tomo-grid{ display:flex; align-items:stretch; gap:28px; flex-wrap:wrap; }
-  .dialog.tomo .tomo-text{ flex:1 1 340px; min-width:0; display:flex; flex-direction:column; }
+  .dialog.tomo .tomo-text{ flex:1 1 340px; min-width:0; display:flex; flex-direction:column; max-height:72vh; overflow-y:auto; padding-right:4px; }
   .dialog.tomo .tomo-text .legend{ margin-top:auto; padding-top:18px; display:flex; flex-direction:column; gap:14px; }
+  /* la pagina di sinistra quando mostra una VOCE (al clic sul lobo) */
+  .tomo-back{ align-self:flex-start; font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.08em; font-size:13px; color:#8a3020; background:transparent; border:0; cursor:pointer; padding:0; margin:0 0 12px; }
+  .tomo-back:hover{ text-decoration:underline; }
+  .voce-name{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(28px,3.4vw,38px); line-height:1.04; margin:2px 0 0; color:#201406; }
+  /* il lobo scelto: l'etichetta si accende */
+  .cerv-lg{ transition:fill .15s; }
+  .cerv-lg.sel .cerv-lbl{ fill:#8a3020; }
+  .cerv-lg.sel .cerv-sub{ fill:#8a3020; }
   .dialog.tomo .cerv-plate.tomo-brain{ flex:2 1 560px; min-width:0; position:relative; display:flex; align-items:center; justify-content:center; }
   .tomo-eyebrow{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.14em; font-size:13px; text-transform:uppercase; color:#5f200e; margin:0 0 4px; }
   .tomo-title{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:clamp(30px,5vw,48px); line-height:1.02; margin:0; color:#201406; }

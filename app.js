@@ -5994,9 +5994,13 @@ function arrivaScheda(nuova, idAtteso){
   if(idAtteso !== idOra) return;
 
   var primaOrig = state.talenti.sbloccoOrigine;
+  var eraVuotoEstasi = estasiVuoto();          // era ancora sigillata prima di questo aggiornamento?
   applicaEstasiSlot(nuova);
   applicaSbloccoOrigine(nuova);
   var origCambiato = (primaOrig !== state.talenti.sbloccoOrigine);
+  // un master ha appena inciso la PRIMA voce mentre guardo: gioco SEMPRE l'apertura
+  // del lucchetto, senza dipendere dal segnalibro del browser (che poteva bloccarla)
+  var sbloccoLive = eraVuotoEstasi && !estasiVuoto();
 
   // il corpo è cambiato davvero rispetto all'ultima versione salvata?
   var corpoCambiato = false;
@@ -6023,7 +6027,7 @@ function arrivaScheda(nuova, idAtteso){
   void origCambiato;
   if(typeof renderAll==="function") renderAll();
   if(typeof renderRetro==="function") renderRetro();
-  rinfrescaEstasiAperto();
+  rinfrescaEstasiAperto(sbloccoLive);
   // la "fotografia" del salvataggio si scatta DOPO il disegno (come fa l'avvio):
   // così le normalizzazioni del render non fanno accendere il tasto Salva.
   if(applicato) salvato=foto();
@@ -6062,12 +6066,14 @@ function ricaricaSchedaVista(){
    l'animazione del lucchetto che si apre. Se posso assegnare SU QUESTA scheda
    (sto forse editando) non mi disturbo; sulla mia scheda invece, dove non posso
    assegnare, il refresh vale come per un giocatore. */
-function rinfrescaEstasiAperto(){
+function rinfrescaEstasiAperto(forzaSblocco){
   var m=document.getElementById("modalPriv");
   if(!m || m.hidden || privFonte!=="estasi") return;
   if(puoAssegnareEstasiQui()) return;
   var body=document.getElementById("privBody"); if(!body) return;
-  var lm=lockModeEstasi();
+  // se è appena stata incisa la prima voce mentre guardo (forzaSblocco), gioco
+  // l'apertura a prescindere dal segnalibro; altrimenti decide lockModeEstasi.
+  var lm = (forzaSblocco && !bersaglio) ? "sblocca" : lockModeEstasi();
   body.innerHTML=estasiTomoHtml(lm);
   if(lm==="sblocca"){ giocaSbloccoEstasi(utente.id); }
 }

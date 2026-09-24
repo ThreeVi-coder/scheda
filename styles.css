@@ -171,7 +171,10 @@
     border-radius:12px; }
   .est-lock-in{ text-align:center; color:#e7d9ba; padding:16px; position:relative; }
   .lock-svg{ width:92px; height:auto; filter:drop-shadow(0 10px 22px rgba(0,0,0,.55)); }
-  .lock-svg .lock-shackle{ transform-origin:68px 44px; transition:transform .6s cubic-bezier(.5,-0.4,.25,1.5); }
+  /* transform-box:view-box = il perno è in coordinate del disegno (se no il punto
+     di rotazione va per conto suo e il gancio si "appiattisce"). Perno sulla gamba
+     DESTRA del gancio, così resta ancorato e il resto si alza girando a sinistra. */
+  .lock-svg .lock-shackle{ transform-box:view-box; transform-origin:68px 52px; transition:transform .55s cubic-bezier(.34,1.45,.5,1); }
   .lock-svg .lock-body{ transition:fill .5s ease; }
   .lock-cap{ margin:16px 0 0; font-family:"EB Garamond",Georgia,serif; font-size:15px; color:#d9ccae; max-width:22ch; margin-left:auto; margin-right:auto; }
   .lock-cap b{ display:block; font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:23px; letter-spacing:.02em; margin-bottom:5px; color:#f2e8cf; }
@@ -186,8 +189,8 @@
     26%{ transform:translateX(2.5px) rotate(1.2deg) } 40%{ transform:translateX(-1.8px) }
     56%{ transform:translateX(1.2px) } 72%{ transform:translateX(-.6px) } 100%{ transform:translateX(0) } }
   .est-lock.opening .lock-shackle{
-    transform:rotate(-58deg) translateY(-3px);
-    transition:transform .55s cubic-bezier(.34,1.56,.64,1) .18s; }
+    transform:translateY(-7px) rotate(-26deg);
+    transition:transform .6s cubic-bezier(.34,1.45,.5,1) .15s; }
   .est-lock.opening .lock-body{
     fill:#f2d277; filter:drop-shadow(0 0 12px rgba(242,205,110,.8));
     transition:fill .4s ease .18s, filter .45s ease .18s; }

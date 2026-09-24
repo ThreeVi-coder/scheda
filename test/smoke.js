@@ -350,6 +350,18 @@ async function main(){
   eq(W.sbloccoEstasiVisto("u1"), false, "una sezione vuota azzera il flag (l'animazione tornerà a partire)");
   W.applicaEstasiSlot({ estasi_slot:{ frontale:"e_f1" } });   // ri-incisa, prima volta
   eq(W.lockModeEstasi(), "sblocca", "ri-incidendo la sezione, l'apertura del lucchetto riparte");
+  // DAL VIVO: anche col segnalibro ancora acceso, se il master incide mentre il
+  // tomo è aperto, l'apertura parte comunque (indipendente dal browser).
+  W.bersaglio = null;
+  W.state.estasiSlot = {};
+  W.salvato = W.foto();
+  W.segnaSbloccoEstasi("u1");                     // segnalibro acceso di proposito
+  W.apriPriv("estasi");                            // il giocatore sta guardando il sigillo
+  W.arrivaScheda({ user_id:"u1", dati: JSON.parse(W.salvato), estasi_slot:{ frontale:"e_f1" }, origine_sbloccata:false }, "u1");
+  for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 20));
+  const lkLive = W.document.querySelector('#privBody .est-lock');
+  ok(lkLive && (lkLive.classList.contains("opening") || lkLive.classList.contains("away")),
+     "col tomo aperto, incidere dal vivo fa partire l'apertura anche col segnalibro acceso");
   W.ruoli = ruoliBakM;
 
   /* ===== esito ===== */

@@ -319,6 +319,13 @@ async function main(){
   ok(typeof W.ascoltaScheda === "function", "esiste l'aggancio della diretta alla scheda aperta");
   W.nascondiAvvisoFuori();
 
+  /* ===== L) Diretta del Controllo (staff) ===== */
+  ok(typeof W.leggiControllo === "function", "esiste la rilettura del Controllo");
+  ok(typeof W.ascoltaControllo === "function", "esiste la diretta del Controllo");
+  W.leggiControllo(false);
+  for (let i = 0; i < 12; i++) await new Promise(r => setTimeout(r, 10));
+  ok(W.profiliCache && W.profiliCache.length > 0, "la rilettura del Controllo popola l'elenco dei profili");
+
   /* ===== esito ===== */
   console.log("");
   if (falliti === 0){

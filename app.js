@@ -5921,6 +5921,7 @@ function ricontrolla(){
     if(cambiati){
       disegnaAuthbar();   // le etichette accanto al nome
       applicaRuoli();
+      ascoltaControllo(); // se ora ho un ruolo staff, accende la diretta del Controllo (si autoprotegge se c'è già)
     }
     cambioStato(r[1].data);   // pausa e accesso: possono chiudere tutto
   }).catch(function(){});
@@ -5957,7 +5958,7 @@ function ascoltaScheda(id){
   try{
     canaleSchedaVista = sb.channel("scheda-"+id)
       .on("postgres_changes",
-          { event:"UPDATE", schema:"public", table:"schede", filter:"user_id=eq."+id },
+          { event:"*", schema:"public", table:"schede", filter:"user_id=eq."+id },
           function(msg){ arrivaScheda(msg && msg.new, id); })
       .subscribe();
   }catch(e){ console.warn("la diretta della scheda non e' partita:", e); }
@@ -6184,8 +6185,16 @@ function caricaControllo(){
   if(ctrlCaricato) return;
   ctrlCaricato=true;
   var body=document.getElementById("tblBody");
-  body.innerHTML='<tr><td colspan="5" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
+  if(body) body.innerHTML='<tr><td colspan="5" class="ctrlmsg">Carico l\'elenco\u2026</td></tr>';
+  leggiControllo(true);
+}
 
+/* Legge (o rilegge) l'elenco del Controllo dal database e ridisegna la sezione
+   attiva. 'primo'=true \u00e8 il caricamento iniziale (mostra gli errori e libera la
+   guardia); un aggiornamento in diretta \u00e8 silenzioso: se qualcosa non risponde
+   tiene l'elenco che c'\u00e8, senza scritte di errore n\u00e9 lampeggi. */
+function leggiControllo(primo){
+  var body=document.getElementById("tblBody");
   var richieste=[
     sb.from("profili").select("user_id,discord_id,username,nome,avatar_url,approvato,in_pausa,ultimo_accesso"),
     puoVedereSchede() ? sb.from("schede").select("user_id,dati,origine_sbloccata,estasi_slot") : Promise.resolve({ data:[], error:null }),
@@ -6195,8 +6204,10 @@ function caricaControllo(){
   Promise.all(richieste).then(function(r){
     var err = r[0].error || r[1].error || (r[2] && r[2].error);
     if(err){
-      ctrlCaricato=false;
-      body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non riesco a leggere l\'elenco: '+esc(err.message)+'</td></tr>';
+      if(primo){
+        ctrlCaricato=false;
+        if(body) body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Non riesco a leggere l\'elenco: '+esc(err.message)+'</td></tr>';
+      }
       console.error(err);
       return;
     }
@@ -6214,10 +6225,35 @@ function caricaControllo(){
     initPrivBlock();   // prepara il menù dei privilegi (la visibilità la decide renderSezione)
     renderSezione();   // disegna solo la sezione attiva
   }).catch(function(e){
-    ctrlCaricato=false;
-    body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
+    if(primo){
+      ctrlCaricato=false;
+      if(body) body.innerHTML='<tr><td colspan="4" class="ctrlmsg">Qualcosa non ha risposto: riprova con Aggiorna.</td></tr>';
+    }
     console.error(e);
   });
+}
+
+/* La diretta del CONTROLLO: quando cambia qualcosa in profili/ruoli/schede (una
+   pausa, un accesso, un ruolo dato o tolto, una scheda salvata) rileggo l'elenco
+   e ridisegno, da solo. Solo per chi ha il Controllo (staff). Un piccolo ritardo
+   accorpa le raffiche di modifiche. */
+var canaleControllo=null, ctrlRefreshT=null;
+function ascoltaControllo(){
+  if(canaleControllo) return;
+  if(!(ruoli && ruoli.length)) return;   // niente ruoli, niente Controllo
+  function tocca(){
+    if(!ctrlCaricato) return;             // se non l'ho mai aperto, si leggerà da solo all'apertura
+    clearTimeout(ctrlRefreshT);
+    ctrlRefreshT=setTimeout(function(){ leggiControllo(false); }, 250);
+  }
+  try{
+    var c = sb.channel("controllo")
+      .on("postgres_changes", { event:"*", schema:"public", table:"profili" }, tocca)
+      .on("postgres_changes", { event:"*", schema:"public", table:"ruoli" },   tocca);
+    if(puoVedereSchede())
+      c = c.on("postgres_changes", { event:"*", schema:"public", table:"schede" }, tocca);
+    canaleControllo = c.subscribe();
+  }catch(e){ console.warn("la diretta del Controllo non e' partita:", e); }
 }
 
 function inAttesa(p){
@@ -7143,6 +7179,7 @@ function avvia(){
       caricaEstasi();           // il catalogo Estasi ed Anedonie (tabella staff), per il pop-up del Retro
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
       ascoltaScheda(utente.id); // e la scheda si aggiorna dal vivo, senza ricaricare
+      ascoltaControllo();       // e l'elenco del Controllo (per lo staff) pure
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }
     });

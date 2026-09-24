@@ -278,6 +278,25 @@ async function main(){
   ok(W.azioniRiga("panoramica", pTest)==="" || W.azioniRiga("panoramica", pTest).indexOf('data-azione')===-1,
      "la Panoramica non mette pulsanti d'azione per riga");
 
+  /* ===== K) Diretta sulla MIA scheda (Realtime schede) ===== */
+  // arriva una modifica alla mia riga: estasi_slot e origine_sbloccata si applicano
+  // da soli, SENZA ricaricare. Ma NON quando sto guardando la scheda di un altro.
+  W.bersaglio = null;
+  W.state.estasiSlot = {};
+  W.state.talenti.sbloccoOrigine = false;
+  W.applicaMiaScheda({ estasi_slot:{ parietale:"e_f1a" }, origine_sbloccata:true });
+  eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ parietale:"e_f1a" }),
+     "una modifica in diretta alla mia riga aggiorna le estasi assegnate");
+  eq(W.state.talenti.sbloccoOrigine, true, "e lo sblocco del +1 d'origine, in diretta");
+  // se sto sulla scheda di un ALTRO, la diretta della mia riga non tocca lo stato
+  W.bersaglio = "altro";
+  W.state.estasiSlot = { frontale:"e_f1" };
+  W.applicaMiaScheda({ estasi_slot:{ temporale:"e_f1" } });
+  eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale:"e_f1" }),
+     "mentre guardo la scheda di un altro, la diretta della mia riga non cambia nulla");
+  W.bersaglio = null;
+  ok(typeof W.rinfrescaEstasiAperto === "function", "esiste il rinfresco del tomo aperto");
+
   /* ===== esito ===== */
   console.log("");
   if (falliti === 0){

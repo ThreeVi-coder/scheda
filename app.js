@@ -5931,12 +5931,46 @@ function ascoltaProfilo(){
       .on("postgres_changes",
           { event:"*", schema:"public", table:"ruoli", filter:"user_id=eq."+utente.id },
           function(){ ricontrolla(); })   // arriva la notizia, ma la verita' si richiede al database
+      .on("postgres_changes",
+          { event:"UPDATE", schema:"public", table:"schede", filter:"user_id=eq."+utente.id },
+          function(msg){ applicaMiaScheda(msg && msg.new); })   // estasi/anedonie e sblocco d'origine, in diretta
       .subscribe();
   }catch(e){
     // se la diretta non parte il sito funziona lo stesso: il database rifiuta
     // comunque, e al rientro sulla scheda del browser si ricontrolla
     console.warn("la diretta non e' partita:", e);
   }
+}
+
+/* Arriva una modifica alla MIA riga di scheda (di solito un master che ha inciso
+   un'Estasi/Anedonia, o lo staff che ha sbloccato il +1 d'origine). Aggiorno solo
+   le due cose che stanno FUORI dal blob dati (estasi_slot, origine_sbloccata):
+   NON tocco 'dati', così non cancello mai le modifiche non salvate del giocatore.
+   E se sto guardando la scheda di un altro (bersaglio) lascio perdere: la diretta
+   e' filtrata sulla mia riga, ma lo stato in memoria potrebbe essere di un altro. */
+function applicaMiaScheda(nuova){
+  if(!nuova || bersaglio) return;
+  var primaOrig = state.talenti.sbloccoOrigine;
+  applicaEstasiSlot(nuova);
+  applicaSbloccoOrigine(nuova);
+  // se e' cambiato lo sblocco del +1 d'origine, i punteggi vanno rifatti
+  if(primaOrig !== state.talenti.sbloccoOrigine && typeof renderAll==="function") renderAll();
+  if(typeof renderRetro==="function") renderRetro();   // hub/elenco del Retro
+  rinfrescaEstasiAperto();                             // se il tomo e' aperto, il lucchetto si apre da solo
+}
+
+/* Se in questo momento e' aperto il tomo delle Estasi sulla MIA scheda, lo
+   ridisegno con lo stato nuovo; se e' scattato il momento dello sblocco, gioco
+   l'animazione del lucchetto che si apre. I master non hanno il sigillo e sono
+   quelli che stanno editando: non li disturbo. */
+function rinfrescaEstasiAperto(){
+  var m=document.getElementById("modalPriv");
+  if(!m || m.hidden || privFonte!=="estasi") return;
+  if(puoAssegnareEstasi()) return;
+  var body=document.getElementById("privBody"); if(!body) return;
+  var lm=lockModeEstasi();
+  body.innerHTML=estasiTomoHtml(lm);
+  if(lm==="sblocca"){ giocaSbloccoEstasi(utente.id); }
 }
 
 // rete di sicurezza: tornando sulla scheda del browser si ricontrolla comunque

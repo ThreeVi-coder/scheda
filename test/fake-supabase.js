@@ -97,6 +97,16 @@ function makeFakeSupabase(seed){
       // e solo id di voci che esistono e appartengono a QUEL lobo; scrive la
       // colonna estasi_slot della scheda e ritorna la mappa ripulita.
       if(nome === "assegna_estasi"){
+        // rispecchia anche i divieti della funzione SQL: chi chiama dev'essere
+        // master o sviluppatore, e NESSUNO (tranne lo sviluppatore) se le assegna
+        // da solo.
+        var uid = session && session.user && session.user.id;
+        var mieiRuoli = (store.ruoli||[]).filter(function(r){ return r.user_id===uid; }).map(function(r){ return r.ruolo; });
+        var isDev = mieiRuoli.indexOf("sviluppatore")>=0;
+        if(!(isDev || mieiRuoli.indexOf("master")>=0))
+          return Promise.resolve({ data:null, error:{ message:"Non sei autorizzato ad assegnare Estasi ed Anedonie." } });
+        if((args && args.target)===uid && !isDev)
+          return Promise.resolve({ data:null, error:{ message:"Non puoi assegnare Estasi ed Anedonie a te stesso." } });
         var target = args && args.target, nuovo = (args && args.nuovo) || {}, pulito = {};
         ["frontale","parietale","temporale","occipitale"].forEach(function(k){
           var v = nuovo[k];

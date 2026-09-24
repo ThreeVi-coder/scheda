@@ -262,10 +262,21 @@ async function main(){
   W.segnaSbloccoEstasi("u1");
   eq(W.lockModeEstasi(), "", "dopo aver visto lo sblocco niente più lucchetto");
   W.ruoli = ruoliBak;
-  eq(W.lockModeEstasi(), "", "il master non vede mai il lucchetto");
+  eq(W.lockModeEstasi(), "", "chi può assegnare qui (sviluppatore sulla propria) non vede il lucchetto");
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
   eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");
+
+  // NESSUNO se le assegna DA SOLO (tranne lo sviluppatore): il gate contestuale
+  const ruoliBak2 = W.ruoli.slice(), bersBak = W.bersaglio;
+  W.ruoli = ["master"]; W.bersaglio = null;
+  eq(W.puoAssegnareEstasiQui(), false, "un master NON può assegnare Estasi sulla propria scheda");
+  W.bersaglio = "u2";
+  eq(W.puoAssegnareEstasiQui(), true, "ma può assegnarle sulla scheda di un altro");
+  W.ruoli = ["sviluppatore"]; W.bersaglio = null;
+  eq(W.puoAssegnareEstasiQui(), true, "lo sviluppatore può anche sulla propria (regola ferrea)");
+  // e il database rifiuta l'auto-assegnazione di un master (finto Supabase come la SQL)
+  W.ruoli = ruoliBak2; W.bersaglio = bersBak;
 
   /* ===== J) Controllo a sezioni per ruolo ===== */
   ok(W.sezOk("panoramica") && W.sezOk("master") && W.sezOk("supporto") && W.sezOk("moderazione") && W.sezOk("ruoli"),

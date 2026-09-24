@@ -6051,12 +6051,13 @@ function ricaricaSchedaVista(){
 
 /* Se in questo momento e' aperto il tomo delle Estasi sulla MIA scheda, lo
    ridisegno con lo stato nuovo; se e' scattato il momento dello sblocco, gioco
-   l'animazione del lucchetto che si apre. I master non hanno il sigillo e sono
-   quelli che stanno editando: non li disturbo. */
+   l'animazione del lucchetto che si apre. Se posso assegnare SU QUESTA scheda
+   (sto forse editando) non mi disturbo; sulla mia scheda invece, dove non posso
+   assegnare, il refresh vale come per un giocatore. */
 function rinfrescaEstasiAperto(){
   var m=document.getElementById("modalPriv");
   if(!m || m.hidden || privFonte!=="estasi") return;
-  if(puoAssegnareEstasi()) return;
+  if(puoAssegnareEstasiQui()) return;
   var body=document.getElementById("privBody"); if(!body) return;
   var lm=lockModeEstasi();
   body.innerHTML=estasiTomoHtml(lm);
@@ -6174,6 +6175,15 @@ function puoToccareSchede(){ return haRuolo("supporto") || haRuolo("sviluppatore
 // supporto tecnico). Lo sviluppatore fa sempre tutto. Deve combaciare col
 // controllo di ruolo dentro la funzione SQL "assegna_estasi".
 function puoAssegnareEstasi(){ return haRuolo("master") || haRuolo("sviluppatore"); }
+/* posso assegnare Estasi/Anedonie SU QUESTA scheda? Un master le assegna solo
+   agli ALTRI, mai a sé stesso: se sto guardando la MIA scheda (bersaglio vuoto)
+   non posso. Lo sviluppatore fa sempre tutto, anche sulla propria. Il divieto
+   vero è nel database (funzione assegna_estasi); qui si nasconde solo il tasto. */
+function puoAssegnareEstasiQui(){
+  if(!puoAssegnareEstasi()) return false;
+  if(haRuolo("sviluppatore")) return true;
+  return !!bersaglio;   // solo sulla scheda di un altro
+}
 
 function nickCell(p){
   var disp = p.nome && p.nome!==p.username ? ' <small>('+esc(p.nome)+')</small>' : '';
@@ -6686,9 +6696,11 @@ function segnaSbloccoEstasi(id){
   try{ localStorage.setItem("est_unlock_"+id,"1"); }catch(e){}
 }
 /* "sigillato" = vuoto; "sblocca" = pieno ma è la prima volta sulla MIA scheda;
-   "" = niente sigillo (i master non lo vedono mai). */
+   "" = niente sigillo (chi può assegnare SU QUESTA scheda non lo vede). Nota: un
+   master sulla PROPRIA scheda ora non può assegnare, quindi vede il sigillo come
+   un giocatore qualunque. */
 function lockModeEstasi(){
-  if(puoAssegnareEstasi()) return "";
+  if(puoAssegnareEstasiQui()) return "";
   if(estasiVuoto()) return "sigillato";
   var mia = !bersaglio;
   if(mia && utente && !sbloccoEstasiVisto(utente.id)) return "sblocca";
@@ -6725,14 +6737,14 @@ function giocaSbloccoEstasi(id){
 function estasiTomoHtml(mode){
   if(!estasiCaricate || !ESTASI.length)
     return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
-  var piu = puoAssegnareEstasi()
+  var piu = puoAssegnareEstasiQui()
     ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
   var lock = mode ? lockOverlayHtml(mode) : "";
   return '<div class="tomo-wrap">'
     + '<div class="tomo-grid">'
     +   '<div class="tomo-text" id="tomoText">'+introTomoHtml()+'</div>'
     +   '<div class="cerv-plate tomo-brain">'+piu+cervelloSvg()
-    +     (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
+    +     (puoAssegnareEstasiQui()?'<div class="est-editor" id="estEditor" hidden></div>':'')
     +   '</div>'
     + '</div>'
     + lock
@@ -6748,8 +6760,8 @@ function voceEntryHtml(lobo){
            + '<p class="est-pop-lobo">'+esc(nomeLobo)+'</p>';
   if(!e)
     return head + '<div class="est-empty"><span class="big">Vuoto</span>'
-      + (puoAssegnareEstasi() ? 'Nessuna incisione su questo lobo. Usa &laquo;+ Assegna&raquo; per inciderlo.'
-                              : 'Questo lobo non &egrave; ancora stato inciso da un master.') + '</div>';
+      + (puoAssegnareEstasiQui() ? 'Nessuna incisione su questo lobo. Usa &laquo;+ Assegna&raquo; per inciderlo.'
+                                  : 'Questo lobo non &egrave; ancora stato inciso da un master.') + '</div>';
   var est = e.tipo!=="anedonia";
   var badges = '<span class="badge '+(est?'b-est':'b-ane')+'"><i></i>'+(est?'Estasi':'Anedonia')+'</span>'
              + '<span class="badge b-rar">'+esc(rarLabel(e.rarita))+'</span>';
@@ -6832,7 +6844,7 @@ function estEditorHtml(){
     + '</div>';
 }
 function apriEditorEstasi(){
-  if(!puoAssegnareEstasi()) return;
+  if(!puoAssegnareEstasiQui()) return;
   var ed=document.getElementById("estEditor"); if(!ed) return;
   ed.innerHTML=estEditorHtml();
   ed.hidden=false;
@@ -6842,6 +6854,7 @@ function chiudiEditorEstasi(){ var ed=document.getElementById("estEditor"); if(e
    o la propria scheda). Via la funzione SQL assegna_estasi. */
 function salvaEstasiDaPopup(){
   if(estasiSalvando) return;
+  if(!puoAssegnareEstasiQui()) return;   // mai sulla propria scheda (tranne sviluppatore); il DB rifiuta comunque
   var id = bersaglio || (utente && utente.id);
   if(!id) return;
   var msg=document.getElementById("eaMsg");

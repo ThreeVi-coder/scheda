@@ -2560,6 +2560,14 @@ function applicaSbloccoOrigine(rigaScheda){
 function applicaEstasiSlot(rigaScheda){
   var m = rigaScheda && rigaScheda.estasi_slot;
   state.estasiSlot = (m && typeof m==="object" && !Array.isArray(m)) ? m : {};
+  // Il flag "sblocco già visto" (nel browser) vale per la MIA scheda. Se la mia
+  // sezione è VUOTA/sigillata lo azzero: così la prossima incisione fa ri-partire
+  // l'animazione del lucchetto — dal vivo o alla riapertura — e la si può anche
+  // rifare (togli e rimetti). Senza questo, l'apertura si vedeva UNA volta sola
+  // per sempre e poi il sigillo spariva di colpo, senza animazione.
+  if(!bersaglio && utente && estasiVuoto()){
+    try{ localStorage.removeItem("est_unlock_"+utente.id); }catch(e){}
+  }
 }
 
 /* ===== IL +1 DEI TALENTI CHE ENTRA NEI PUNTEGGI =====

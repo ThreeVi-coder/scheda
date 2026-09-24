@@ -337,6 +337,21 @@ async function main(){
   for (let i = 0; i < 12; i++) await new Promise(r => setTimeout(r, 10));
   ok(W.profiliCache && W.profiliCache.length > 0, "la rilettura del Controllo popola l'elenco dei profili");
 
+  /* ===== M) L'animazione del lucchetto si RIPETE (flag azzerato a sezione vuota) ===== */
+  // Il flag "sblocco già visto" (browser) NON deve più bloccare per sempre
+  // l'animazione: quando la MIA sezione è vuota si azzera, così ogni nuova
+  // incisione fa ripartire lo sblocco (dal vivo o alla riapertura).
+  const ruoliBakM = W.ruoli.slice();
+  W.ruoli = [];                                   // un giocatore normale (vede il sigillo)
+  W.bersaglio = null;
+  W.segnaSbloccoEstasi("u1");                     // fingo di averlo già visto una volta
+  eq(W.sbloccoEstasiVisto("u1"), true, "il flag di sblocco risulta impostato");
+  W.applicaEstasiSlot({ estasi_slot:{} });        // sezione vuota → deve azzerare il flag
+  eq(W.sbloccoEstasiVisto("u1"), false, "una sezione vuota azzera il flag (l'animazione tornerà a partire)");
+  W.applicaEstasiSlot({ estasi_slot:{ frontale:"e_f1" } });   // ri-incisa, prima volta
+  eq(W.lockModeEstasi(), "sblocca", "ri-incidendo la sezione, l'apertura del lucchetto riparte");
+  W.ruoli = ruoliBakM;
+
   /* ===== esito ===== */
   console.log("");
   if (falliti === 0){

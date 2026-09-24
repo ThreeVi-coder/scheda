@@ -1040,7 +1040,9 @@ function caricaScheda(id, poi){
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
+    nascondiAvvisoFuori();
     mostraPane("scheda");
+    ascoltaScheda(id);        // la diretta segue questa scheda
     if(typeof poi==="function") poi();
   }).catch(function(e){
     if(msg) msg.textContent="Non ha risposto: riprova.";
@@ -1063,7 +1065,9 @@ function caricaLaMia(){
     modoScheda();
     sincronizzaComandi();
     salvato=foto(); aggiornaSalva();
+    nascondiAvvisoFuori();
     mostraPane("scheda");
+    ascoltaScheda(utente.id);   // torno sulla mia: la diretta segue la mia riga
   });
 }
 
@@ -5931,9 +5935,6 @@ function ascoltaProfilo(){
       .on("postgres_changes",
           { event:"*", schema:"public", table:"ruoli", filter:"user_id=eq."+utente.id },
           function(){ ricontrolla(); })   // arriva la notizia, ma la verita' si richiede al database
-      .on("postgres_changes",
-          { event:"UPDATE", schema:"public", table:"schede", filter:"user_id=eq."+utente.id },
-          function(msg){ applicaMiaScheda(msg && msg.new); })   // estasi/anedonie e sblocco d'origine, in diretta
       .subscribe();
   }catch(e){
     // se la diretta non parte il sito funziona lo stesso: il database rifiuta
@@ -5942,21 +5943,109 @@ function ascoltaProfilo(){
   }
 }
 
-/* Arriva una modifica alla MIA riga di scheda (di solito un master che ha inciso
-   un'Estasi/Anedonia, o lo staff che ha sbloccato il +1 d'origine). Aggiorno solo
-   le due cose che stanno FUORI dal blob dati (estasi_slot, origine_sbloccata):
-   NON tocco 'dati', così non cancello mai le modifiche non salvate del giocatore.
-   E se sto guardando la scheda di un altro (bersaglio) lascio perdere: la diretta
-   e' filtrata sulla mia riga, ma lo stato in memoria potrebbe essere di un altro. */
-function applicaMiaScheda(nuova){
-  if(!nuova || bersaglio) return;
+/* ===== LA DIRETTA SEGUE LA SCHEDA CHE HAI DAVANTI =====
+   Un canale a parte, filtrato sulla riga della scheda aperta (la mia, o quella di
+   un altro se sono un master che la sta guardando). Cambia quando cambio scheda.
+   Così ogni modifica fatta da fuori (il bot che aggiunge XP, un master che
+   sistema, un altro dispositivo) arriva SENZA ricaricare. */
+var canaleSchedaVista=null, idSchedaVista=null;
+function ascoltaScheda(id){
+  if(!id) return;
+  if(id===idSchedaVista && canaleSchedaVista) return;   // già in ascolto su questa
+  if(canaleSchedaVista){ try{ canaleSchedaVista.unsubscribe(); }catch(e){} canaleSchedaVista=null; }
+  idSchedaVista=id;
+  try{
+    canaleSchedaVista = sb.channel("scheda-"+id)
+      .on("postgres_changes",
+          { event:"UPDATE", schema:"public", table:"schede", filter:"user_id=eq."+id },
+          function(msg){ arrivaScheda(msg && msg.new, id); })
+      .subscribe();
+  }catch(e){ console.warn("la diretta della scheda non e' partita:", e); }
+}
+
+/* stringa "stabile" (chiavi in ordine) di un oggetto: serve a confrontare due
+   versioni dei dati senza farsi ingannare dall'ordine delle chiavi (il jsonb del
+   database non conserva l'ordine con cui abbiamo salvato). */
+function jsonStabile(v){
+  if(Array.isArray(v)) return "["+v.map(jsonStabile).join(",")+"]";
+  if(v && typeof v==="object")
+    return "{"+Object.keys(v).sort().map(function(k){ return JSON.stringify(k)+":"+jsonStabile(v[k]); }).join(",")+"}";
+  return JSON.stringify(v);
+}
+
+/* Arriva una modifica alla riga della scheda che sto guardando.
+   - Le colonne dello STAFF (estasi_slot, origine_sbloccata) le applico SEMPRE:
+     il giocatore non le tocca, sovrascriverle è sicuro.
+   - Il CORPO della scheda (dati) lo applico solo se NON ho modifiche in sospeso;
+     se ne ho, tengo le mie e mostro un avviso con «Ricarica» (scelta di Threevi).
+   - Se nel frattempo ho cambiato scheda, ignoro (l'update era per l'altra). */
+function arrivaScheda(nuova, idAtteso){
+  if(!nuova) return;
+  var idOra = bersaglio || (utente && utente.id);
+  if(idAtteso !== idOra) return;
+
   var primaOrig = state.talenti.sbloccoOrigine;
   applicaEstasiSlot(nuova);
   applicaSbloccoOrigine(nuova);
-  // se e' cambiato lo sblocco del +1 d'origine, i punteggi vanno rifatti
-  if(primaOrig !== state.talenti.sbloccoOrigine && typeof renderAll==="function") renderAll();
-  if(typeof renderRetro==="function") renderRetro();   // hub/elenco del Retro
-  rinfrescaEstasiAperto();                             // se il tomo e' aperto, il lucchetto si apre da solo
+  var origCambiato = (primaOrig !== state.talenti.sbloccoOrigine);
+
+  // il corpo è cambiato davvero rispetto all'ultima versione salvata?
+  var corpoCambiato = false;
+  if("dati" in nuova){
+    var salvatoOgg = null; try{ salvatoOgg = salvato ? JSON.parse(salvato) : null; }catch(e){}
+    corpoCambiato = jsonStabile(nuova.dati||null) !== jsonStabile(salvatoOgg);
+  }
+
+  var applicato=false;
+  if(corpoCambiato){
+    if(sporco()){
+      // ho modifiche non salvate e intanto è cambiata da fuori: NON tocco il corpo,
+      // tengo le mie e avviso e basta. (Le colonne staff le ho già aggiornate.)
+      mostraAvvisoFuori();
+    } else {
+      // nessuna modifica mia in sospeso: la scheda si riaggiorna da sola, tutta
+      if(nuova.dati) applicaDati(nuova.dati);
+      applicato=true;
+      nascondiAvvisoFuori();
+    }
+  }
+  // origCambiato serve solo a documentare che lo sblocco può aver toccato i punteggi:
+  // in ogni caso ridisegno tutto qui sotto una volta sola.
+  void origCambiato;
+  if(typeof renderAll==="function") renderAll();
+  if(typeof renderRetro==="function") renderRetro();
+  rinfrescaEstasiAperto();
+  // la "fotografia" del salvataggio si scatta DOPO il disegno (come fa l'avvio):
+  // così le normalizzazioni del render non fanno accendere il tasto Salva.
+  if(applicato) salvato=foto();
+}
+
+/* L'avviso "questa scheda è cambiata altrove" quando ho modifiche non salvate.
+   Non blocca niente: tiene le mie e mi lascia scegliere se ricaricare. È una
+   scritta di servizio (come i messaggi del Salva), non un contenuto della scheda:
+   non ha personalizzazione, come deciso con Threevi. */
+function elAvvisoFuori(){
+  var el=document.getElementById("avvisoFuori");
+  if(el) return el;
+  el=document.createElement("div");
+  el.id="avvisoFuori"; el.className="avviso-fuori"; el.hidden=true;
+  el.innerHTML='<span class="af-txt">Questa scheda &egrave; stata aggiornata altrove. Le tue modifiche non salvate sono al sicuro.</span>'
+    +'<button type="button" class="af-ric" data-avvfuori-ric>Ricarica</button>'
+    +'<button type="button" class="af-x" data-avvfuori-chiudi aria-label="Chiudi">&times;</button>';
+  document.body.appendChild(el);
+  el.addEventListener("click", function(ev){
+    if(ev.target.closest("[data-avvfuori-ric]")) ricaricaSchedaVista();
+    else if(ev.target.closest("[data-avvfuori-chiudi]")) nascondiAvvisoFuori();
+  });
+  return el;
+}
+function mostraAvvisoFuori(){ elAvvisoFuori().hidden=false; }
+function nascondiAvvisoFuori(){ var el=document.getElementById("avvisoFuori"); if(el) el.hidden=true; }
+/* «Ricarica»: ricarico dal database la scheda che sto guardando, scartando le mie
+   modifiche non salvate (l'ho scelto io cliccando). */
+function ricaricaSchedaVista(){
+  nascondiAvvisoFuori();
+  if(bersaglio) caricaScheda(bersaglio); else caricaLaMia();
 }
 
 /* Se in questo momento e' aperto il tomo delle Estasi sulla MIA scheda, lo
@@ -7053,6 +7142,7 @@ function avvia(){
       caricaPrivilegi();        // i privilegi di classe/sottoclasse (tabella staff)
       caricaEstasi();           // il catalogo Estasi ed Anedonie (tabella staff), per il pop-up del Retro
       ascoltaProfilo();         // da qui in poi pausa e accesso fanno effetto subito
+      ascoltaScheda(utente.id); // e la scheda si aggiorna dal vivo, senza ricaricare
       // i font decorativi arrivano da internet: quando sono pronti rimisuro
       if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ apply(); }); }
     });

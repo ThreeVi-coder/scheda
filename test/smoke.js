@@ -278,24 +278,46 @@ async function main(){
   ok(W.azioniRiga("panoramica", pTest)==="" || W.azioniRiga("panoramica", pTest).indexOf('data-azione')===-1,
      "la Panoramica non mette pulsanti d'azione per riga");
 
-  /* ===== K) Diretta sulla MIA scheda (Realtime schede) ===== */
-  // arriva una modifica alla mia riga: estasi_slot e origine_sbloccata si applicano
-  // da soli, SENZA ricaricare. Ma NON quando sto guardando la scheda di un altro.
+  /* ===== K) Diretta su TUTTA la scheda (Realtime schede) ===== */
+  // La diretta segue la scheda aperta e ne aggiorna il corpo quando cambia da
+  // fuori, MA senza calpestare le modifiche non salvate (in tal caso: avviso).
   W.bersaglio = null;
+  W.nascondiAvvisoFuori();
   W.state.estasiSlot = {};
   W.state.talenti.sbloccoOrigine = false;
-  W.applicaMiaScheda({ estasi_slot:{ parietale:"e_f1a" }, origine_sbloccata:true });
-  eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ parietale:"e_f1a" }),
-     "una modifica in diretta alla mia riga aggiorna le estasi assegnate");
-  eq(W.state.talenti.sbloccoOrigine, true, "e lo sblocco del +1 d'origine, in diretta");
-  // se sto sulla scheda di un ALTRO, la diretta della mia riga non tocca lo stato
-  W.bersaglio = "altro";
-  W.state.estasiSlot = { frontale:"e_f1" };
-  W.applicaMiaScheda({ estasi_slot:{ temporale:"e_f1" } });
+  W.salvato = W.foto();                                   // baseline: nessuna modifica in sospeso
+  const base = JSON.parse(W.salvato);
+
+  // 1) corpo cambiato da fuori, SENZA modifiche mie -> si applica da solo
+  const fuori1 = JSON.parse(JSON.stringify(base)); fuori1.xp = (base.xp||0) + 1234;
+  W.arrivaScheda({ user_id:"u1", dati:fuori1, estasi_slot:{}, origine_sbloccata:false }, "u1");
+  eq(W.state.xp, fuori1.xp, "senza modifiche in sospeso, il corpo si aggiorna dal vivo");
+  eq(W.sporco(), false, "e il tasto Salva resta spento (ri-fotografato)");
+
+  // 2) ho modifiche NON salvate e intanto cambia da fuori -> tengo le mie + avviso
+  W.state.xp = W.state.xp + 5;                            // una mia modifica non salvata
+  const mioXp = W.state.xp;
+  const fuori2 = JSON.parse(W.salvato); fuori2.xp = 99999;
+  W.arrivaScheda({ user_id:"u1", dati:fuori2, estasi_slot:{}, origine_sbloccata:false }, "u1");
+  eq(W.state.xp, mioXp, "con modifiche non salvate la diretta NON sovrascrive il corpo");
+  const avv = W.document.getElementById("avvisoFuori");
+  ok(avv && !avv.hidden, "e compare l'avviso «aggiornata altrove»");
+
+  // 3) cambio delle SOLE estasi (corpo uguale) mentre ho modifiche: si applica, niente avviso
+  W.nascondiAvvisoFuori();
+  const ugual = JSON.parse(W.salvato);                   // stesso corpo del salvato
+  W.arrivaScheda({ user_id:"u1", dati:ugual, estasi_slot:{ frontale:"e_f1" }, origine_sbloccata:false }, "u1");
   eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale:"e_f1" }),
-     "mentre guardo la scheda di un altro, la diretta della mia riga non cambia nulla");
-  W.bersaglio = null;
-  ok(typeof W.rinfrescaEstasiAperto === "function", "esiste il rinfresco del tomo aperto");
+     "un cambio delle sole estasi si applica anche con modifiche in sospeso");
+  const avv2 = W.document.getElementById("avvisoFuori");
+  ok(!avv2 || avv2.hidden, "e NON scatta l'avviso di conflitto (il corpo non è cambiato)");
+
+  // 4) update per un'ALTRA scheda (non quella che guardo) -> ignorato
+  const xpPrima = W.state.xp;
+  W.arrivaScheda({ user_id:"uX", dati:fuori2, estasi_slot:{}, origine_sbloccata:false }, "uX");
+  eq(W.state.xp, xpPrima, "un update per un'altra scheda non tocca quella aperta");
+  ok(typeof W.ascoltaScheda === "function", "esiste l'aggancio della diretta alla scheda aperta");
+  W.nascondiAvvisoFuori();
 
   /* ===== esito ===== */
   console.log("");

@@ -1964,3 +1964,33 @@
     .sv-left{ width:auto; }
     .sv-detail{ flex:1 1 auto; align-self:stretch; }
   }
+
+/* ===== AVVISO "scheda aggiornata altrove" =====
+   Barra di servizio in basso: compare quando qualcuno cambia la scheda da fuori
+   mentre io ho modifiche non salvate. Tiene le mie e mi lascia scegliere. */
+.avviso-fuori{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  z-index:9999; max-width:min(680px,94vw);
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px; border-radius:12px;
+  background:rgba(28,22,14,.96); border:1px solid #ae9861;
+  box-shadow:0 10px 30px rgba(0,0,0,.45);
+  color:#efe4cc; font-size:14px; line-height:1.35;
+}
+.avviso-fuori .af-txt{ flex:1 1 auto; }
+.avviso-fuori .af-ric{
+  flex:0 0 auto; cursor:pointer; white-space:nowrap;
+  padding:7px 14px; border-radius:9px;
+  background:#c9a24a; color:#241a06; border:1px solid #7a5a1e;
+  font-weight:700; font-size:14px;
+}
+.avviso-fuori .af-ric:hover{ background:#d8b25c; }
+.avviso-fuori .af-x{
+  flex:0 0 auto; cursor:pointer; background:none; border:none;
+  color:#c9bfa8; font-size:20px; line-height:1; padding:2px 4px;
+}
+.avviso-fuori .af-x:hover{ color:#efe4cc; }
+@media (max-width:520px){
+  .avviso-fuori{ flex-wrap:wrap; }
+  .avviso-fuori .af-txt{ flex-basis:100%; }
+}

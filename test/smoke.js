@@ -241,6 +241,21 @@ async function main(){
   W.tornaIntro();
   for (let i = 0; i < 32; i++) await new Promise(r => setTimeout(r, 20));
   ok(box && box.textContent.indexOf("Cornelious Vane")!==-1, "«Torna» rimette l'introduzione (estratto di Vane)");
+
+  // il SIGILLO (lucchetto) per chi NON assegna: sigillato se vuoto, sblocco la 1ª volta
+  const ruoliBak = W.ruoli.slice();
+  W.ruoli = [];                      // fingo un giocatore normale (non master)
+  W.state.estasiSlot = {};
+  eq(W.estasiVuoto(), true, "senza voci estasiVuoto è vero");
+  eq(W.lockModeEstasi(), "sigillato", "senza voci il giocatore vede la pagina sigillata");
+  W.state.estasiSlot = { frontale: "e_f1" };
+  W.bersaglio = null;
+  try { W.localStorage.removeItem("est_unlock_u1"); } catch(e) {}
+  eq(W.lockModeEstasi(), "sblocca", "con la prima voce, la prima volta, parte lo sblocco");
+  W.segnaSbloccoEstasi("u1");
+  eq(W.lockModeEstasi(), "", "dopo aver visto lo sblocco niente più lucchetto");
+  W.ruoli = ruoliBak;
+  eq(W.lockModeEstasi(), "", "il master non vede mai il lucchetto");
   // un id inventato o del lobo sbagliato viene SCARTATO dalla funzione
   const puliaOut = await W.sb.rpc("assegna_estasi", { target:"u1", nuovo:{ frontale:"e_f1", parietale:"inventato", temporale:"e_f1" } });
   eq(JSON.stringify(puliaOut.data), JSON.stringify({ frontale:"e_f1" }), "id non validi o del lobo sbagliato vengono scartati");

@@ -3997,7 +3997,9 @@ function apriPriv(fonte){
     renderTaltab();
   } else if(fonte==="estasi"){
     if(tit) tit.textContent="";        // il titolo grande sta nel corpo (col suo font)
-    body.innerHTML = estasiTomoHtml();  // testata + estratto + legenda + cervello cliccabile
+    var lm = lockModeEstasi();
+    body.innerHTML = estasiTomoHtml(lm);   // testata + estratto + legenda + cervello (+ sigillo)
+    if(lm==="sblocca"){ giocaSbloccoEstasi(utente.id); }   // apertura del lucchetto, una volta
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
   }
@@ -6479,16 +6481,69 @@ function introTomoHtml(){
     + '<div class="legend">'+tomoLegendHtml()+'</div>';
 }
 
-function estasiTomoHtml(){
+/* --- SIGILLO: finché non c'è nessuna Estasi/Anedonia, il giocatore vede la
+   pagina SIGILLATA (oscurata + lucchetto). Il MASTER invece la vede sempre
+   sbloccata (è lui a incidere). La primissima volta che il giocatore entra
+   dopo l'assegnazione, il lucchetto si APRE e rivela la pagina (una volta sola,
+   ricordata nel browser). --- */
+function estasiVuoto(){ var s=state.estasiSlot||{}; for(var k in s){ if(s[k]) return false; } return true; }
+function sbloccoEstasiVisto(id){
+  try{ return localStorage.getItem("est_unlock_"+id)==="1"; }catch(e){ return false; }
+}
+function segnaSbloccoEstasi(id){
+  try{ localStorage.setItem("est_unlock_"+id,"1"); }catch(e){}
+}
+/* "sigillato" = vuoto; "sblocca" = pieno ma è la prima volta sulla MIA scheda;
+   "" = niente sigillo (i master non lo vedono mai). */
+function lockModeEstasi(){
+  if(puoAssegnareEstasi()) return "";
+  if(estasiVuoto()) return "sigillato";
+  var mia = !bersaglio;
+  if(mia && utente && !sbloccoEstasiVisto(utente.id)) return "sblocca";
+  return "";
+}
+function lockSvg(){
+  return '<svg class="lock-svg" viewBox="0 0 100 116" aria-hidden="true">'
+    + '<path class="lock-shackle" d="M32 56 V40 a18 18 0 0 1 36 0 V56" fill="none" stroke="#e7d9ba" stroke-width="7" stroke-linecap="round"/>'
+    + '<rect class="lock-body" x="24" y="54" width="52" height="46" rx="9" fill="#c9a24a" stroke="#7a5a1e" stroke-width="2"/>'
+    + '<circle cx="50" cy="72" r="5.5" fill="#3a2a0e"/>'
+    + '<rect x="47.5" y="74" width="5" height="14" rx="2.5" fill="#3a2a0e"/>'
+    + '</svg>';
+}
+function lockOverlayHtml(mode){
+  var cap = (mode==="sigillato")
+    ? '<p class="lock-cap"><b>Sigillato</b>In attesa che un master incida la prima Estasi o Anedonia.</p>'
+    : '<p class="lock-cap"><b>Si apre&hellip;</b></p>';
+  return '<div class="est-lock'+(mode==="sblocca"?" pre":"")+'"><div class="est-lock-in">'+lockSvg()+cap+'</div></div>';
+}
+/* apre il lucchetto e svela la pagina (chiamata dopo il disegno) */
+function giocaSbloccoEstasi(id){
+  var lock=document.querySelector("#privBody .est-lock"); if(!lock) return;
+  segnaSbloccoEstasi(id);
+  requestAnimationFrame(function(){
+    lock.classList.remove("pre");
+    lock.classList.add("opening");
+    setTimeout(function(){ lock.classList.add("away"); }, 650);
+    setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 1350);
+  });
+  // rete di sicurezza se il rAF è strozzato: via comunque
+  setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 1600);
+}
+
+function estasiTomoHtml(mode){
   if(!estasiCaricate || !ESTASI.length)
     return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
   var piu = puoAssegnareEstasi()
     ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
-  return '<div class="tomo-grid">'
+  var lock = mode ? lockOverlayHtml(mode) : "";
+  return '<div class="tomo-wrap">'
+    + '<div class="tomo-grid">'
     +   '<div class="tomo-text" id="tomoText">'+introTomoHtml()+'</div>'
     +   '<div class="cerv-plate tomo-brain">'+piu+cervelloSvg()
     +     (puoAssegnareEstasi()?'<div class="est-editor" id="estEditor" hidden></div>':'')
     +   '</div>'
+    + '</div>'
+    + lock
     + '</div>';
 }
 

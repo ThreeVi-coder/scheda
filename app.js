@@ -6724,14 +6724,22 @@ function lockOverlayHtml(mode){
 function giocaSbloccoEstasi(id){
   var lock=document.querySelector("#privBody .est-lock"); if(!lock) return;
   segnaSbloccoEstasi(id);
-  requestAnimationFrame(function(){
+  // faccio partire lo scatto DOPO che lo stato "pre" è stato disegnato, se no la
+  // transizione non parte. Uso il rAF, ma con una rete di sicurezza a tempo: se
+  // il tab è in secondo piano il rAF è strozzato, e l'animazione partirebbe mai.
+  function apri(){
+    if(lock.classList.contains("opening")) return;   // già partita
     lock.classList.remove("pre");
     lock.classList.add("opening");
-    setTimeout(function(){ lock.classList.add("away"); }, 650);
-    setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 1350);
-  });
-  // rete di sicurezza se il rAF è strozzato: via comunque
-  setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 1600);
+  }
+  requestAnimationFrame(apri);
+  setTimeout(apri, 60);
+  // lo scatto (vibrazione + gancio + lampo) dura ~0,9s: tengo la posa aperta un
+  // attimo, poi il sigillo si dissolve
+  setTimeout(function(){ lock.classList.add("away"); }, 950);
+  setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 1750);
+  // rete di sicurezza finale: via comunque
+  setTimeout(function(){ if(lock.parentNode) lock.parentNode.removeChild(lock); }, 2050);
 }
 
 function estasiTomoHtml(mode){

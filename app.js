@@ -4004,13 +4004,15 @@ function apriPriv(fonte){
   // gli altri restano la finestra normale scura.
   var dlg=document.getElementById("dialogPriv");
   if(dlg) dlg.classList.toggle("tomo", fonte==="estasi");
+  montaSigillo("");   // via un eventuale sigillo rimasto da un'apertura precedente
   if(fonte==="talenti"){
     body.innerHTML='<div class="taltab" id="taltab"></div>';
     renderTaltab();
   } else if(fonte==="estasi"){
     if(tit) tit.textContent="";        // il titolo grande sta nel corpo (col suo font)
     var lm = lockModeEstasi();
-    body.innerHTML = estasiTomoHtml(lm);   // testata + estratto + legenda + cervello (+ sigillo)
+    body.innerHTML = estasiTomoHtml(lm);   // testata + estratto + legenda + cervello
+    montaSigillo(lm);                       // il sigillo copre tutta la finestra
     if(lm==="sblocca"){ giocaSbloccoEstasi(utente.id); }   // apertura del lucchetto, una volta
   } else {
     body.innerHTML=fisarmonicaHtml(vociFonte(fonte), messaggioVuoto(fonte));
@@ -6075,6 +6077,7 @@ function rinfrescaEstasiAperto(forzaSblocco){
   // l'apertura a prescindere dal segnalibro; altrimenti decide lockModeEstasi.
   var lm = (forzaSblocco && !bersaglio) ? "sblocca" : lockModeEstasi();
   body.innerHTML=estasiTomoHtml(lm);
+  montaSigillo(lm);
   if(lm==="sblocca"){ giocaSbloccoEstasi(utente.id); }
 }
 
@@ -6736,7 +6739,7 @@ function lockOverlayHtml(mode){
 }
 /* apre il lucchetto e svela la pagina (chiamata dopo il disegno) */
 function giocaSbloccoEstasi(id){
-  var lock=document.querySelector("#privBody .est-lock"); if(!lock) return;
+  var lock=document.querySelector("#dialogPriv .est-lock"); if(!lock) return;
   segnaSbloccoEstasi(id);
   // faccio partire lo scatto DOPO che lo stato "pre" è stato disegnato, se no la
   // transizione non parte. Uso il rAF, ma con una rete di sicurezza a tempo: se
@@ -6761,7 +6764,9 @@ function estasiTomoHtml(mode){
     return '<p class="hint" style="color:#4c3820">Il catalogo delle Estasi non &egrave; ancora pronto. Riprova tra un attimo.</p>';
   var piu = puoAssegnareEstasiQui()
     ? '<button class="est-piu" type="button" data-estedit title="Assegna Estasi ed Anedonie">+ Assegna</button>' : '';
-  var lock = mode ? lockOverlayHtml(mode) : "";
+  // NB: il SIGILLO (lucchetto) NON sta più qui dentro: lo monto a livello di
+  // finestra (montaSigillo), così oscura tutto il pop-up in modo uniforme, senza
+  // la cornice chiara attorno. 'mode' resta per compatibilità ma non serve più qui.
   return '<div class="tomo-wrap">'
     + '<div class="tomo-grid">'
     +   '<div class="tomo-text" id="tomoText">'+introTomoHtml()+'</div>'
@@ -6769,8 +6774,21 @@ function estasiTomoHtml(mode){
     +     (puoAssegnareEstasiQui()?'<div class="est-editor" id="estEditor" hidden></div>':'')
     +   '</div>'
     + '</div>'
-    + lock
     + '</div>';
+}
+
+/* Monta (o toglie) il SIGILLO a livello dell'intera finestra #dialogPriv, così
+   l'oscuramento copre tutto il pop-up uniformemente (niente cornice chiara). Con
+   mode vuoto rimuove il sigillo e basta. */
+function montaSigillo(mode){
+  var dlg=document.getElementById("dialogPriv"); if(!dlg) return;
+  var vecchio=dlg.querySelector(".est-lock");
+  if(vecchio && vecchio.parentNode) vecchio.parentNode.removeChild(vecchio);
+  if(!mode) return;
+  var tmp=document.createElement("div");
+  tmp.innerHTML=lockOverlayHtml(mode);
+  var lock=tmp.firstChild;
+  if(lock) dlg.appendChild(lock);
 }
 
 /* la PAGINA DI SINISTRA in versione "voce": la scheda del lobo cliccato (o la

@@ -163,12 +163,16 @@
   .cerv-lg.sel .cerv-lbl{ fill:#8a3020; }
   .cerv-lg.sel .cerv-sub{ fill:#8a3020; }
 
-  /* SIGILLO: la pagina oscurata + lucchetto finché un master non incide la prima voce */
+  /* SIGILLO: TUTTA la finestra oscurata + lucchetto, finché un master non incide
+     la prima voce. Sta a livello di #dialogPriv (position:fixed), così copre tutto
+     il pop-up in modo UNIFORME (niente cornice chiara). pointer-events:none →
+     la × e "Chiudi" restano cliccabili sotto. */
   .dialog.tomo .tomo-wrap{ position:relative; }
-  .est-lock{ position:absolute; inset:-10px; z-index:9; display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(ellipse at center, rgba(24,16,6,.62), rgba(16,11,4,.86));
-    -webkit-backdrop-filter:grayscale(.7) blur(1.5px); backdrop-filter:grayscale(.7) blur(1.5px);
-    border-radius:12px; }
+  .est-lock{ position:absolute; inset:0; z-index:40; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center, rgba(16,11,4,.9), rgba(10,7,3,.94));
+    -webkit-backdrop-filter:grayscale(.75) blur(1.5px); backdrop-filter:grayscale(.75) blur(1.5px);
+    border-radius:16px; }
   .est-lock-in{ text-align:center; color:#e7d9ba; padding:16px; position:relative; }
   .lock-svg{ width:92px; height:auto; filter:drop-shadow(0 10px 22px rgba(0,0,0,.55)); }
   /* transform-box:view-box = il perno è in coordinate del disegno (se no il punto

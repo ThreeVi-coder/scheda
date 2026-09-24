@@ -359,7 +359,7 @@ async function main(){
   W.apriPriv("estasi");                            // il giocatore sta guardando il sigillo
   W.arrivaScheda({ user_id:"u1", dati: JSON.parse(W.salvato), estasi_slot:{ frontale:"e_f1" }, origine_sbloccata:false }, "u1");
   for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 20));
-  const lkLive = W.document.querySelector('#privBody .est-lock');
+  const lkLive = W.document.querySelector('#dialogPriv .est-lock');
   ok(lkLive && (lkLive.classList.contains("opening") || lkLive.classList.contains("away")),
      "col tomo aperto, incidere dal vivo fa partire l'apertura anche col segnalibro acceso");
   W.ruoli = ruoliBakM;

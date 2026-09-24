@@ -220,6 +220,12 @@ async function main(){
   W.apriEditorEstasi();             // il master apre l'editor col +
   const selF = W.document.querySelector('#privBody .ea-sel[data-lobo="frontale"]');
   ok(!!selF, "il + apre l'editor coi menù per lobo (a chi assegna)");
+  // REGRESSIONE: un clic sul <select> (che ha data-lobo) NON deve chiudere l'editor
+  // né aprire il dettaglio del lobo — solo i lobi dell'illustrazione lo fanno.
+  if(selF){
+    selF.dispatchEvent(new W.MouseEvent("click", { bubbles: true }));
+    ok(!W.document.getElementById("estEditor").hidden, "cliccare il menù dell'editor non chiude l'editor");
+  }
   if(selF){
     selF.value = "e_f1";
     W.salvaEstasiDaPopup();

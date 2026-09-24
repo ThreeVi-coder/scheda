@@ -4179,7 +4179,9 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
       if(e.target.closest("[data-esteditclose]") || e.target.id==="estEditor"){ chiudiEditorEstasi(); return; }
       if(e.target.closest("[data-estedit]")){ apriEditorEstasi(); return; }
       var esav=e.target.closest("[data-estasave]"); if(esav){ salvaEstasiDaPopup(); return; }
-      var lob=e.target.closest("[data-lobo]"); if(lob){ apriDettaglioLobo(lob.getAttribute("data-lobo")); return; }
+      // SOLO i lobi dell'illustrazione aprono il dettaglio; NON i <select> dell'editor
+      // (che pure hanno data-lobo): altrimenti aprire il menù chiudeva l'editor.
+      var lob=e.target.closest(".cerv-hit,.cerv-lg"); if(lob){ apriDettaglioLobo(lob.getAttribute("data-lobo")); return; }
       var cap=e.target.closest(".acc-cap"); if(cap){ cap.parentNode.classList.toggle("aperta"); return; }
       var add=e.target.closest("[data-taladdsez]"); if(add){ apriAggiuntaTalento(add.getAttribute("data-taladdsez")); return; }
       var rem=e.target.closest("[data-talrem]"); if(rem){ togliTalento(rem.getAttribute("data-talsez"), rem.getAttribute("data-talrem")); return; }

@@ -215,19 +215,20 @@ async function main(){
   W.bersaglio = null;               // sto sulla MIA scheda (u1)
   W.state.estasiSlot = {};
   W.apriPriv("estasi");             // di base esce il TOMO (nessun menù)
-  ok(!W.document.querySelector('#privBody .ea-sel'), "di base il tomo NON mostra i menù (vista da lettura)");
+  ok(!W.document.querySelector('#privBody .ea-pick'), "di base il tomo NON mostra i menù (vista da lettura)");
   ok(!!W.document.querySelector('#privBody .cerv-svg'), "il tomo mostra il cervello");
   W.apriEditorEstasi();             // il master apre l'editor col +
-  const selF = W.document.querySelector('#privBody .ea-sel[data-lobo="frontale"]');
-  ok(!!selF, "il + apre l'editor coi menù per lobo (a chi assegna)");
-  // REGRESSIONE: un clic sul <select> (che ha data-lobo) NON deve chiudere l'editor
-  // né aprire il dettaglio del lobo — solo i lobi dell'illustrazione lo fanno.
-  if(selF){
-    selF.dispatchEvent(new W.MouseEvent("click", { bubbles: true }));
-    ok(!W.document.getElementById("estEditor").hidden, "cliccare il menù dell'editor non chiude l'editor");
-  }
-  if(selF){
-    selF.value = "e_f1";
+  const pickF = W.document.querySelector('#privBody .ea-pick[data-lobo="frontale"]');
+  ok(!!pickF, "il + apre l'editor coi menù per lobo (a chi assegna)");
+  if(pickF){
+    // aprire il menù NON deve chiudere l'editor (era il bug col <select>)
+    pickF.querySelector('.ea-pick-btn').dispatchEvent(new W.MouseEvent("click", { bubbles: true }));
+    ok(!W.document.getElementById("estEditor").hidden, "aprire un menù non chiude l'editor");
+    ok(!pickF.querySelector('.ea-pick-menu').hidden, "il menù si apre");
+    // scelgo la voce e_f1
+    const optF = pickF.querySelector('.ea-opt[data-eaval="e_f1"]');
+    if(optF) optF.dispatchEvent(new W.MouseEvent("click", { bubbles: true }));
+    eq(pickF.getAttribute("data-val"), "e_f1", "scegliendo una voce il menù registra il valore");
     W.salvaEstasiDaPopup();
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r, 20));
     eq(JSON.stringify(W.state.estasiSlot), JSON.stringify({ frontale: "e_f1" }), "il salvataggio aggiorna lo stato vivo della scheda");

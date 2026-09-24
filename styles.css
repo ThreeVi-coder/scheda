@@ -109,11 +109,23 @@
   .ea-riga{ display:flex; align-items:center; gap:12px; justify-content:space-between; }
   .ea-lobo{ display:flex; align-items:center; gap:8px; font-family:var(--ui); font-size:13px; color:var(--ink); white-space:nowrap; }
   .ea-dot{ width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25) inset; flex-shrink:0; }
-  .ea-sel{ flex:1 1 auto; min-width:0; max-width:340px; font-family:var(--ui); font-size:13px;
-    padding:7px 9px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  /* menù personalizzato (non <select> nativo) */
+  .ea-pick{ position:relative; flex:1 1 auto; min-width:0; max-width:340px; }
+  .ea-pick-btn{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-family:var(--ui); font-size:13px; padding:8px 11px; border-radius:8px; cursor:pointer; text-align:left;
+    border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  .ea-pick-val{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ea-pick-arr{ flex-shrink:0; opacity:.7; transition:transform .15s; }
+  .ea-pick.open .ea-pick-arr{ transform:rotate(180deg); }
+  .ea-pick-menu{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30;
+    max-height:240px; overflow:auto; padding:5px; border-radius:8px; }
+  .ea-pick-menu[hidden]{ display:none; }
+  .ea-opt{ display:block; width:100%; text-align:left; background:transparent; border:0; cursor:pointer;
+    font-family:var(--ui); font-size:13px; padding:7px 9px; border-radius:5px; color:inherit; }
+  .ea-opt-h{ font-family:var(--ui); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; opacity:.7; padding:8px 9px 3px; }
   @media (max-width:520px){
     .ea-riga{ flex-direction:column; align-items:stretch; gap:6px; }
-    .ea-sel{ max-width:none; }
+    .ea-pick{ max-width:none; }
   }
   .ea-bar{ display:flex; align-items:center; justify-content:flex-end; gap:12px; margin-top:16px; }
   .ea-bar .ctrlmsg{ margin-right:auto; }
@@ -214,7 +226,7 @@
   .est-pop-in, .est-editor-in{ position:relative; width:min(460px,96%); max-height:100%; overflow:auto;
     background:linear-gradient(180deg, rgba(255,251,240,.9), rgba(210,186,140,.5)), #e7d9ba;
     border:1px solid #b19661; border-radius:7px; padding:22px 24px 24px; box-shadow:0 24px 60px -20px rgba(30,18,8,.75); }
-  .est-editor-in{ width:min(520px,96%); }
+  .est-editor-in{ width:min(520px,96%); overflow:visible; }   /* i menù possono uscire dalla card */
   .est-pop-x{ position:absolute; top:6px; right:12px; border:0; background:transparent; cursor:pointer;
     font-family:"IM Fell English",Georgia,serif; font-size:26px; line-height:1; color:#33261a; }
   .est-pop-lobo{ font-family:"IM Fell English SC",Georgia,serif; letter-spacing:.13em; font-size:12.5px; color:#5f200e; margin:0 0 2px; }
@@ -231,14 +243,19 @@
   .est-ed-tit{ font-family:"IM Fell English",Georgia,serif; font-weight:400; font-size:24px; margin:0 0 2px; color:#201406; }
   .est-ed-hint{ font-size:14px; color:#4c3820; margin:0 0 14px; }
 
-  /* selettori dell'editor, più curati su pergamena */
+  /* i menù personalizzati dell'editor, su pergamena */
   .dialog.tomo .ea-body{ gap:12px; }
   .dialog.tomo .ea-lobo{ color:#201406; }
-  .dialog.tomo .ea-sel{ appearance:none; -webkit-appearance:none; background:rgba(255,251,240,.72); color:#201406;
-    border:1px solid #b19661; border-radius:7px; padding:9px 34px 9px 12px; font-size:14px; box-shadow:inset 0 1px 2px rgba(60,44,20,.12);
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235f3418' stroke-width='1.6' stroke-linecap='round'/></svg>");
-    background-repeat:no-repeat; background-position:right 12px center; }
-  .dialog.tomo .ea-sel:focus{ outline:none; border-color:#7a4a2a; box-shadow:0 0 0 2px rgba(122,74,42,.25); }
+  .dialog.tomo .ea-pick-btn{ background:rgba(255,251,240,.72); color:#201406; border:1px solid #b19661;
+    border-radius:7px; padding:9px 12px; font-size:14px; box-shadow:inset 0 1px 2px rgba(60,44,20,.12); }
+  .dialog.tomo .ea-pick-btn:hover{ border-color:#7a4a2a; }
+  .dialog.tomo .ea-pick.open .ea-pick-btn{ border-color:#7a4a2a; box-shadow:0 0 0 2px rgba(122,74,42,.22); }
+  .dialog.tomo .ea-pick-arr{ color:#5f3418; }
+  .dialog.tomo .ea-pick-menu{ background:#efe6cf; border:1px solid #b19661; box-shadow:0 16px 40px -12px rgba(30,18,8,.6); }
+  .dialog.tomo .ea-opt{ color:#201406; font-size:14px; }
+  .dialog.tomo .ea-opt:hover{ background:rgba(122,74,42,.14); }
+  .dialog.tomo .ea-opt.sel{ background:rgba(122,74,42,.1); font-weight:600; }
+  .dialog.tomo .ea-opt-h{ color:#8a3020; opacity:1; font-family:"IM Fell English SC",Georgia,serif; }
   .dialog.tomo .ea-bar .ctrlmsg{ color:#5f200e; }
   .sep{ width:1px; height:16px; background:var(--line); margin:0 2px; }
   .chip[disabled]{ cursor:default; opacity:.6; }

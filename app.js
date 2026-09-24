@@ -4175,6 +4175,10 @@ function renderTaltab(){ var b=document.getElementById("taltab"); if(b) b.innerH
   var m=document.getElementById("modalPriv");
   if(m){
     m.addEventListener("click", function(e){
+      // menù personalizzati dell'editor (pulsante che apre la lista)
+      var pk=e.target.closest("[data-eapick]"); if(pk){ togglePick(pk); return; }
+      var opt=e.target.closest(".ea-opt"); if(opt){ scegliPick(opt); return; }
+      chiudiMenuPick();   // qualunque altro clic chiude eventuali liste aperte
       if(e.target.closest("[data-tornaintro]")){ tornaIntro(); return; }
       if(e.target.closest("[data-esteditclose]") || e.target.id==="estEditor"){ chiudiEditorEstasi(); return; }
       if(e.target.closest("[data-estedit]")){ apriEditorEstasi(); return; }
@@ -6430,22 +6434,49 @@ function cervelloSvg(){
     + '</svg>';
 }
 
+/* Il menù per un lobo. NON è un <select> nativo (dava problemi dentro il pop-up):
+   è un pulsante che apre una lista che gestiamo noi. Il valore scelto sta in
+   data-val sul .ea-pick; l'etichetta visibile nel .ea-pick-val. */
 function unSelectLobo(lobo, etich, scelto){
   var voci=estasiPerLobo(lobo);
   var estasi=voci.filter(function(e){ return e.tipo!=="anedonia"; });
   var aned =voci.filter(function(e){ return e.tipo==="anedonia"; });
-  function opt(e){
-    return '<option value="'+esc(e.id)+'"'+(e.id===scelto?' selected':'')+'>'
-      + esc((e.nome||"(senza nome)")+" · "+rarLabel(e.rarita))+'</option>';
-  }
-  function gruppo(lab, arr){ return arr.length ? '<optgroup label="'+esc(lab)+'">'+arr.map(opt).join("")+'</optgroup>' : ''; }
+  function label(e){ return (e.nome||"(senza nome)")+" · "+rarLabel(e.rarita); }
+  function opt(e){ return '<button type="button" class="ea-opt'+(e.id===scelto?' sel':'')+'" data-eaval="'+esc(e.id)+'">'+esc(label(e))+'</button>'; }
+  function gruppo(lab, arr){ return arr.length ? '<div class="ea-opt-h">'+esc(lab)+'</div>'+arr.map(opt).join("") : ''; }
+  var e0 = scelto ? estasiById(scelto) : null;
+  var testo = e0 ? label(e0) : "— vuoto —";
   var col=LOBI_COL[lobo]||"#999";
-  return '<label class="ea-riga">'
+  return '<div class="ea-riga">'
     + '<span class="ea-lobo"><span class="ea-dot" style="background:'+col+'"></span>'+esc(etich)+'</span>'
-    + '<select class="ea-sel" data-lobo="'+esc(lobo)+'">'
-    + '<option value="">— vuoto —</option>'
-    + gruppo("Estasi", estasi) + gruppo("Anedonie", aned)
-    + '</select></label>';
+    + '<div class="ea-pick'+(e0?"":" vuoto")+'" data-lobo="'+esc(lobo)+'" data-val="'+esc(scelto||"")+'">'
+    +   '<button type="button" class="ea-pick-btn" data-eapick><span class="ea-pick-val">'+esc(testo)+'</span><span class="ea-pick-arr" aria-hidden="true">&#9662;</span></button>'
+    +   '<div class="ea-pick-menu" hidden>'
+    +     '<button type="button" class="ea-opt'+(scelto?"":" sel")+'" data-eaval="">&mdash; vuoto &mdash;</button>'
+    +     gruppo("Estasi", estasi) + gruppo("Anedonie", aned)
+    +   '</div>'
+    + '</div></div>';
+}
+/* apre/chiude e sceglie nei menù personalizzati */
+function chiudiMenuPick(){
+  document.querySelectorAll("#privBody .ea-pick.open").forEach(function(p){
+    p.classList.remove("open"); var mn=p.querySelector(".ea-pick-menu"); if(mn) mn.hidden=true;
+  });
+}
+function togglePick(btn){
+  var pick=btn.closest(".ea-pick"); if(!pick) return;
+  var mn=pick.querySelector(".ea-pick-menu"), apri=mn.hidden;
+  chiudiMenuPick();
+  if(apri){ mn.hidden=false; pick.classList.add("open"); }
+}
+function scegliPick(opt){
+  var pick=opt.closest(".ea-pick"); if(!pick) return;
+  pick.setAttribute("data-val", opt.getAttribute("data-eaval")||"");
+  pick.classList.toggle("vuoto", !opt.getAttribute("data-eaval"));
+  var val=pick.querySelector(".ea-pick-val"); if(val) val.innerHTML=opt.innerHTML;
+  pick.querySelectorAll(".ea-opt.sel").forEach(function(o){ o.classList.remove("sel"); });
+  opt.classList.add("sel");
+  chiudiMenuPick();
 }
 
 /* --- il TOMO delle Estasi ed Anedonie ---
@@ -6656,8 +6687,8 @@ function salvaEstasiDaPopup(){
   if(!id) return;
   var msg=document.getElementById("eaMsg");
   var nuovo={};
-  document.querySelectorAll("#privBody .ea-sel").forEach(function(s){
-    var v=s.value; if(v) nuovo[s.getAttribute("data-lobo")]=v;
+  document.querySelectorAll("#privBody .ea-pick").forEach(function(p){
+    var v=p.getAttribute("data-val"); if(v) nuovo[p.getAttribute("data-lobo")]=v;
   });
   estasiSalvando=true;
   var btn=document.querySelector("#privBody [data-estasave]"); if(btn) btn.disabled=true;

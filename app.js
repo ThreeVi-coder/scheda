@@ -211,6 +211,8 @@ var state={
   statsColor:"#7C5CFF",   // colore del poligono e della linea illuminata
   transizione:"morph",    // come si passa tra Caratteristiche e Abilita': "morph" | "dissolvenza"
   retroVista:"hub",       // pagina Retro: "hub" (illustrazione con richiami) | "elenco" (immagine a lato + lista a tendina)
+  ispirazione:false,      // il punto di Ispirazione: acceso/spento, non si accumula (max 1)
+  ispColore:"#E0B15E",    // colore della stella quando l'Ispirazione e' accesa
   classSymColor:"#a78bfa",   // colore di partenza dei simboli (seme per i nuovi)
   tsCompColor:"#E0B15E",     // colore degli esagoni accesi dei tiri salvezza
   tsDadoColor:"#A78BFA",     // colore del dado disegnato al centro del favo
@@ -704,7 +706,7 @@ var elName=document.getElementById("name"), elHeader=document.getElementById("he
     elFont=document.getElementById("font"), elCapSection=document.getElementById("capSection"),
     elEmblem=document.getElementById("emblem"), emLeft=document.getElementById("emLeft"), emRight=document.getElementById("emRight");
 
-var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","retroVista","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza","allineamento"];
+var SAVE_FIELDS=["font","size","align","bold","italic","underline","smallcaps","neon","dropcap","upper","label","nameColor","capColor","emblemMode","xpStyle","xpColor1","xpColor2","statsEvid","statsColor","transizione","retroVista","classSymColor","tsCompColor","tsDadoColor","abilCarColore","hpColorPieno","hpColorFerito","hpColorCritico","difIcoColor","razza","allineamento","ispirazione"];
 /* "testi" non sta nell'elenco qui sopra apposta: si salva con tutto il resto
    ma si rilegge una scritta alla volta, in applicaDati. */
 
@@ -744,6 +746,11 @@ function applicaDati(o){
   else state.tsCompColor="#E0B15E";
   if(typeof o.tsDadoColor==="string" && /^#[0-9a-fA-F]{6}$/.test(o.tsDadoColor)) state.tsDadoColor=o.tsDadoColor;
   else state.tsDadoColor="#A78BFA";
+  // Ispirazione: il segnalino e' un booleano vero/falso; il colore della stella
+  // si convalida come gli altri (una scheda vecchia o scritta male torna all'oro).
+  state.ispirazione = (o.ispirazione===true);
+  if(typeof o.ispColore==="string" && /^#[0-9a-fA-F]{6}$/.test(o.ispColore)) state.ispColore=o.ispColore;
+  else state.ispColore="#E0B15E";
   // i tre colori "salute" della barra dei punti ferita: se mancano o sono
   // scritti male, tornano ai valori standard (verde / oro / rosso).
   ["hpColorPieno","hpColorFerito","hpColorCritico"].forEach(function(k){
@@ -870,6 +877,7 @@ function datiDaSalvare(){
   o.pfAttuali=state.pfAttuali; o.pfTemp=state.pfTemp; o.pfScostamento=state.pfScostamento;
   o.dvSpesi=state.dvSpesi; o.morteS=state.morteS; o.morteF=state.morteF;
   o.difScost=state.difScost;
+  o.ispColore=state.ispColore;   // il segnalino ispirazione va gia' via SAVE_FIELDS; qui solo il colore
   // NB: lo sblocco del +1 d'origine NON si salva qui: vive nella colonna
   // schede.origine_sbloccata (roba dello staff), così il salvataggio del player
   // non può azzerarlo. Salvo solo le liste scelte e le caratteristiche scelte.
@@ -1536,6 +1544,9 @@ function doReset(which){
     xpPicker2.setHex(state.xpColor2);
   } else if(which==="Prof"){
     azzeraTesti("prof");
+    state.ispColore="#E0B15E";   // torna all'oro; il segnalino acceso/spento resta
+    if(typeof ispPicker!=="undefined" && ispPicker){ ispFermo=true; try{ ispPicker.setHex(state.ispColore); } finally{ ispFermo=false; } }
+    renderIsp();
   } else if(which==="Align"){
     azzeraTesti("align");   // solo l'aspetto: la scelta dell'allineamento resta
   } else if(which==="RazzaAsp"){
@@ -1926,6 +1937,35 @@ function openAlign(){ document.getElementById("modalAlign").hidden=false; render
     var k=b.getAttribute("data-allin");
     state.allineamento = (state.allineamento===k) ? "" : k;
     renderAlign(); renderAlignDialog(); aggiornaSalva();
+  });
+})();
+
+/* ===== Ispirazione =====
+   Un solo punto, acceso o spento: non si accumula (al massimo 1). Lo accendono
+   e spengono sia il player sulla propria scheda sia lo staff su quella altrui
+   (tutto cio' che non e' sola lettura). La stella si illumina del colore scelto,
+   personalizzabile come le altre scritte. */
+var ispFermo=false;
+function coloreIsp(){ return /^#[0-9a-fA-F]{6}$/.test(state.ispColore||"") ? state.ispColore : "#E0B15E"; }
+function renderIsp(){
+  var panel=document.getElementById("profPanel"); if(!panel) return;
+  var on=!!state.ispirazione;
+  // una classe sul riquadro accende ENTRAMBE le stelle e la scritta insieme
+  panel.classList.toggle("isp-on", on);
+  panel.style.setProperty("--isp-col", coloreIsp());
+  ["ispStarL","ispStarR"].forEach(function(id){
+    var s=document.getElementById(id); if(s) s.setAttribute("aria-pressed", on?"true":"false");
+  });
+}
+function toggleIsp(){
+  if(soloLettura) return;
+  state.ispirazione=!state.ispirazione;
+  renderIsp(); aggiornaSalva();
+}
+(function(){
+  // toccare una stella qualsiasi accende/spegne (le due sono lo stesso interruttore)
+  ["ispStarL","ispStarR"].forEach(function(id){
+    var s=document.getElementById(id); if(s) s.addEventListener("click", toggleIsp);
   });
 })();
 
@@ -4425,6 +4465,11 @@ function sincronizzaExtra(dove){
       finally{ tsFermo=false; }
     }
   }
+  if(dove==="prof"){
+    if(typeof ispPicker!=="undefined" && ispPicker){
+      ispFermo=true; try{ ispPicker.setHex(coloreIsp()); } finally{ ispFermo=false; }
+    }
+  }
   if(dove==="abil"){
     if(typeof abilCarPicker!=="undefined" && abilCarPicker){
       var menuCar=document.getElementById("abilCarSel");
@@ -4507,7 +4552,7 @@ function applicaTesti(){
   aggiornaMortalita();   // e la sbiadita/il banner/il teschio se sei a terra
 }
 
-function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderAlign(); renderAlignDialog(); renderRazzaPanel(); renderRetro(); renderLevel(); renderXpDialog();
+function renderAll(){ markWheel(); renderChosen(); renderPanel(); renderAlign(); renderAlignDialog(); renderIsp(); renderRazzaPanel(); renderRetro(); renderLevel(); renderXpDialog();
   renderProfDialog(); renderStats(); renderStatsDialog(); renderTs(); renderTsDialog(); renderAbil(); renderAbilDialog();
   renderHp(); renderHpDialog(); renderDif(); renderDifDialog(); apply(); setHub(null);
   var _dr=apertaAspetto(); if(_dr) sincronizzaSel(_dr); }
@@ -5784,6 +5829,7 @@ var statsPicker=makePicker(document.getElementById("statsPicker"), state.statsCo
 var tsFermo=false;
 var tsCompPicker=makePicker(document.getElementById("tsCompPicker"), state.tsCompColor, function(hex){ if(tsFermo) return; state.tsCompColor=hex; renderTs(); aggiornaSalva(); });
 var tsDadoPicker=makePicker(document.getElementById("tsDadoPicker"), state.tsDadoColor, function(hex){ if(tsFermo) return; state.tsDadoColor=hex; renderTs(); aggiornaSalva(); });
+var ispPicker=makePicker(document.getElementById("ispPicker"), state.ispColore, function(hex){ if(ispFermo) return; state.ispColore=hex; renderIsp(); aggiornaSalva(); });
 
 /* Colore delle caratteristiche: il menu' a tendina sceglie quale, la tavolozza
    le da' il colore. Esagono e gruppo si aggiornano insieme perche' leggono da

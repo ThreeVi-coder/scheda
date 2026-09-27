@@ -364,6 +364,29 @@ async function main(){
      "col tomo aperto, incidere dal vivo fa partire l'apertura anche col segnalibro acceso");
   W.ruoli = ruoliBakM;
 
+  /* ===== N) Ispirazione: segnalino 0/1 + colore, con reti di sicurezza ===== */
+  W.applicaDati({ ispirazione: true, ispColore: "#12ab34" });
+  eq(W.state.ispirazione, true, "l'ispirazione accesa si carica");
+  eq(W.state.ispColore, "#12ab34", "il colore della stella si carica");
+  W.applicaDati({ ispirazione: "si", ispColore: "non-un-colore" });
+  eq(W.state.ispirazione, false, "solo il vero booleano accende (una scheda vecchia parte spenta)");
+  eq(W.state.ispColore, "#E0B15E", "colore sballato → torna all'oro di partenza");
+  const salIsp = W.datiDaSalvare();
+  eq(salIsp.ispirazione, false, "il segnalino si salva");
+  eq(salIsp.ispColore, "#E0B15E", "e il colore della stella si salva");
+  W.soloLettura = false;
+  W.state.ispirazione = false; W.toggleIsp();
+  eq(W.state.ispirazione, true, "toggleIsp accende il punto");
+  W.toggleIsp();
+  eq(W.state.ispirazione, false, "toggleIsp rispegne (non si accumula, max 1)");
+  const panelEl = W.document.getElementById("profPanel");
+  W.state.ispirazione = false; W.renderIsp();
+  ok(panelEl && !panelEl.classList.contains("isp-on"), "spenta: il riquadro Competenza non ha la classe 'isp-on'");
+  W.state.ispirazione = true; W.renderIsp();
+  ok(panelEl && panelEl.classList.contains("isp-on"), "accesa: il riquadro prende 'isp-on' (due stelle + scritta insieme)");
+  const starEl = W.document.getElementById("ispStarL");
+  ok(starEl && starEl.getAttribute("aria-pressed") === "true", "accesa: la stella risulta premuta");
+
   /* ===== esito ===== */
   console.log("");
   if (falliti === 0){

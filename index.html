@@ -6,7 +6,7 @@
 <title>Scheda personaggio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
-<link rel="stylesheet" href="styles.css?v=100">
+<link rel="stylesheet" href="styles.css?v=101">
 </head>
 <body>
   <div class="wrap">
@@ -111,6 +111,13 @@
       <div class="ppanel" id="profPanel">
         <div class="eyebrow">Competenza</div>
         <div class="profval" id="profVal">+2</div>
+        <button class="ispstar isp-l" id="ispStarL" type="button" aria-pressed="false" aria-label="Ispirazione: accendi o spegni" title="Ispirazione &mdash; un punto che il master ti concede: spendilo in sessione per ritirare un tiro di d20. Non si accumula (al massimo 1).">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.786 1.402 8.174L12 18.896l-7.336 3.868 1.402-8.174L.132 9.21l8.2-1.192z"/></svg>
+        </button>
+        <button class="ispstar isp-r" id="ispStarR" type="button" aria-pressed="false" aria-label="Ispirazione: accendi o spegni" title="Ispirazione &mdash; un punto che il master ti concede: spendilo in sessione per ritirare un tiro di d20. Non si accumula (al massimo 1).">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.786 1.402 8.174L12 18.896l-7.336 3.868 1.402-8.174L.132 9.21l8.2-1.192z"/></svg>
+        </button>
+        <div class="ispword" id="ispWord" aria-hidden="true">Ispirazione</div>
         <button class="gear" id="gearProf" title="Bonus di competenza" aria-label="Bonus di competenza"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
 
@@ -125,6 +132,7 @@
         <div class="alline" id="alignLine"></div>
         <button class="gear" id="gearAlign" title="Scegli l&rsquo;allineamento" aria-label="Scegli l'allineamento"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3 v2.4 M12 18.6 v2.4 M3 12 h2.4 M18.6 12 h2.4 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M5.6 18.4 l1.7 -1.7"/></svg></button>
       </div>
+
 
       <div class="hpanel" id="hpPanel">
         <div class="hpmain">
@@ -562,6 +570,7 @@
             <thead><tr><th>Livelli</th><th>Bonus</th></tr></thead>
             <tbody></tbody>
           </table>
+          <p class="hint">Le due <b>stelle</b> agli angoli sono l&rsquo;<b>Ispirazione</b>: un punto che il master ti concede, uno solo (non si accumula). Tocca una stella qualsiasi per accenderla &mdash; si illuminano entrambe con la scritta &mdash; e spendila in sessione per ritirare un tiro di d20.</p>
           </div>
 
           <div class="este">
@@ -569,6 +578,10 @@
           <p class="hintsel">Tocca la scritta che vuoi cambiare.</p>
           <div class="antepsel" id="antsel_prof"></div>
           <div class="comandi" id="com_prof"></div>
+          <div class="ispcol">
+            <span class="ispcol-lab">Colore dell&rsquo;Ispirazione accesa (stelle e scritta)</span>
+            <div id="ispPicker"></div>
+          </div>
           </div>
         </div>
         <div class="dlgbar" id="barProf">
@@ -618,6 +631,7 @@
         </div>
       </div>
     </div>
+
 
     <div class="modal" id="modalHp" hidden>
       <div class="backdrop" data-close="hp"></div>
@@ -952,6 +966,6 @@
     <feDisplacementMap id="inkDispl" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </svg>
-<script src="app.js?v=100"></script>
+<script src="app.js?v=101"></script>
 </body>
 </html>
